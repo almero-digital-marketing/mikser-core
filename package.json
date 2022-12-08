@@ -1,0 +1,39 @@
+{
+  "name": "mikser-core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --no-warnings app.js",
+    "dev": "node --no-warnings app.js --plugins documents front-matter files yaml json lowdb -t",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "mikser": "app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/almero-digital-marketing/mikser-core.git"
+  },
+  "type": "module",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "commander": "^9.4.1",
+    "execa": "^6.1.0",
+    "front-matter": "^4.0.2",
+    "globby": "^13.1.2",
+    "handlebars": "^4.7.7",
+    "handlebars-helpers": "^0.10.0",
+    "line-reader": "^0.4.0",
+    "lodash": "^4.17.21",
+    "lowdb": "^5.0.5",
+    "minimatch": "^5.1.1",
+    "pino": "^8.7.0",
+    "pino-pretty": "^9.1.1",
+    "piscina": "^3.2.0",
+    "pluralize": "^8.0.0",
+    "yamljs": "^0.3.0"
+  }
+}
