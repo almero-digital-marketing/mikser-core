@@ -29,7 +29,7 @@ onPersist(async () => {
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
                 database.data.entities.push(entity)
             break
-            case operations.OPERATION_UPDTE:
+            case operations.OPERATION_UPDATE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
                 database
                 .chain

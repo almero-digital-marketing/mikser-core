@@ -125,7 +125,7 @@ export async function updateEntity(entity) {
     const logger = useLogger()
     entity.stamp = mikser.stamp
     logger.debug('Update %s entity: %s', entity.collection, entity.id)
-    mikser.operations.push({ operation: operations.OPERATION_UPDTE, entity })
+    mikser.operations.push({ operation: operations.OPERATION_UPDATE, entity })
 }
 
 export async function renderEntity(entity, context) {

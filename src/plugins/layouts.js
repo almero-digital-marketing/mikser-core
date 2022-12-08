@@ -78,7 +78,7 @@ onSync(async ({ id, operation }) => {
             layouts[layout.name] = layout
             await createEntity(layout)
         break
-        case operations.OPERATION_UPDTE:
+        case operations.OPERATION_UPDATE:
             var layout = {
                 id: path.join('/layouts', relativePath),
                 uri,
@@ -134,7 +134,7 @@ onImport(async () => {
 onProcessed(async () => {
     const logger = useLogger()
 
-    const entitiesToAdd = useOperations([operations.OPERATION_CREATE, operations.OPERATION_UPDTE])
+    const entitiesToAdd = useOperations([operations.OPERATION_CREATE, operations.OPERATION_UPDATE])
     .map(operation => operation.entity)
     .filter(entity => entity.collection != 'layouts')
 

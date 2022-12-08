@@ -3,7 +3,7 @@ import fm from 'front-matter'
 
 onProcess(() => {
     const logger = useLogger()
-    const entities = useOperations([operations.OPERATION_CREATE, operations.OPERATION_UPDTE])
+    const entities = useOperations([operations.OPERATION_CREATE, operations.OPERATION_UPDATE])
     .map(operation => operation.entity)
     .filter(entity => entity.source && fm.test(entity.source))
 

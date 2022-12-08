@@ -48,7 +48,6 @@ export async function onCancelled(callback) {
     mikser.hooks.cancelled.push(callback)
 }
 
-
 export async function onBeforeRender(callback) {
     mikser.hooks.beforeRender.push(callback)
 }

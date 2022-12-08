@@ -4,7 +4,7 @@ import path from 'path'
 
 let processTimeout
 
-export function watchEntities(collection, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true },) {
+export function watchEntities(collection, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true }) {
     if (mikser.options.watch === true || mikser.options.watch.indexOf(collection) > -1)
     chokidar.watch(folder, options)
     .on('all', () => {
