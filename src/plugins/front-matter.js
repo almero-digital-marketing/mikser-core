@@ -1,9 +1,9 @@
-import { onProcess, useLogger, useOperations } from '../index.js'
+import { onProcess, useLogger, useOperations, operations } from '../index.js'
 import fm from 'front-matter'
 
 onProcess(() => {
     const logger = useLogger()
-    const entities = useOperations(['create', 'update'])
+    const entities = useOperations([operations.OPERATION_CREATE, operations.OPERATION_UPDTE])
     .map(operation => operation.entity)
     .filter(entity => entity.source && fm.test(entity.source))
 

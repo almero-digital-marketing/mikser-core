@@ -67,7 +67,7 @@ onSync(async ({ id, operation }) => {
     const relativePath = id.replace('/layouts/', '')
     const uri = path.join(mikser.options.layoutsFolder, relativePath)
     switch (operation) {
-        case operations.CREATE:
+        case operations.OPERATION_CREATE:
             var layout = {
                 id: path.join('/layouts', relativePath),
                 uri,
@@ -78,7 +78,7 @@ onSync(async ({ id, operation }) => {
             layouts[layout.name] = layout
             await createEntity(layout)
         break
-        case operations.UPDATE:
+        case operations.OPERATION_UPDTE:
             var layout = {
                 id: path.join('/layouts', relativePath),
                 uri,
@@ -89,7 +89,7 @@ onSync(async ({ id, operation }) => {
             layouts[layout.name] = layout
             await updateEntity(layout)
         break
-        case operations.DELETE:
+        case operations.OPERATION_DELETE:
             var layout = {
                 id: path.join('/layouts', relativePath),
                 collection: 'layouts',
@@ -134,7 +134,7 @@ onImport(async () => {
 onProcessed(async () => {
     const logger = useLogger()
 
-    const entitiesToAdd = useOperations(['create', 'update'])
+    const entitiesToAdd = useOperations([operations.OPERATION_CREATE, operations.OPERATION_UPDTE])
     .map(operation => operation.entity)
     .filter(entity => entity.collection != 'layouts')
 
@@ -158,7 +158,7 @@ onProcessed(async () => {
         }
     }
 
-    const entitiesToRemove = useOperations(['delete'])
+    const entitiesToRemove = useOperations([operations.OPERATION_DELETE])
     .map(operation => operation.entity)
     .filter(entity => entity.collection != 'layouts')
     for (let entity of entitiesToRemove) { 

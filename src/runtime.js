@@ -1,7 +1,7 @@
 import pino from 'pino'
 import path from 'path'
 import { Command } from 'commander'
-import { mikser, onInitialize, onInitialized, onRender, onCancel } from './index.js'
+import { mikser, onInitialize, onInitialized, onRender, onCancel, operations } from './index.js'
 import { rmdir } from 'fs/promises'
 import _ from 'lodash'
 import Piscina from 'piscina'
@@ -112,26 +112,26 @@ export async function createEntity(entity) {
     const logger = useLogger()
     entity.stamp = mikser.stamp
     logger.debug('Create %s entity: %s', entity.collection, entity.id)
-    mikser.operations.push({ operation: 'create', entity })
+    mikser.operations.push({ operation: operations.OPERATION_CREATE, entity })
 }
 
 export async function deleteEntity({ id, type }) {
     const logger = useLogger()
     logger.debug('Delete %s entity: %s', collection, id)
-    mikser.operations.push({ operation: 'delete', entity: { id, type } })
+    mikser.operations.push({ operation: operations.OPERATION_DELETE, entity: { id, type } })
 }
 
 export async function updateEntity(entity) {
     const logger = useLogger()
     entity.stamp = mikser.stamp
     logger.debug('Update %s entity: %s', entity.collection, entity.id)
-    mikser.operations.push({ operation: 'update', entity })
+    mikser.operations.push({ operation: operations.OPERATION_UPDTE, entity })
 }
 
 export async function renderEntity(entity, context) {
     const logger = useLogger()
     logger.info('Render %s entity: %s → %s', entity.collection, entity.id, entity.destination)
-    mikser.operations.push({ operation: 'render', entity, context })
+    mikser.operations.push({ operation: operations.OPERATION_RENDER, entity, context })
 }
 
 export async function render(entity, context, signal) {

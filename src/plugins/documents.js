@@ -8,7 +8,7 @@ onSync(async ({ id, operation }) => {
     const relativePath = id.replace('/documents/', '')
     const uri = path.join(mikser.options.documentsFolder, relativePath)
     switch (operation) {
-        case operations.CREATE:
+        case operations.OPERATION_CREATE:
             await createEntity({
                 id,
                 uri,
@@ -18,7 +18,7 @@ onSync(async ({ id, operation }) => {
                 source: await readFile(uri, 'utf8') 
             })
         break
-        case operations.UPDATE:
+        case operations.OPERATION_UPDATE:
             await updateEntity({
                 id,
                 uri,
@@ -28,7 +28,7 @@ onSync(async ({ id, operation }) => {
                 source: await readFile(uri, 'utf8') 
             })
         break
-        case operations.DELETE:
+        case operations.OPERATION_DELETE:
             await deleteEntity({
                 id,
                 collection: 'documents',

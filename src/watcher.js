@@ -13,7 +13,7 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
     .on('add', async fullPath => {
         const relativePath = fullPath.replace(folder, '')
         await mikser.sync({
-            operation: operations.CREATE, 
+            operation: operations.OPERATION_CREATE, 
             id: path.join(`/${collection}`, relativePath)
         })
 
@@ -23,7 +23,7 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
     .on('change', async fullPath => {
         const relativePath = fullPath.replace(folder, '')
         await mikser.sync({
-            operation: operations.UPDATE, 
+            operation: operations.OPERATION_UPDATE, 
             id: path.join(`/${collection}`, relativePath)
         })
 
@@ -33,7 +33,7 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
     .on('unlink', async fullPath => {
         const relativePath = fullPath.replace(folder, '')
         await mikser.sync({
-            operation: operations.DELETE, 
+            operation: operations.OPERATION_DELETE, 
             id: path.join(`/${collection}`, relativePath)
         })
 
