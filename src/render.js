@@ -5,7 +5,7 @@ import { readFile } from 'fs/promises'
 export default async ({ entity, options, config, context }) => {
     async function loadPlugin(pluginName) {   
         const resolveLocations = [
-            path.join(options.workingFolder, 'node_modules', `mikser-render-${pluginName}.js`),
+            path.join(options.workingFolder, 'node_modules', `mikser-core-render-${pluginName}/index.js`),
             path.join(options.workingFolder, 'plugins', 'render', `${pluginName}.js`),
             path.join(path.dirname(import.meta.url), 'plugins', 'render', `${pluginName}.js`)
         ]
@@ -22,17 +22,17 @@ export default async ({ entity, options, config, context }) => {
     }
 
     const plugins = {}
-    const pluginsToLoad = [...context.plugins]
+    const pluginsToLoad = [...context.plugins || []]
     if (entity.layout?.template) {
         pluginsToLoad.push(entity.layout.template)
     }
     if (entity.meta?.plugins) {
         pluginsToLoad.push(...entity.meta.plugins)
     }
-    for (let pluginName of context.plugins || []) {
+    for (let pluginName of pluginsToLoad) {
         const plugin = await loadPlugin(pluginName)
         plugins[pluginName] = plugin
-        if (plugin.load) await plugin.load({ entity, options, config: config[pluginName], context })
+        if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context })
     }
 
     let source
@@ -46,9 +46,10 @@ export default async ({ entity, options, config, context }) => {
                 entity,
                 plugins,
                 config: config[pluginName],
-                data: context.data
+                data: context.data,
+                source
             }
-            source = await renderer.render({ entity, options, config, context, source, plugins, runtime })
+            source = await plugin.render({ entity, options, config, context, source, plugins, runtime })
         }
     }
 

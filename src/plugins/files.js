@@ -27,7 +27,7 @@ onSync(async ({ id, operation }) => {
         case constants.OPERATION_CREATE:
             await ensureLink(relativePath)
             await createEntity({
-                id: join('/files', relativePath),
+                id,
                 uri,
                 name: relativePath,
                 collection: 'files',
@@ -38,7 +38,7 @@ onSync(async ({ id, operation }) => {
         break
         case constants.OPERATION_UPDATE:
             await updateEntity({
-                id: join('/files', relativePath),
+                id,
                 uri,
                 name: relativePath,
                 collection: 'files',
@@ -50,7 +50,7 @@ onSync(async ({ id, operation }) => {
         case constants.OPERATION_DELETE:
             await unlink(join(mikser.options.outputFolder, relativePath))
             await deleteEntity({
-                id: join('/files', relativePath),
+                id,
                 collection: 'files',
                 type: 'file',
             })

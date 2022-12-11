@@ -37,7 +37,7 @@ export async function run(options) {
         mikser.runtime.commander?.version(version)
         .option('--working-folder <folder>', 'set mikser working folder', './')
         .option('--plugins [plugins...]', 'list of mikser plugins to load', [])
-        .option('--clear', 'clear everything before generation', [])
+        .option('--clear', 'clear current state before execution', false)
         .option('-o --output <folder>', 'set mikser output folder realtive to working folder ot absolute', 'out')
         .option('-w --watch [types]', 'watch entity types for changes', [])
         .option('-d --debug', 'display debug statements')
@@ -58,6 +58,8 @@ export async function run(options) {
         mikser.options.workingFolder = path.resolve(mikser.options.workingFolder)
         mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, 'runtime')
         mikser.options.outputFolder = path.isAbsolute(mikser.options.output) ? mikser.options.output : path.join(mikser.options.workingFolder, mikser.options.output)
+        
+        process.chdir(mikser.options.workingFolder)
         
         logger.debug(mikser.options, 'Mikser options')
         logger.info('Working folder: %s', mikser.options.workingFolder)
@@ -159,12 +161,11 @@ export function detectFeatures(features) {
     return !missing.length
 }
 
-let processTimeout
 export function watchEntities(collection, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true }) {
     if (mikser.options.watch === true || mikser.options.watch.indexOf(collection) > -1)
     chokidar.watch(folder, options)
     .on('all', () => {
-        clearTimeout(processTimeout)
+        clearTimeout(mikser.runtime.processTimeout)
     })
     .on('add', async fullPath => {
         const relativePath = fullPath.replace(folder, '')
@@ -173,8 +174,8 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
             id: path.join(`/${collection}`, relativePath)
         })
 
-        clearTimeout(processTimeout)
-        processTimeout = setTimeout(() => mikser.process(), 1000)
+        clearTimeout(mikser.runtime.processTimeout)
+        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
     })
     .on('change', async fullPath => {
         const relativePath = fullPath.replace(folder, '')
@@ -183,8 +184,8 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
             id: path.join(`/${collection}`, relativePath)
         })
 
-        clearTimeout(processTimeout)
-        processTimeout = setTimeout(() => mikser.process(), 1000)
+        clearTimeout(mikser.runtime.processTimeout)
+        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
     })
     .on('unlink', async fullPath => {
         const relativePath = fullPath.replace(folder, '')
@@ -193,7 +194,7 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
             id: path.join(`/${collection}`, relativePath)
         })
 
-        clearTimeout(processTimeout)
-        processTimeout = setTimeout(() => mikser.process(), 1000)
+        clearTimeout(mikser.runtime.processTimeout)
+        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
     })
 }

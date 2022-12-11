@@ -15,23 +15,22 @@ function getFormatInfo(relativePath) {
 }
 
 function addToSitemap(entity) {
-    if (!entity.meta?.href) return
-
     const logger = useLogger()
-    if (entity.meta.lang) {
-        sitemap[entity.meta.href] = sitemap[entity.meta.href] || {};
-        let previous = sitemap[entity.meta.href][entity.meta.lang];
+    const { href = entity.name, lang } = entity.meta
+    if (lang) {
+        sitemap[href] = sitemap[href] || {};
+        let previous = sitemap[href][lang];
         if (previous && (previous.id != entity.id)) {
             logger.warn('Entity with equal href: %s and %s', previous.collection, previous.id, entity.id);
         }
-        sitemap[entity.meta.href][entity.meta.lang] = entity
+        sitemap[href][lang] = entity
     }
     else {
-        let previous = sitemap[entity.meta.href];
+        let previous = sitemap[href];
         if (previous && (previous.id != entity.id)) {
             logger.warn('Entity with equal href: %s and %s', previous.collection, previous.id, entity.id);
         }
-        sitemap[entity.meta.href] = entity
+        sitemap[href] = entity
     }
 }
 
@@ -69,7 +68,7 @@ onSync(async ({ id, operation }) => {
     switch (operation) {
         case constants.OPERATION_CREATE:
             var layout = {
-                id: path.join('/layouts', relativePath),
+                id,
                 uri,
                 collection: 'layouts',
                 type: 'layout',
@@ -81,7 +80,7 @@ onSync(async ({ id, operation }) => {
         break
         case constants.OPERATION_UPDATE:
             var layout = {
-                id: path.join('/layouts', relativePath),
+                id,
                 uri,
                 collection: 'layouts',
                 type: 'layout',
@@ -93,7 +92,7 @@ onSync(async ({ id, operation }) => {
         break
         case constants.OPERATION_DELETE:
             var layout = {
-                id: path.join('/layouts', relativePath),
+                id,
                 collection: 'layouts',
                 type: 'layout',
                 format: path.extname(relativePath).substring(1).toLowerCase(),
