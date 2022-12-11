@@ -1,6 +1,5 @@
 
 import path from 'path'
-import { readFile } from 'fs/promises'
 
 export default async ({ entity, options, config, context }) => {
     async function loadPlugin(pluginName) {   
@@ -35,23 +34,13 @@ export default async ({ entity, options, config, context }) => {
         if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context })
     }
 
-    let source
-    for(let pluginName in plugins) {
-        const plugin = plugins[pluginName]
-        source = source || entity.layout.source || await readFile(entity.layout.uri, 'utf8')
-
-        if (plugin.render) {
-            const runtime = {
-                [entity.type]: entity,
-                entity,
-                plugins,
-                config: config[pluginName],
-                data: context.data,
-                source
-            }
-            source = await plugin.render({ entity, options, config, context, source, plugins, runtime })
-        }
+    const runtime = {
+        [entity.type]: entity,
+        entity,
+        plugins,
+        config: config[entity.layout.template],
+        data: context.data,
     }
-
-    return source
+    const renderer = plugins[entity.layout.template]
+    return await renderer.render({ entity, options, config, context, plugins, runtime })
 }

@@ -1,6 +1,6 @@
 {
   "name": "mikser-core",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "",
   "main": "src/index.js",
   "scripts": {
@@ -33,7 +33,6 @@
     "pino": "^8.7.0",
     "pino-pretty": "^9.1.1",
     "piscina": "^3.2.0",
-    "pluralize": "^8.0.0",
     "yamljs": "^0.3.0"
   }
 }

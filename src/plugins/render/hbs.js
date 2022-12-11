@@ -19,7 +19,7 @@ export function load({ config }) {
     ]))
 }
 
-export function render({ context, source, runtime }) {
+export async function render({ context, runtime }) {
     for (let partial in context.layouts) {
         if (context.layouts[partial].tempalte == 'hbs' && partial.indexOf('partials') == 0) {
             const partialLayout = readFile(context.layouts[partial].uri, 'utf8')
@@ -34,7 +34,7 @@ export function render({ context, source, runtime }) {
             sandbox = runtime[helper]
         }
     }
-
+    const source = await readFile(entity.layout.uri, 'utf8')
     const tempalte = handlebars.compile(source)
     return tempalte(sandbox)
 }
