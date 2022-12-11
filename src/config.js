@@ -3,7 +3,7 @@ import path from 'path'
 
 onLoad(async () => {
     const logger = useLogger()
-    const configFile = path.join(mikser.options.workingFolder, 'mikser.config.js')
+    const configFile = path.join(mikser.options.workingFolder || '.', 'mikser.config.js')
     try {
         const config = await import(configFile)
         logger.debug('Config: %s', configFile)

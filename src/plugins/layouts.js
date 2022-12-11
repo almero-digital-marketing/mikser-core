@@ -1,4 +1,4 @@
-import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onProcessed, onBeforeRender, useOperations, renderEntity, onAfterRender, operations, onSync } from '../index.js'
+import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onProcessed, onBeforeRender, useOperations, renderEntity, onAfterRender, constants, onSync } from '../index.js'
 import path from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import { globby } from 'globby'
@@ -67,32 +67,35 @@ onSync(async ({ id, operation }) => {
     const relativePath = id.replace('/layouts/', '')
     const uri = path.join(mikser.options.layoutsFolder, relativePath)
     switch (operation) {
-        case operations.OPERATION_CREATE:
+        case constants.OPERATION_CREATE:
             var layout = {
                 id: path.join('/layouts', relativePath),
                 uri,
                 collection: 'layouts',
+                type: 'layout',
                 name: relativePath.replace(path.extname(relativePath), ''),
                 ...getFormatInfo(relativePath)
             }
             layouts[layout.name] = layout
             await createEntity(layout)
         break
-        case operations.OPERATION_UPDATE:
+        case constants.OPERATION_UPDATE:
             var layout = {
                 id: path.join('/layouts', relativePath),
                 uri,
                 collection: 'layouts',
+                type: 'layout',
                 name: relativePath.replace(path.extname(relativePath), ''),
                 ...getFormatInfo(relativePath)
             }
             layouts[layout.name] = layout
             await updateEntity(layout)
         break
-        case operations.OPERATION_DELETE:
+        case constants.OPERATION_DELETE:
             var layout = {
                 id: path.join('/layouts', relativePath),
                 collection: 'layouts',
+                type: 'layout',
                 format: path.extname(relativePath).substring(1).toLowerCase(),
             }
             for (let name in layouts) {
@@ -124,6 +127,7 @@ onImport(async () => {
             uri,
             name: relativePath.replace(path.extname(relativePath), ''),
             collection: 'layouts',
+            type: 'layout',
             ...getFormatInfo(relativePath)
         }
         layouts[layout.name] = layout
@@ -134,7 +138,7 @@ onImport(async () => {
 onProcessed(async () => {
     const logger = useLogger()
 
-    const entitiesToAdd = useOperations([operations.OPERATION_CREATE, operations.OPERATION_UPDATE])
+    const entitiesToAdd = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
     .map(operation => operation.entity)
     .filter(entity => entity.collection != 'layouts')
 
@@ -158,7 +162,7 @@ onProcessed(async () => {
         }
     }
 
-    const entitiesToRemove = useOperations([operations.OPERATION_DELETE])
+    const entitiesToRemove = useOperations([constants.OPERATION_DELETE])
     .map(operation => operation.entity)
     .filter(entity => entity.collection != 'layouts')
     for (let entity of entitiesToRemove) { 

@@ -1,5 +1,6 @@
 
 import path from 'path'
+import { readFile } from 'fs/promises'
 
 export default async ({ entity, options, config, context }) => {
     async function loadPlugin(pluginName) {   
@@ -20,13 +21,36 @@ export default async ({ entity, options, config, context }) => {
         }
     }
 
-    const renderer = await loadPlugin(entity.layout.template)
-    if (renderer) {
-        const plugins = {}
-        for (let pluginName of context.plugins || []) {
-            context.plugins[pluginName] = await loadPlugin(pluginName)
-        }
-        context.plugins = plugins
-        return renderer.render({ entity, options, config, context })
+    const plugins = {}
+    const pluginsToLoad = [...context.plugins]
+    if (entity.layout?.template) {
+        pluginsToLoad.push(entity.layout.template)
     }
+    if (entity.meta?.plugins) {
+        pluginsToLoad.push(...entity.meta.plugins)
+    }
+    for (let pluginName of context.plugins || []) {
+        const plugin = await loadPlugin(pluginName)
+        plugins[pluginName] = plugin
+        if (plugin.load) await plugin.load({ entity, options, config: config[pluginName], context })
+    }
+
+    let source
+    for(let pluginName in plugins) {
+        const plugin = plugins[pluginName]
+        source = source || entity.layout.source || await readFile(entity.layout.uri, 'utf8')
+
+        if (plugin.render) {
+            const runtime = {
+                [entity.type]: entity,
+                entity,
+                plugins,
+                config: config[pluginName],
+                data: context.data
+            }
+            source = await renderer.render({ entity, options, config, context, source, plugins, runtime })
+        }
+    }
+
+    return source
 }

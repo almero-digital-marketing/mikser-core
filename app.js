@@ -1,7 +1,6 @@
-import { createMikser } from "./src/index.js"
+import { run } from "./src/index.js"
 
 async function main() {
-    const mikser = await createMikser()
-    await mikser.start()
+    await run()
 }
 main()

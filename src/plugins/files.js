@@ -1,4 +1,4 @@
-import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, operations } from '../index.js'
+import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants } from '../index.js'
 import { join, dirname, extname } from 'path'
 import { mkdir, symlink, unlink } from 'fs/promises'
 import { globby } from 'globby'
@@ -24,32 +24,35 @@ onSync(async ({ id, operation }) => {
     const format = extname(relativePath).substring(1).toLowerCase()
 
     switch (operation) {
-        case operations.OPERATION_CREATE:
+        case constants.OPERATION_CREATE:
             await ensureLink(relativePath)
             await createEntity({
                 id: join('/files', relativePath),
                 uri,
                 name: relativePath,
                 collection: 'files',
+                type: 'file',
                 format,
                 source
             })
         break
-        case operations.OPERATION_UPDATE:
+        case constants.OPERATION_UPDATE:
             await updateEntity({
                 id: join('/files', relativePath),
                 uri,
                 name: relativePath,
                 collection: 'files',
+                type: 'file',
                 format,
                 source
             })
         break
-        case operations.OPERATION_DELETE:
+        case constants.OPERATION_DELETE:
             await unlink(join(mikser.options.outputFolder, relativePath))
             await deleteEntity({
                 id: join('/files', relativePath),
                 collection: 'files',
+                type: 'file',
             })
         break
     }
@@ -74,6 +77,7 @@ onImport(async () => {
             id: join('/files', relativePath),
             uri,
             collection: 'file',
+            type: 'file',
             format: extname(relativePath).substring(1).toLowerCase(),
             source
         })

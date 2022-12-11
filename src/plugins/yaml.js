@@ -1,9 +1,9 @@
-import { onProcess, useLogger, useOperations, operations } from '../index.js'
+import { onProcess, useLogger, useOperations, constants } from '../index.js'
 import YAML from 'yamljs'
 
 onProcess(() => {
     const logger = useLogger()
-    const entities = useOperations([operations.OPERATION_CREATE, operations.OPERATION_UPDATE])
+    const entities = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
     .map(operation => operation.entity)
     .filter(entity => entity.source && (entity.format == 'yml' || entity.format == 'yaml'))
 

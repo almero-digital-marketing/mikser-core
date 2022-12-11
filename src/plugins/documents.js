@@ -1,4 +1,4 @@
-import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, operations } from '../index.js'
+import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants } from '../index.js'
 import path from 'path'
 import { mkdir, readFile } from 'fs/promises'
 import { globby } from 'globby'
@@ -8,30 +8,33 @@ onSync(async ({ id, operation }) => {
     const relativePath = id.replace('/documents/', '')
     const uri = path.join(mikser.options.documentsFolder, relativePath)
     switch (operation) {
-        case operations.OPERATION_CREATE:
+        case constants.OPERATION_CREATE:
             await createEntity({
                 id,
                 uri,
                 name: relativePath.replace(path.extname(relativePath), ''),
                 collection: 'documents',
+                type: 'document',
                 format: path.extname(relativePath).substring(1).toLowerCase(),
                 source: await readFile(uri, 'utf8') 
             })
         break
-        case operations.OPERATION_UPDATE:
+        case constants.OPERATION_UPDATE:
             await updateEntity({
                 id,
                 uri,
                 name: relativePath.replace(path.extname(relativePath), ''),
                 collection: 'documents',
+                type: 'document',
                 format: path.extname(relativePath).substring(1).toLowerCase(),
                 source: await readFile(uri, 'utf8') 
             })
         break
-        case operations.OPERATION_DELETE:
+        case constants.OPERATION_DELETE:
             await deleteEntity({
                 id,
                 collection: 'documents',
+                type: 'document',
                 format: path.extname(relativePath).substring(1).toLowerCase(),
             })
         break
@@ -57,6 +60,7 @@ onImport(async () => {
             uri,
             name: relativePath.replace(path.extname(relativePath), ''),
             collection: 'documents',
+            type: 'document',
             format: path.extname(relativePath).substring(1).toLowerCase(),
             source: await readFile(uri, 'utf8') 
         })

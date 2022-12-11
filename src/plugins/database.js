@@ -1,4 +1,4 @@
-import { mikser, onLoaded, useLogger, onPersist, operations } from '../index.js'
+import { mikser, onLoaded, useLogger, onPersist, constants } from '../index.js'
 import path from 'path'
 import { mkdir } from 'fs/promises'
 import { Low } from 'lowdb'
@@ -25,11 +25,11 @@ onPersist(async () => {
     const logger = useLogger()
     for (let { operation, entity } of mikser.operations) {
         switch (operation) {
-            case operations.OPERATION_CREATE:
+            case constants.OPERATION_CREATE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
                 database.data.entities.push(entity)
             break
-            case operations.OPERATION_UPDATE:
+            case constants.OPERATION_UPDATE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
                 database
                 .chain
@@ -38,7 +38,7 @@ onPersist(async () => {
                 .set(entity)
                 .value()
             break
-            case operations.OPERATION_DELETE:
+            case constants.OPERATION_DELETE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
                 database
                 .chain
