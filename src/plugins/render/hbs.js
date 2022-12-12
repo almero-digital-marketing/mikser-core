@@ -17,15 +17,19 @@ export function load({ config }) {
         'string', 
         'url'
     ]))
-}
-
-export async function render({ context, runtime }) {
     for (let partial in context.layouts) {
         if (context.layouts[partial].tempalte == 'hbs' && partial.indexOf('partials') == 0) {
             const partialLayout = readFile(context.layouts[partial].uri, 'utf8')
             handlebars.registerPartial(partial, partialLayout)
         }
     }
+    runtime.hbs(source, sandbox => {
+        const tempalte = handlebars.compile(source)
+        return tempalte(sandbox)
+    })
+}
+
+export async function render({ entity, runtime }) {
     const sandbox = {}
     for (let helper in runtime) {
         if (typeof(runtime[helper]) == 'function') {
@@ -35,6 +39,5 @@ export async function render({ context, runtime }) {
         }
     }
     const source = await readFile(entity.layout.uri, 'utf8')
-    const tempalte = handlebars.compile(source)
-    return tempalte(sandbox)
+    return runtime.hbs(source, sandbox)
 }

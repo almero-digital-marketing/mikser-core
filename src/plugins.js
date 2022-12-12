@@ -37,7 +37,9 @@ onLoad(async () => {
         logger.info('Loading plugins: %s', plugins)
 
         for (let plugin of plugins) {
-            await loadPlugin(plugin)
+            if (plugin && plugin.indexOf('render-') != 0) {
+                await loadPlugin(plugin)
+            }
         }
     }
 })

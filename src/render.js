@@ -4,9 +4,9 @@ import path from 'path'
 export default async ({ entity, options, config, context }) => {
     async function loadPlugin(pluginName) {   
         const resolveLocations = [
-            path.join(options.workingFolder, 'node_modules', `mikser-core-render-${pluginName}/index.js`),
-            path.join(options.workingFolder, 'plugins', 'render', `${pluginName}.js`),
-            path.join(path.dirname(import.meta.url), 'plugins', 'render', `${pluginName}.js`)
+            path.join(options.workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
+            path.join(options.workingFolder, 'plugins', `${pluginName}.js`),
+            path.join(path.dirname(import.meta.url), 'plugins', `${pluginName}.js`)
         ]
         for (let resolveLocation of resolveLocations) {
             try {
@@ -21,19 +21,18 @@ export default async ({ entity, options, config, context }) => {
     }
 
     const plugins = {}
-    const pluginsToLoad = [...context.plugins || []]
+    let pluginsToLoad = [...context.plugins || []]
     if (entity.layout?.template) {
-        pluginsToLoad.push(entity.layout.template)
+        pluginsToLoad.push(`render-${entity.layout.template}`)
     }
     if (entity.meta?.plugins) {
         pluginsToLoad.push(...entity.meta.plugins)
     }
-    for (let pluginName of pluginsToLoad) {
-        const plugin = await loadPlugin(pluginName)
-        plugins[pluginName] = plugin
-        if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context })
-    }
+    options?.plugins && pluginsToLoad.push(...options.plugins)
+    config?.plugins && pluginsToLoad.push(...config.plugins)
 
+    pluginsToLoad = pluginsToLoad.filter(pluginName => pluginName && pluginName.indexOf('render-') == 0)
+    
     const runtime = {
         [entity.type]: entity,
         entity,
@@ -41,6 +40,13 @@ export default async ({ entity, options, config, context }) => {
         config: config[entity.layout.template],
         data: context.data,
     }
-    const renderer = plugins[entity.layout.template]
-    return await renderer.render({ entity, options, config, context, plugins, runtime })
+    
+    for (let pluginName of pluginsToLoad) {
+        const plugin = await loadPlugin(pluginName)
+        plugins[pluginName] = plugin
+        if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context, runtime })
+    }
+    
+    const renderer = plugins[`render-${entity.layout.template}`]
+    return await renderer?.render({ entity, options, config, context, plugins, runtime })
 }
