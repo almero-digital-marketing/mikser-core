@@ -5,11 +5,11 @@ onProcess(() => {
     const logger = useLogger()
     const entities = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
     .map(operation => operation.entity)
-    .filter(entity => entity.source && (entity.format == 'yml' || entity.format == 'yaml'))
+    .filter(entity => entity.content && (entity.format == 'yml' || entity.format == 'yaml'))
 
     for (let entity of entities) {
-        entity.meta = Object.assign(entity.meta || {}, YAML.parse(entity.source))
-        delete entity.source
+        entity.meta = Object.assign(entity.meta || {}, YAML.parse(entity.content))
+        delete entity.content
         logger.trace('Yaml %s: %s', entity.collection, entity.id)
     }
 })

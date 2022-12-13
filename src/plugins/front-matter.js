@@ -5,12 +5,12 @@ onProcess(() => {
     const logger = useLogger()
     const entities = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
     .map(operation => operation.entity)
-    .filter(entity => entity.source && fm.test(entity.source))
+    .filter(entity => entity.content && fm.test(entity.content))
 
     for (let entity of entities) {
-        const info = fm(entity.source)
+        const info = fm(entity.content)
         entity.meta = Object.assign(entity.meta, info.attributes)
-        entity.source = info.body
+        entity.content = info.body
         logger.trace('Front matter %s: %s', entity.collection, entity.id)
     }
 })

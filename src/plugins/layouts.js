@@ -1,6 +1,6 @@
 import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onProcessed, onBeforeRender, useOperations, renderEntity, onAfterRender, constants, onSync } from '../index.js'
 import path from 'path'
-import { mkdir, writeFile } from 'fs/promises'
+import { mkdir, writeFile, unlink } from 'fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
 import minimatch from 'minimatch'
@@ -16,7 +16,7 @@ function getFormatInfo(relativePath) {
 
 function addToSitemap(entity) {
     const logger = useLogger()
-    const { href = entity.name, lang } = entity.meta
+    const { href = entity.name, lang } = entity.meta || {}
     if (lang) {
         sitemap[href] = sitemap[href] || {};
         let previous = sitemap[href][lang];
@@ -143,10 +143,18 @@ onProcessed(async () => {
 
     for (let entity of entitiesToAdd) {
         if (!entity.meta?.layout) {
-            for (let pattern in mikser.config.layouts?.match) {
+            for (let pattern in mikser.config.layouts?.match || []) {
                 if (minimatch(pattern, entity.name)) {
                     entity.layout = mikser.config.layouts?.match[pattern]
                     break
+                }
+            }
+            if (!entity.layout) {
+                const autoLayout = entity.name?.split('.').slice(1).join('.')
+                if (layouts[autoLayout]) {
+                    entity.layout = layouts[autoLayout]
+                } else {
+                    continue
                 }
             }
         } else {
@@ -195,13 +203,13 @@ onBeforeRender(async () => {
                             pageEntity.meta.href = `${entity.meta.href}.${page}`
                         } 
 
-                        if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index')) {
-                            pageEntity.destination = path.join(entity.destination, `index.${pageData.page}.${entity.layout.format}`)
+                        if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
+                            pageEntity.destination = path.join(entity.destination, pageData.page, `index.${entity.layout.format}`)
                         } else {
                             pageEntity.destination += page ? `.${pageData.page}.html` : `.${entity.layout.format}`
                         }
                     } else {
-                        if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index')) {
+                        if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
                             pageEntity.destination = path.join(entity.destination, `index.${entity.layout.format}`)
                         } else {
                             pageEntity.destination += `.${entity.layout.format}`
@@ -212,7 +220,7 @@ onBeforeRender(async () => {
             }
         } else {
             if (!_.endsWith(entity.name, entity.format)) {
-                if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index')) {
+                if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
                     entity.destination = path.join(entity.destination, `index.${entity.layout.format}`)
                 } else {
                     entity.destination += `.${entity.layout.format}`
@@ -230,6 +238,9 @@ onAfterRender(async () => {
         if (result && entity.destination) {
             const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
             await mkdir(path.dirname(destinationFile), { recursive: true })
+            try {
+                await unlink(destinationFile)
+            } catch {}
             await writeFile(destinationFile, result)
             logger.info('Render finished: %s', entity.destination)
         }

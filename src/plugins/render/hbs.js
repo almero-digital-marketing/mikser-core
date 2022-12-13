@@ -2,7 +2,7 @@ import handlebars from 'handlebars'
 import helpers from 'handlebars-helpers'
 import { readFile } from 'fs/promises'
 
-export function load({ config }) {
+export function load({ config, runtime, context }) {
     handlebars.registerHelper(helpers(config?.helpers || [
         'array', 
         'collection',
@@ -23,10 +23,10 @@ export function load({ config }) {
             handlebars.registerPartial(partial, partialLayout)
         }
     }
-    runtime.hbs(source, sandbox => {
+    runtime.hbs = (source, sandbox) => {
         const tempalte = handlebars.compile(source)
         return tempalte(sandbox)
-    })
+    }
 }
 
 export async function render({ entity, runtime }) {
@@ -35,9 +35,10 @@ export async function render({ entity, runtime }) {
         if (typeof(runtime[helper]) == 'function') {
             handlebars.registerHelper(helper, runtime[helper])
         } else {
-            sandbox = runtime[helper]
+            sandbox[helper] = runtime[helper]
         }
     }
     const source = await readFile(entity.layout.uri, 'utf8')
-    return runtime.hbs(source, sandbox)
+    const result = runtime.hbs(source, sandbox)
+    return result
 }

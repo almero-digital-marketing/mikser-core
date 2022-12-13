@@ -16,7 +16,7 @@ onSync(async ({ id, operation }) => {
                 collection: 'documents',
                 type: 'document',
                 format: path.extname(relativePath).substring(1).toLowerCase(),
-                source: await readFile(uri, 'utf8') 
+                content: await readFile(uri, 'utf8') 
             })
         break
         case constants.OPERATION_UPDATE:
@@ -27,7 +27,7 @@ onSync(async ({ id, operation }) => {
                 collection: 'documents',
                 type: 'document',
                 format: path.extname(relativePath).substring(1).toLowerCase(),
-                source: await readFile(uri, 'utf8') 
+                content: await readFile(uri, 'utf8') 
             })
         break
         case constants.OPERATION_DELETE:
@@ -53,7 +53,7 @@ onLoaded(async () => {
 
 onImport(async () => {
     const paths = await globby('**/*', { cwd: mikser.options.documentsFolder })
-    for (let relativePath of paths) {
+    return Promise.all(paths.map(async relativePath => {
         const uri = path.join(mikser.options.documentsFolder, relativePath)
         await createEntity({
             id: path.join('/documents', relativePath),
@@ -62,7 +62,7 @@ onImport(async () => {
             collection: 'documents',
             type: 'document',
             format: path.extname(relativePath).substring(1).toLowerCase(),
-            source: await readFile(uri, 'utf8') 
+            content: await readFile(uri, 'utf8') 
         })
-    }
+    }))
 })

@@ -1,5 +1,5 @@
 import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants } from '../index.js'
-import { join, dirname, extname } from 'path'
+import { join, dirname, extname,  } from 'path'
 import { mkdir, symlink, unlink } from 'fs/promises'
 import { globby } from 'globby'
 
@@ -29,7 +29,7 @@ onSync(async ({ id, operation }) => {
             await createEntity({
                 id,
                 uri,
-                name: relativePath,
+                name: relativePath.replace(path.extname(relativePath), ''),
                 collection: 'files',
                 type: 'file',
                 format,
@@ -40,7 +40,7 @@ onSync(async ({ id, operation }) => {
             await updateEntity({
                 id,
                 uri,
-                name: relativePath,
+                name: relativePath.replace(path.extname(relativePath), ''),
                 collection: 'files',
                 type: 'file',
                 format,
@@ -71,7 +71,7 @@ onLoaded(async () => {
 onImport(async () => {
     await mkdir(mikser.options.outputFolder, { recursive: true }) 
     const paths = await globby('**/*', { cwd: mikser.options.filesFolder })
-    for (let relativePath of paths) {
+    return Promise.all(paths.map(async relativePath => {
         const { uri, source } = await ensureLink(relativePath)
         await createEntity({
             id: join('/files', relativePath),
@@ -79,7 +79,8 @@ onImport(async () => {
             collection: 'file',
             type: 'file',
             format: extname(relativePath).substring(1).toLowerCase(),
+            name: relativePath,
             source
         })
-    }
+    }))
 })
