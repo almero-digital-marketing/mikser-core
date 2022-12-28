@@ -60,11 +60,19 @@ export async function onAfterRender(callback) {
     Mikser.hooks.afterRender.push(callback)
 }
 
+export async function onFinalize(callback) {
+    Mikser.hooks.finalize.push(callback)
+}
+
+export async function onFinalized(callback) {
+    Mikser.hooks.finalized.push(callback)
+}
+
 export async function onSync(callback, collection) {
     if (collection) {
-        Mikser.hooks.sync.push(({ operation, id }) => {
+        Mikser.hooks.sync.push(async ({ operation, id }) => {
             if (id.indexOf('/' + collection) == 0) {
-                callback({ operation, id })
+                return await callback({ operation, id })
             }
         })
     } else {

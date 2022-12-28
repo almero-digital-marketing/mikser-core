@@ -1,8 +1,8 @@
 
-import { readFile } from 'fs/promises'
+import { readFileSync } from 'fs'
 import path from 'path'
 
-export default async ({ entity, options, config, context }) => {
+export default async ({ entity, renderer, options, config, context }) => {
     async function loadPlugin(pluginName) {   
         const resolveLocations = [
             path.join(options.workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
@@ -23,9 +23,7 @@ export default async ({ entity, options, config, context }) => {
 
     const plugins = {}
     let pluginsToLoad = [...context.plugins || []]
-    if (entity.layout?.template) {
-        pluginsToLoad.push(`render-${entity.layout.template}`)
-    }
+    pluginsToLoad.push(`render-${renderer}`)
     if (entity.meta?.plugins) {
         pluginsToLoad.push(...entity.meta.plugins)
     }
@@ -34,18 +32,15 @@ export default async ({ entity, options, config, context }) => {
 
     pluginsToLoad = pluginsToLoad.filter(pluginName => pluginName && pluginName.indexOf('render-') == 0)
     
-    if (!entity.meta) {
-        entity.meta = {
-            content: await readFile(entity.source, { encoding: 'utf8' })
-        }
-    }
-
     const runtime = {
         [entity.type]: entity,
         entity,
         plugins,
-        config: config[entity.layout.template],
+        config: config[renderer],
         data: context.data,
+        content() {
+            return readFileSync(entity.source, { encoding: 'utf8' })
+        }
     }
     
     for (let pluginName of pluginsToLoad) {
@@ -54,6 +49,6 @@ export default async ({ entity, options, config, context }) => {
         if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context, runtime })
     }
     
-    const renderer = plugins[`render-${entity.layout.template}`]
-    return await renderer?.render({ entity, options, config, context, plugins, runtime })
+    const rendererPlugin = plugins[`render-${renderer}`]
+    return await rendererPlugin?.render({ entity, options, config, context, plugins, runtime })
 }

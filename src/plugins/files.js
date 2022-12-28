@@ -1,13 +1,14 @@
-import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants } from '../index.js'
-import { join, dirname, extname,  } from 'path'
+import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants, findEntity } from '../index.js'
+import path from 'path'
 import { mkdir, symlink, unlink } from 'fs/promises'
 import { globby } from 'globby'
+import hasha from 'hasha'
 
 async function ensureLink(relativePath) {
-    const uri = join(mikser.options.outputFolder, relativePath)
-    const source = join(mikser.options.filesFolder, relativePath)
+    const uri = path.join(mikser.options.outputFolder, relativePath)
+    const source = path.join(mikser.options.filesFolder, relativePath)
     try {
-        await mkdir(dirname(uri), { recursive: true })
+        await mkdir(path.dirname(uri), { recursive: true })
         await symlink(source, uri, 'file')
     } catch (err) {
         if (err.code != 'EEXIST')
@@ -19,12 +20,14 @@ async function ensureLink(relativePath) {
 onSync(async ({ id, operation }) => {
     const relativePath = id.replace('/files/', '')
 
-    const uri = join(mikser.options.outputFolder, relativePath)
-    const source = join(mikser.options.filesFolder, relativePath)
-    const format = extname(relativePath).substring(1).toLowerCase()
-
+    const uri = path.join(mikser.options.outputFolder, relativePath)
+    const source = path.join(mikser.options.filesFolder, relativePath)
+    const format = path.extname(relativePath).substring(1).toLowerCase()
+    
+    let synced = true
     switch (operation) {
         case constants.OPERATION_CREATE:
+            var checksum = await hasha.fromFile(source, { algorithm: 'md5' })
             await ensureLink(relativePath)
             await createEntity({
                 id,
@@ -33,22 +36,30 @@ onSync(async ({ id, operation }) => {
                 collection: 'files',
                 type: 'file',
                 format,
-                source
+                source,
+                checksum
             })
         break
         case constants.OPERATION_UPDATE:
-            await updateEntity({
-                id,
-                uri,
-                name: relativePath.replace(path.extname(relativePath), ''),
-                collection: 'files',
-                type: 'file',
-                format,
-                source
-            })
+            const current = await findEntity({ id })
+            var checksum = await hasha.fromFile(source, { algorithm: 'md5' })
+            if (current.checksum != checksum) {
+                await updateEntity({
+                    id,
+                    uri,
+                    name: relativePath.replace(path.extname(relativePath), ''),
+                    collection: 'files',
+                    type: 'file',
+                    format,
+                    source,
+                    checksum
+                })
+            } else {
+                synced = false
+            }
         break
         case constants.OPERATION_DELETE:
-            await unlink(join(mikser.options.outputFolder, relativePath))
+            await unlink(path.join(mikser.options.outputFolder, relativePath))
             await deleteEntity({
                 id,
                 collection: 'files',
@@ -56,11 +67,12 @@ onSync(async ({ id, operation }) => {
             })
         break
     }
-})
+    return synced
+}, 'files')
 
 onLoaded(async () => {
     const logger = useLogger()
-    mikser.options.filesFolder = mikser.config.files?.folder || join(mikser.options.workingFolder, 'files')
+    mikser.options.filesFolder = mikser.config.files?.filesFolder || path.join(mikser.options.workingFolder, 'files')
 
     logger.info('Files: %s', mikser.options.filesFolder)
     await mkdir(mikser.options.filesFolder, { recursive: true })
@@ -73,14 +85,17 @@ onImport(async () => {
     const paths = await globby('**/*', { cwd: mikser.options.filesFolder })
     return Promise.all(paths.map(async relativePath => {
         const { uri, source } = await ensureLink(relativePath)
+        const checksum = await hasha.fromFile(source, { algorithm: 'md5' })
+
         await createEntity({
-            id: join('/files', relativePath),
+            id: path.join('/files', relativePath),
             uri,
-            collection: 'file',
+            collection: 'files',
             type: 'file',
-            format: extname(relativePath).substring(1).toLowerCase(),
+            format: path.extname(relativePath).substring(1).toLowerCase(),
             name: relativePath,
-            source
+            source,
+            checksum
         })
     }))
 })

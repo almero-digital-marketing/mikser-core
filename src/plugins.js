@@ -14,7 +14,7 @@ export async function loadPlugin(pluginName) {
             const plugin = await import(resolveLocation)
             const pluginRuntime = Object.keys(plugin)
             if (pluginRuntime.length) {
-                Object.assign(mikser.runtime, plugin)
+                mikser.runtime[pluginName] = plugin
                 logger.trace('Loaded %s plugin: %s', pluginName, pluginRuntime)
             } else {
                 logger.trace('Loaded %s plugin', pluginName)
@@ -27,19 +27,23 @@ export async function loadPlugin(pluginName) {
     logger.error('Plugin not found: %s', pluginName)
 }
 
+export function userPlugins(filter) {
+    const plugins = mikser.options.plugins.concat(mikser.config.plugins)
+    if (!filter) return plugins
+    return plugins.filter(plugin => plugin && filter(plugin))
+}
+
 onLoad(async () => {
     const logger = useLogger()
 
-    const plugins = mikser.options.plugins.concat(mikser.config.plugins)
+    const plugins = userPlugins(plugin => plugin.indexOf('render-') != 0)
     if (!plugins.length) {
         logger.info('No plugins loaded')
     } else {
         logger.info('Loading plugins: %s', plugins)
 
         for (let plugin of plugins) {
-            if (plugin && plugin.indexOf('render-') != 0) {
-                await loadPlugin(plugin)
-            }
+            await loadPlugin(plugin)
         }
     }
 })

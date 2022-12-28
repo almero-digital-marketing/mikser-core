@@ -1,19 +1,11 @@
-import { mikser, onLoaded, useLogger, onPersist, constants } from '../index.js'
-import path from 'path'
-import { mkdir } from 'fs/promises'
-import { Low } from 'lowdb'
-import { JSONFile } from 'lowdb/node'
+import { mikser, onLoaded, useLogger, onPersist, constants } from './index.js'
+import { Low, Memory } from 'lowdb'
 import _ from 'lodash'
 
 let database
 
 onLoaded(async () => {
-    const logger = useLogger()
-    mikser.options.databaseFolder = path.join(mikser.options.runtimeFolder, 'database')
-    await mkdir(mikser.options.databaseFolder, { recursive: true })
-    const databaseFile = path.join(mikser.options.databaseFolder, 'db.json')
-    logger.debug('Database: %s', databaseFile)
-    const adapter = new JSONFile(databaseFile)
+    const adapter = new Memory()
     database = new Low(adapter)
     database.data = {
         entities: []
@@ -48,10 +40,10 @@ onPersist(async () => {
             break
         }
     }
-    await database.write()
 })
 
 export async function findEntity(query) {
+    if (!query) return
     return database
     .chain
     .get('entities')
@@ -60,6 +52,9 @@ export async function findEntity(query) {
 }
 
 export async function findEntities(query) {
+    if (!query) {
+        return database.chain.get('entities').value()
+    }
     return database
     .chain
     .get('entities')
@@ -67,6 +62,6 @@ export async function findEntities(query) {
     .value()
 }
 
-export {
-    database
+export function useDatabase() {
+    return database
 }

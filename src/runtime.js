@@ -1,15 +1,12 @@
 import pino from 'pino'
 import path from 'path'
 import { Command } from 'commander'
-import { mikser, onInitialize, onInitialized, onRender, onCancel, constants } from './index.js'
+import { mikser, onInitialize, onInitialized, onRender, onCancel, onFinalized, constants } from './index.js'
 import { rmdir } from 'fs/promises'
 import _ from 'lodash'
 import Piscina from 'piscina'
 import { AbortController } from 'abort-controller'
 import chokidar from 'chokidar'
-
-import './config.js'
-import './plugins.js'
 
 export function useLogger() {
     return mikser.runtime.logger
@@ -86,8 +83,8 @@ export async function run(options) {
         const { signal } = abortController
         await Promise.all(entitiesToRender.map(async operation => {
             try {
-                const { entity, context } = operation
-                operation.result = await render(entity, context, signal)
+                const { entity, renderer, context } = operation
+                operation.result = await render(entity, renderer, context, signal)
             } catch (err) {
                 if (err.name != 'AbortError') {
                     logger.error(err, 'Render error')
@@ -100,6 +97,11 @@ export async function run(options) {
 
     onCancel(async () => {
         abortController?.abort()
+    })
+
+    onFinalized(() => {
+        const logger = useLogger()
+        logger.info('Mikser completed')
     })
        
     console.info('Mikser: %s', version)
@@ -118,10 +120,10 @@ export async function createEntity(entity) {
     mikser.operations.push({ operation: constants.OPERATION_CREATE, entity })
 }
 
-export async function deleteEntity({ id, type }) {
+export async function deleteEntity({ id, collection, type }) {
     const logger = useLogger()
-    logger.debug('Delete %s entity: %s', collection, id)
-    mikser.operations.push({ operation: constants.OPERATION_DELETE, entity: { id, type } })
+    logger.debug('Delete %s entity: %s %s', collection, type, id)
+    mikser.operations.push({ operation: constants.OPERATION_DELETE, entity: { id, type, collection } })
 }
 
 export async function updateEntity(entity) {
@@ -131,34 +133,20 @@ export async function updateEntity(entity) {
     mikser.operations.push({ operation: constants.OPERATION_UPDATE, entity })
 }
 
-export async function renderEntity(entity, context) {
+export async function renderEntity(entity, renderer, context = {}) {
     const logger = useLogger()
-    logger.info('Render %s entity: %s → %s', entity.collection, entity.id, entity.destination)
-    mikser.operations.push({ operation: constants.OPERATION_RENDER, entity, context })
+    logger.info('Render %s entity: [%s] %s → %s', entity.collection, renderer, entity.id, entity.destination)
+    mikser.operations.push({ operation: constants.OPERATION_RENDER, entity, renderer, context })
 }
 
-export async function render(entity, context, signal) {
+export async function render(entity, renderer, context, signal) {
     return await mikser.runtime.renderPool.run({ 
         entity,
+        renderer,
         options: mikser.options,
         config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render')),
         context
     }, { signal })
-}
-
-export function detectFeatures(features) {
-    const available = Object.keys(mikser.runtime)
-    const missing = []
-    for(let feature of features) {
-        if (!available.indexOf(feature)) {
-            missing.push(feature)
-        }
-    }
-    const logger = useLogger()
-    if (missing.length) {
-        logger.error('Missing features: %s', missing)
-    }
-    return !missing.length
 }
 
 export function watchEntities(collection, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true }) {
@@ -169,32 +157,38 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
     })
     .on('add', async fullPath => {
         const relativePath = fullPath.replace(folder, '')
-        await mikser.sync({
+        const synced = await mikser.sync({
             operation: constants.OPERATION_CREATE, 
             id: path.join(`/${collection}`, relativePath)
         })
 
-        clearTimeout(mikser.runtime.processTimeout)
-        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        if (synced) {
+            clearTimeout(mikser.runtime.processTimeout)
+            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        }
     })
     .on('change', async fullPath => {
         const relativePath = fullPath.replace(folder, '')
-        await mikser.sync({
+        const synced = await mikser.sync({
             operation: constants.OPERATION_UPDATE, 
             id: path.join(`/${collection}`, relativePath)
         })
 
-        clearTimeout(mikser.runtime.processTimeout)
-        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        if (synced) {
+            clearTimeout(mikser.runtime.processTimeout)
+            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        }
     })
     .on('unlink', async fullPath => {
         const relativePath = fullPath.replace(folder, '')
-        await mikser.sync({
+        const synced = await mikser.sync({
             operation: constants.OPERATION_DELETE, 
             id: path.join(`/${collection}`, relativePath)
         })
 
-        clearTimeout(mikser.runtime.processTimeout)
-        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        if (synced) {
+            clearTimeout(mikser.runtime.processTimeout)
+            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        }
     })
 }

@@ -1,7 +1,7 @@
 import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants } from '../index.js'
 import path from 'path'
 import { mkdir, readFile } from 'fs/promises'
-import { globby } from 'globby'
+import { globby, globbySync } from 'globby'
 import _ from 'lodash'
 
 onSync(async ({ id, operation }) => {
@@ -43,12 +43,16 @@ onSync(async ({ id, operation }) => {
 
 onLoaded(async () => {
     const logger = useLogger()
-    mikser.options.documentsFolder = mikser.config.documents?.folder || path.join(mikser.options.workingFolder, 'documents')
+    mikser.options.documentsFolder = mikser.config.documents?.documentsFolder || path.join(mikser.options.workingFolder, 'documents')
 
     logger.info('Documents: %s', mikser.options.documentsFolder)
     await mkdir(mikser.options.documentsFolder, { recursive: true })
     
     watchEntities('documents', mikser.options.documentsFolder)
+
+    console.log(globbySync('*', {
+        expandDirectories: true
+    }))
 })
 
 onImport(async () => {

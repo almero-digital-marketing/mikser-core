@@ -68,6 +68,17 @@ export default class Mikser {
         this.operations = []
     }
     static async sync(operation) {
-        for(let hook of this.hooks.sync) await hook(operation)
+        let synced
+        for(let hook of this.hooks.sync) {
+            const result = await hook(operation)
+            if (result === true) {
+                synced = true
+            } else if (result === false) {
+                if (!synced) {
+                    synced = false
+                }
+            }
+        }
+        return synced === undefined || synced
     }
 }

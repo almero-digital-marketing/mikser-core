@@ -105,11 +105,11 @@ onSync(async ({ id, operation }) => {
             await deleteEntity(layout)
         break
     }
-})
+}, 'layouts')
 
 onLoaded(async () => {
     const logger = useLogger()
-    mikser.options.layoutsFolder = mikser.config.layouts?.folder || path.join(mikser.options.workingFolder, 'layouts')
+    mikser.options.layoutsFolder = mikser.config.layouts?.layoutsFolder || path.join(mikser.options.workingFolder, 'layouts')
 
     logger.info('Layouts: %s', mikser.options.layoutsFolder)
     await mkdir(mikser.options.layoutsFolder, { recursive: true })
@@ -127,8 +127,8 @@ onImport(async () => {
             name: relativePath.replace(path.extname(relativePath), ''),
             collection: 'layouts',
             type: 'layout',
-            ...getFormatInfo(relativePath)
         }
+        Object.assign(layout, await getFormatInfo(relativePath))
         layouts[layout.name] = layout
         await createEntity(layout)
     }
@@ -140,7 +140,6 @@ onProcessed(async () => {
     const entitiesToAdd = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
     .map(operation => operation.entity)
     .filter(entity => entity.collection != 'layouts')
-
     for (let entity of entitiesToAdd) {
         if (!entity.meta?.layout) {
             for (let pattern in mikser.config.layouts?.match || []) {
@@ -165,7 +164,7 @@ onProcessed(async () => {
             logger.debug('Layout matched for %s: %s', entity.collection, entity.id)
             addToSitemap(entity)
         } else {
-            logger.debug('Layout missing for %s: %s', entity.collection, entity.id)
+            logger.trace('Layout missing for %s: %s', entity.collection, entity.id)
         }
     }
 
@@ -178,9 +177,10 @@ onProcessed(async () => {
 })
 
 onBeforeRender(async () => {
-    let entities = getSitemapEntities()
+    const entities = getSitemapEntities()
     if (entities.length) mikser.cancel()
-    for (let entity of entities) {
+    for (let original of entities) {
+        const entity = _.cloneDeep(original)
         entity.destination = '/' + entity.name
         try {
             var { load, plugins = [] } = await import(entity.layout.uri + '.js')
@@ -215,7 +215,7 @@ onBeforeRender(async () => {
                             pageEntity.destination += `.${entity.layout.format}`
                         }
                     }
-                    await renderEntity(pageEntity, { data: pageData, sitemap, layouts, plugins })
+                    await renderEntity(pageEntity, entity.layout.template, { data: pageData, sitemap, layouts, plugins })
                 }
             }
         } else {
@@ -226,7 +226,7 @@ onBeforeRender(async () => {
                     entity.destination += `.${entity.layout.format}`
                 }
             }
-            await renderEntity(entity, { data, sitemap, layouts, plugins })
+            await renderEntity(entity, entity.layout.template, { data, sitemap, layouts, plugins })
         }
     }
 })
@@ -235,14 +235,14 @@ onAfterRender(async () => {
     const logger = useLogger()
     const entitiesToRender = useOperations(['render'])
     for(let { result, entity } of entitiesToRender) {
-        if (result && entity.destination) {
+        if (result && entity.layout) {
             const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
             await mkdir(path.dirname(destinationFile), { recursive: true })
             try {
                 await unlink(destinationFile)
             } catch {}
             await writeFile(destinationFile, result)
-            logger.info('Render finished: %s', entity.destination)
+            logger.info('Render finished: %s', entity.destination.replace(mikser.options.workingFolder, ''))
         }
     }
 })
