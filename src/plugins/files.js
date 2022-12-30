@@ -1,5 +1,5 @@
 import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants, findEntity } from '../index.js'
-import path from 'path'
+import path from 'node:path'
 import { mkdir, symlink, unlink } from 'fs/promises'
 import { globby } from 'globby'
 import hasha from 'hasha'

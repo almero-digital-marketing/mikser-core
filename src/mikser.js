@@ -38,6 +38,8 @@ export default class Mikser {
         await this.process()
     }
     static async process() {
+        await this.cancel()
+
         for(let hook of this.hooks.process) await hook()
         for(let hook of this.hooks.processed) await hook()
 
@@ -47,8 +49,6 @@ export default class Mikser {
         await this.render()
     }
     static async render() {
-        await this.cancel()
-
         for(let hook of this.hooks.beforeRender) await hook()
         for(let hook of this.hooks.render) await hook()
         for(let hook of this.hooks.afterRender) await hook()
@@ -58,8 +58,6 @@ export default class Mikser {
     static async cancel() {
         for(let hook of this.hooks.cancel) await hook()
         for(let hook of this.hooks.cancelled) await hook()
-        
-        this.operations = []
     }
     static async finalize() {
         for(let hook of this.hooks.finalize) await hook()
@@ -73,10 +71,8 @@ export default class Mikser {
             const result = await hook(operation)
             if (result === true) {
                 synced = true
-            } else if (result === false) {
-                if (!synced) {
-                    synced = false
-                }
+            } else if (result === false && !synced) {
+				synced = false
             }
         }
         return synced === undefined || synced

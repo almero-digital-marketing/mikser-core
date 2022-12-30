@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { readFileSync } from 'node:fs'
 import { globby } from 'globby'
 
 export function load({ runtime }) {

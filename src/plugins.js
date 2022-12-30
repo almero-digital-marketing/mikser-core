@@ -1,5 +1,5 @@
 import { mikser, onLoad, useLogger } from './index.js'
-import path from 'path'
+import path from 'node:path'
 
 export async function loadPlugin(pluginName) {
     const logger = useLogger()

@@ -1,8 +1,8 @@
 
-import { readFileSync } from 'fs'
-import path from 'path'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 
-export default async ({ entity, renderer, options, config, context }) => {
+export default async ({ entity, renderer, options, config, context, state }) => {
     async function loadPlugin(pluginName) {   
         const resolveLocations = [
             path.join(options.workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
@@ -36,7 +36,7 @@ export default async ({ entity, renderer, options, config, context }) => {
         [entity.type]: entity,
         entity,
         plugins,
-        config: config[renderer],
+        config: config[`render-${renderer}`],
         data: context.data,
         content() {
             return readFileSync(entity.source, { encoding: 'utf8' })
@@ -46,9 +46,9 @@ export default async ({ entity, renderer, options, config, context }) => {
     for (let pluginName of pluginsToLoad) {
         const plugin = await loadPlugin(pluginName)
         plugins[pluginName] = plugin
-        if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context, runtime })
+        if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context, runtime, state })
     }
     
     const rendererPlugin = plugins[`render-${renderer}`]
-    return await rendererPlugin?.render({ entity, options, config, context, plugins, runtime })
+    return await rendererPlugin?.render({ entity, options, config, context, plugins, runtime, state })
 }

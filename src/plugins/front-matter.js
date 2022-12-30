@@ -9,8 +9,10 @@ onProcess(() => {
 
     for (let entity of entities) {
         const info = fm(entity.content)
-        entity.meta = Object.assign(entity.meta, info.attributes)
-        entity.content = info.body
-        logger.trace('Front matter %s: %s', entity.collection, entity.id)
+        if (info.attributes) {
+            entity.meta = Object.assign(entity.meta || {}, info.attributes)
+            entity.content = info.body
+            logger.trace('Front matter %s: %s', entity.collection, entity.id)
+        }
     }
 })

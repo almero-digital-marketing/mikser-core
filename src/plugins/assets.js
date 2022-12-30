@@ -1,12 +1,9 @@
 import { mikser, onLoaded, useLogger, onImport, watchEntities, onProcessed, onBeforeRender, useOperations, renderEntity, onAfterRender, constants, onSync, onFinalize, findEntities, userPlugins } from '../index.js'
-import path from 'path'
+import path from 'node:path'
 import { mkdir, writeFile, unlink, rm, readFile, symlink } from 'fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
 import minimatch from 'minimatch'
-
-let presets = {}
-let assetsMap = {}
 
 async function getEntityPresets(entity) {
     const entityPresets = []
@@ -41,6 +38,11 @@ async function isPresetRendered(entity) {
 
 onLoaded(async () => {
     const logger = useLogger()
+	
+	mikser.state.assets = {
+		presets: {},
+		assetsMap: {}
+	}
 
     mikser.options.presetsFolder = mikser.config.assets?.presetsFolder || path.join(mikser.options.workingFolder, 'presets')
     logger.info('Presets: %s', mikser.options.presetsFolder)
@@ -50,11 +52,22 @@ onLoaded(async () => {
     logger.info('Assets: %s', mikser.options.assetsFolder)
     await mkdir(mikser.options.assetsFolder, { recursive: true })
 
+    const uri = path.join(mikser.options.outputFolder, 'assets')
+    try {
+        await mkdir(mikser.options.outputFolder, { recursive: true }) 
+        await symlink(mikser.options.assetsFolder, uri, 'dir')
+    } catch (err) {
+        if (err.code != 'EEXIST')
+        throw err
+    }
+
     watchEntities('presets', mikser.options.presetsFolder)
 })
 
 onSync(async ({ id, operation }) => {
     const logger = useLogger()
+	const { presets } = mikser.state.assets
+	
     const relativePath = id.replace('/presets/', '')
     const name = relativePath.replace(path.extname(relativePath), '')
     let synced = true
@@ -89,6 +102,8 @@ onSync(async ({ id, operation }) => {
 
 onImport(async () => {
     const logger = useLogger()
+	const { presets } = mikser.state.assets
+	
     const paths = await globby('*.js', { cwd: mikser.options.presetsFolder })
     for (let relativePath of paths) {
         const uri = path.join(mikser.options.presetsFolder, relativePath)
@@ -106,20 +121,12 @@ onImport(async () => {
             logger.error(err, 'Preset loading error: %s', uri)
         }
     }
-
-    const uri = path.join(mikser.options.outputFolder, 'assets')
-    try {
-        await mkdir(mikser.options.outputFolder, { recursive: true }) 
-        await symlink(mikser.options.assetsFolder, uri, 'dir')
-    } catch (err) {
-        if (err.code != 'EEXIST')
-        throw err
-    }
-
 })
 
 onProcessed(async () => {
     const logger = useLogger()
+	const { assetsMap } = mikser.state.assets
+	
     const entitiesToAdd = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
     .map(operation => operation.entity)
     for (let entity of entitiesToAdd) {
@@ -139,6 +146,8 @@ onProcessed(async () => {
 
 onBeforeRender(async () => {
     const entities = await findEntities()
+	const { presets, assetsMap } = mikser.state.assets
+	
     for (let original of entities) {
         for (let entityPreset of assetsMap[original.id] || []) {
             const entity = _.cloneDeep(original)
@@ -170,6 +179,8 @@ onAfterRender(async () => {
 
 onFinalize(async () => {
     const logger = useLogger()
+	const { presets } = mikser.state.assets
+	
     let revisions = await globby('**/*.md5', { cwd: mikser.options.assetsFolder })
     for (let revision of revisions) {
         const [preset] = revision.split(path.sep)

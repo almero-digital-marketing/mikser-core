@@ -1,12 +1,9 @@
 import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onProcessed, onBeforeRender, useOperations, renderEntity, onAfterRender, constants, onSync } from '../index.js'
-import path from 'path'
+import path from 'node:path'
 import { mkdir, writeFile, unlink } from 'fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
 import minimatch from 'minimatch'
-
-let sitemap = {}
-let layouts = {}
 
 function getFormatInfo(relativePath) {
     const template = path.extname(relativePath).substring(1).toLowerCase()
@@ -16,6 +13,7 @@ function getFormatInfo(relativePath) {
 
 function addToSitemap(entity) {
     const logger = useLogger()
+	const { sitemap } = mikser.state.layouts
     const { href = entity.name, lang } = entity.meta || {}
     if (lang) {
         sitemap[href] = sitemap[href] || {};
@@ -35,6 +33,7 @@ function addToSitemap(entity) {
 }
 
 function removeFromSitemap(entity) {
+	const { sitemap } = mikser.state.layouts
     for (let href in sitemap) {
         let entry = sitemap[href]
         if (entry.id == entity.id) {
@@ -48,6 +47,7 @@ function removeFromSitemap(entity) {
 }
 
 export function* getSitemapEntities() {
+	const { sitemap } = mikser.state.layouts
     for (let href in sitemap) {
         let entry = sitemap[href]
         if (entry.id) {
@@ -65,6 +65,7 @@ onSync(async ({ id, operation }) => {
 
     const relativePath = id.replace('/layouts/', '')
     const uri = path.join(mikser.options.layoutsFolder, relativePath)
+	const { layouts } = mikser.state.layouts
     switch (operation) {
         case constants.OPERATION_CREATE:
             var layout = {
@@ -109,6 +110,12 @@ onSync(async ({ id, operation }) => {
 
 onLoaded(async () => {
     const logger = useLogger()
+	
+	mikser.state.layouts = {
+		layouts: {},
+		sitemap: {}
+	}
+	
     mikser.options.layoutsFolder = mikser.config.layouts?.layoutsFolder || path.join(mikser.options.workingFolder, 'layouts')
 
     logger.info('Layouts: %s', mikser.options.layoutsFolder)
@@ -118,6 +125,7 @@ onLoaded(async () => {
 })
 
 onImport(async () => {
+	const { layouts } = mikser.state.layouts
     const paths = await globby('**/*', { cwd: mikser.options.layoutsFolder, ignore: '**/*.js' })
     for (let relativePath of paths) {
         const uri = path.join(mikser.options.layoutsFolder, relativePath)
@@ -136,7 +144,8 @@ onImport(async () => {
 
 onProcessed(async () => {
     const logger = useLogger()
-
+	const { layouts } = mikser.state.layouts
+	
     const entitiesToAdd = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
     .map(operation => operation.entity)
     .filter(entity => entity.collection != 'layouts')
@@ -215,7 +224,7 @@ onBeforeRender(async () => {
                             pageEntity.destination += `.${entity.layout.format}`
                         }
                     }
-                    await renderEntity(pageEntity, entity.layout.template, { data: pageData, sitemap, layouts, plugins })
+                    await renderEntity(pageEntity, entity.layout.template, { data: pageData, plugins })
                 }
             }
         } else {
@@ -226,7 +235,7 @@ onBeforeRender(async () => {
                     entity.destination += `.${entity.layout.format}`
                 }
             }
-            await renderEntity(entity, entity.layout.template, { data, sitemap, layouts, plugins })
+            await renderEntity(entity, entity.layout.template, { data, plugins })
         }
     }
 })
@@ -246,8 +255,3 @@ onAfterRender(async () => {
         }
     }
 })
-
-export {
-    sitemap,
-    layouts
-}

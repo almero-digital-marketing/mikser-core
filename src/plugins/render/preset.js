@@ -3,7 +3,7 @@ export async function load({ entity, runtime }) {
     runtime.preset = preset.default
 }
 
-export async function render({ entity, options, config, context, plugins, runtime }) {
-    await runtime.preset({ entity, options, config, context, plugins, runtime })
+export async function render({ entity, options, config, context, plugins, runtime, state }) {
+    await runtime.preset({ entity, options, config, context, plugins, runtime, state })
     return entity.destination
 }

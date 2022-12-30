@@ -1,5 +1,5 @@
 import pino from 'pino'
-import path from 'path'
+import path from 'node:path'
 import { Command } from 'commander'
 import { mikser, onInitialize, onInitialized, onRender, onCancel, onFinalized, constants } from './index.js'
 import { rmdir } from 'fs/promises'
@@ -29,6 +29,7 @@ export async function run(options) {
             filename: new URL('./render.js', import.meta.url).href
         })
     }
+	mikser.state = {}
     
     onInitialize(async () => {
         mikser.runtime.commander?.version(version)
@@ -90,7 +91,7 @@ export async function run(options) {
                     logger.error(err, 'Render error')
                     throw err
                 }
-                logger.trace('Render canceled:', entity.id)    
+                logger.trace('Render canceled')    
             } 
         }))
     })
@@ -101,7 +102,7 @@ export async function run(options) {
 
     onFinalized(() => {
         const logger = useLogger()
-        logger.info('Mikser completed')
+        logger.info('Render completed')
     })
        
     console.info('Mikser: %s', version)
@@ -144,8 +145,9 @@ export async function render(entity, renderer, context, signal) {
         entity,
         renderer,
         options: mikser.options,
-        config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render')),
-        context
+        config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
+        context,
+		state: mikser.state
     }, { signal })
 }
 

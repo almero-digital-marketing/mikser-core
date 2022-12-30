@@ -1,5 +1,5 @@
 import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants } from '../index.js'
-import path from 'path'
+import path from 'node:path'
 import { mkdir, readFile } from 'fs/promises'
 import { globby, globbySync } from 'globby'
 import _ from 'lodash'
