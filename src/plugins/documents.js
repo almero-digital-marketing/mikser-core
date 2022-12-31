@@ -45,18 +45,17 @@ onLoaded(async () => {
     const logger = useLogger()
     mikser.options.documentsFolder = mikser.config.documents?.documentsFolder || path.join(mikser.options.workingFolder, 'documents')
 
-    logger.info('Documents: %s', mikser.options.documentsFolder)
+    logger.info('Documents folder: %s', mikser.options.documentsFolder)
     await mkdir(mikser.options.documentsFolder, { recursive: true })
     
     watchEntities('documents', mikser.options.documentsFolder)
-
-    console.log(globbySync('*', {
-        expandDirectories: true
-    }))
 })
 
 onImport(async () => {
+    const logger = useLogger()
     const paths = await globby('**/*', { cwd: mikser.options.documentsFolder })
+    logger.info('Importing documents: %d', paths.length)
+
     return Promise.all(paths.map(async relativePath => {
         const uri = path.join(mikser.options.documentsFolder, relativePath)
         await createEntity({

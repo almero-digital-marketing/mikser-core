@@ -37,6 +37,7 @@
     "pino": "^8.7.0",
     "pino-pretty": "^9.1.1",
     "piscina": "^3.2.0",
+    "truncate-stream": "^1.0.2",
     "yamljs": "^0.3.0"
   }
 }

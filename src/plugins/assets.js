@@ -27,7 +27,7 @@ async function isPresetRendered(entity) {
     const revisions = await getRevisions(entity)
     for (let revision of revisions) {
         const [assetsRevision] = revision.split('.').slice(-2,-1)
-        if (entity.preset.revision <= assetsRevision) {
+        if (entity.preset.revision <= Number.parseInt(assetsRevision)) {
             let checksum = await readFile(revision, 'utf8')
             result ||= checksum == entity.checksum
             if (result) break
@@ -45,11 +45,11 @@ onLoaded(async () => {
 	}
 
     mikser.options.presetsFolder = mikser.config.assets?.presetsFolder || path.join(mikser.options.workingFolder, 'presets')
-    logger.info('Presets: %s', mikser.options.presetsFolder)
+    logger.info('Presets folder: %s', mikser.options.presetsFolder)
     await mkdir(mikser.options.presetsFolder, { recursive: true })
 
     mikser.options.assetsFolder = mikser.config.assets?.assetsFolder || path.join(mikser.options.workingFolder, 'assets')
-    logger.info('Assets: %s', mikser.options.assetsFolder)
+    logger.info('Assets folder: %s', mikser.options.assetsFolder)
     await mkdir(mikser.options.assetsFolder, { recursive: true })
 
     const uri = path.join(mikser.options.outputFolder, 'assets')
@@ -145,9 +145,12 @@ onProcessed(async () => {
 })
 
 onBeforeRender(async () => {
+    const logger = useLogger()
     const entities = await findEntities()
 	const { presets, assetsMap } = mikser.state.assets
+    logger.info('Processing assets: %d', Object.keys(assetsMap).length)
 	
+    const presetRenders = {}
     for (let original of entities) {
         for (let entityPreset of assetsMap[original.id] || []) {
             const entity = _.cloneDeep(original)
@@ -157,8 +160,12 @@ onBeforeRender(async () => {
                 entityName = entity.name.replace(`.${entity.format}`, `.${entity.preset.format}`)
             }
             entity.destination = path.join(mikser.options.assetsFolder, entityPreset, entityName)
-            if (!await isPresetRendered(entity)) {
-                await renderEntity(entity, 'preset')
+            if (!presetRenders[entity.destination]) {
+                presetRenders[entity.destination] = true
+
+                if (!await isPresetRendered(entity)) {
+                    await renderEntity(entity, 'preset')
+                }
             }
         }
     }

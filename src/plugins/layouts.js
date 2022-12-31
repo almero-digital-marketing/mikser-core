@@ -1,6 +1,6 @@
 import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onProcessed, onBeforeRender, useOperations, renderEntity, onAfterRender, constants, onSync } from '../index.js'
 import path from 'node:path'
-import { mkdir, writeFile, unlink } from 'fs/promises'
+import { mkdir, writeFile, unlink } from 'node:fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
 import minimatch from 'minimatch'
@@ -46,7 +46,7 @@ function removeFromSitemap(entity) {
     }
 }
 
-export function* getSitemapEntities() {
+function* getSitemapEntities() {
 	const { sitemap } = mikser.state.layouts
     for (let href in sitemap) {
         let entry = sitemap[href]
@@ -118,7 +118,7 @@ onLoaded(async () => {
 	
     mikser.options.layoutsFolder = mikser.config.layouts?.layoutsFolder || path.join(mikser.options.workingFolder, 'layouts')
 
-    logger.info('Layouts: %s', mikser.options.layoutsFolder)
+    logger.info('Layouts folder: %s', mikser.options.layoutsFolder)
     await mkdir(mikser.options.layoutsFolder, { recursive: true })
     
     watchEntities('layouts', mikser.options.layoutsFolder)

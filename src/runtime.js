@@ -136,12 +136,13 @@ export async function updateEntity(entity) {
 
 export async function renderEntity(entity, renderer, context = {}) {
     const logger = useLogger()
-    logger.info('Render %s entity: [%s] %s → %s', entity.collection, renderer, entity.id, entity.destination)
+    logger.debug('Render %s entity: [%s] %s → %s', entity.collection, renderer, entity.id, entity.destination)
     mikser.operations.push({ operation: constants.OPERATION_RENDER, entity, renderer, context })
 }
 
 export async function render(entity, renderer, context, signal) {
-    return await mikser.runtime.renderPool.run({ 
+    const logger = useLogger()
+    const result = await mikser.runtime.renderPool.run({ 
         entity,
         renderer,
         options: mikser.options,
@@ -149,6 +150,8 @@ export async function render(entity, renderer, context, signal) {
         context,
 		state: mikser.state
     }, { signal })
+    logger.info('Rendered %s: [%s] %s', entity.type, renderer, entity.destination)
+    return result
 }
 
 export function watchEntities(collection, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true }) {

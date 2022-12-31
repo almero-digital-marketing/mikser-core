@@ -1,8 +1,7 @@
-import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants, findEntity } from '../index.js'
+import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants, findEntity, checksum } from '../index.js'
 import path from 'node:path'
 import { mkdir, symlink, unlink } from 'fs/promises'
 import { globby } from 'globby'
-import hasha from 'hasha'
 
 async function ensureLink(relativePath) {
     const uri = path.join(mikser.options.outputFolder, relativePath)
@@ -74,18 +73,20 @@ onLoaded(async () => {
     const logger = useLogger()
     mikser.options.filesFolder = mikser.config.files?.filesFolder || path.join(mikser.options.workingFolder, 'files')
 
-    logger.info('Files: %s', mikser.options.filesFolder)
+    logger.info('Files folder: %s', mikser.options.filesFolder)
     await mkdir(mikser.options.filesFolder, { recursive: true })
 
     watchEntities('files', mikser.options.filesFolder)
 })
 
 onImport(async () => {
+    const logger = useLogger()
     await mkdir(mikser.options.outputFolder, { recursive: true }) 
     const paths = await globby('**/*', { cwd: mikser.options.filesFolder })
+    logger.info('Importing files: %d', paths.length)
+
     return Promise.all(paths.map(async relativePath => {
         const { uri, source } = await ensureLink(relativePath)
-        const checksum = await hasha.fromFile(source, { algorithm: 'md5' })
 
         await createEntity({
             id: path.join('/files', relativePath),
@@ -95,7 +96,7 @@ onImport(async () => {
             format: path.extname(relativePath).substring(1).toLowerCase(),
             name: relativePath,
             source,
-            checksum
+            checksum: await checksum(source)
         })
     }))
 })

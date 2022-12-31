@@ -1,6 +1,7 @@
 
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
+import _ from 'lodash'
 
 export default async ({ entity, renderer, options, config, context, state }) => {
     async function loadPlugin(pluginName) {   
@@ -30,7 +31,7 @@ export default async ({ entity, renderer, options, config, context, state }) => 
     options?.plugins && pluginsToLoad.push(...options.plugins)
     config?.plugins && pluginsToLoad.push(...config.plugins)
 
-    pluginsToLoad = pluginsToLoad.filter(pluginName => pluginName && pluginName.indexOf('render-') == 0)
+    pluginsToLoad = _.uniq(pluginsToLoad.filter(pluginName => pluginName && pluginName.indexOf('render-') == 0))
     
     const runtime = {
         [entity.type]: entity,
