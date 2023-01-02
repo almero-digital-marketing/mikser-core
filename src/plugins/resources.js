@@ -10,6 +10,9 @@ import path from 'node:path'
 import { globby } from 'globby'
 import { existsSync } from 'node:fs'
 
+export const collection = 'resources'
+export const type = 'resource'
+
 const _ = deepdash(lodash)
 let abortController
 
@@ -20,7 +23,7 @@ onLoaded(async () => {
 		resourceMap: {}
 	}
 
-    mikser.options.resourcesFolder = mikser.config.resources?.resourcesFolder || path.join(mikser.options.workingFolder, 'resources')
+    mikser.options.resourcesFolder = mikser.config.resources?.resourcesFolder || path.join(mikser.options.workingFolder, collection)
     logger.info('Resources folder: %s', mikser.options.resourcesFolder)
     await mkdir(mikser.options.resourcesFolder, { recursive: true })
 
@@ -29,7 +32,7 @@ onLoaded(async () => {
         mikser.state.resources.resourceMap[resource.url] = library
     }
     
-    const uri = path.join(mikser.options.outputFolder, 'resources')
+    const uri = path.join(mikser.options.outputFolder, collection)
     try {
         await mkdir(mikser.options.outputFolder, { recursive: true }) 
         await symlink(mikser.options.resourcesFolder, uri, 'dir')
@@ -47,7 +50,7 @@ onProcessed(async () => {
 
     const entities = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
     .map(operation => operation.entity)
-    .filter(entity => entity.collection != 'resources' && entity.meta)
+    .filter(entity => entity.collection != collection && entity.meta)
 
     const resources = []
     for (let entity of entities) {      
@@ -93,7 +96,7 @@ onProcessed(async () => {
                         logger.trace('Downloading canceled')
                         return
                     } else {
-                        logger.error(err, 'Resource error: %s %s', entity.id, url)
+                        logger.error('Resource error: %s %s %s', entity.id, url, err.message)
                         continue
                     }
                 }
@@ -113,8 +116,8 @@ onProcessed(async () => {
             await createEntity({
                 id: path.join('/resources', library, pathname),
                 uri,
-                collection: 'resources',
-                type: 'resource',
+                collection,
+                type,
                 format: path.extname(resource).substring(1).toLowerCase(),
                 name: path.join(library, pathname),
                 source: resource,

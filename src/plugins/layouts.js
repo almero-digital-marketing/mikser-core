@@ -5,6 +5,9 @@ import { globby } from 'globby'
 import _ from 'lodash'
 import minimatch from 'minimatch'
 
+export const collection = 'layouts'
+export const type = 'layout'
+
 function getFormatInfo(relativePath) {
     const template = path.extname(relativePath).substring(1).toLowerCase()
     const format = path.extname(relativePath.replace(path.extname(relativePath),'')).substring(1).toLowerCase() || 'html'
@@ -14,7 +17,7 @@ function getFormatInfo(relativePath) {
 function addToSitemap(entity) {
     const logger = useLogger()
 	const { sitemap } = mikser.state.layouts
-    const { href = entity.name, lang } = entity.meta || {}
+    const { href = '/' + entity.name, lang } = entity.meta || {}
     if (lang) {
         sitemap[href] = sitemap[href] || {};
         let previous = sitemap[href][lang];
@@ -36,12 +39,27 @@ function removeFromSitemap(entity) {
 	const { sitemap } = mikser.state.layouts
     for (let href in sitemap) {
         let entry = sitemap[href]
-        if (entry.id == entity.id) {
-            delete sitemap[href]
+        if (entry.id) {
+            if (entry.id == entity.id) {
+                delete sitemap[href]
+                return
+            } 
         } else {
             for (let lang in entry) {
-                delete entry[lang]
+                if (entry[lang].id == entity.id) {
+                    delete entry[lang]
+                    return
+                }
             }
+        }
+    }
+}
+
+function removePagesFromSitemap(entity) {
+    const entities = Array.from(getSitemapEntities())
+    for(let current of entities) {
+        if (entity.uri == current.uri) {
+            removeFromSitemap(current)
         }
     }
 }
@@ -51,19 +69,22 @@ function* getSitemapEntities() {
     for (let href in sitemap) {
         let entry = sitemap[href]
         if (entry.id) {
-            yield entry
+            if (!entry.page || entry.page <= 1) {
+                yield entry
+            }
         } else {
             for (let lang in entry) {
-                yield entry[lang]
+                if (!entry[lang].page || entry[lang].page <= 1) {
+                    yield entry[lang]
+                }
             }
         }
     }
 }
 
-onSync(async ({ id, operation }) => {
+onSync(async ({ id, operation, relativePath }) => {
     if (_.endsWith(id, '.js')) id = id.replace(new RegExp('.js$'), '')
 
-    const relativePath = id.replace('/layouts/', '')
     const uri = path.join(mikser.options.layoutsFolder, relativePath)
 	const { layouts } = mikser.state.layouts
     switch (operation) {
@@ -71,8 +92,8 @@ onSync(async ({ id, operation }) => {
             var layout = {
                 id,
                 uri,
-                collection: 'layouts',
-                type: 'layout',
+                collection,
+                type,
                 name: relativePath.replace(path.extname(relativePath), ''),
                 ...getFormatInfo(relativePath)
             }
@@ -83,8 +104,8 @@ onSync(async ({ id, operation }) => {
             var layout = {
                 id,
                 uri,
-                collection: 'layouts',
-                type: 'layout',
+                collection,
+                type,
                 name: relativePath.replace(path.extname(relativePath), ''),
                 ...getFormatInfo(relativePath)
             }
@@ -94,8 +115,8 @@ onSync(async ({ id, operation }) => {
         case constants.OPERATION_DELETE:
             var layout = {
                 id,
-                collection: 'layouts',
-                type: 'layout',
+                collection,
+                type,
                 format: path.extname(relativePath).substring(1).toLowerCase(),
             }
             for (let name in layouts) {
@@ -106,7 +127,7 @@ onSync(async ({ id, operation }) => {
             await deleteEntity(layout)
         break
     }
-}, 'layouts')
+}, collection)
 
 onLoaded(async () => {
     const logger = useLogger()
@@ -116,12 +137,12 @@ onLoaded(async () => {
 		sitemap: {}
 	}
 	
-    mikser.options.layoutsFolder = mikser.config.layouts?.layoutsFolder || path.join(mikser.options.workingFolder, 'layouts')
+    mikser.options.layoutsFolder = mikser.config.layouts?.layoutsFolder || path.join(mikser.options.workingFolder, collection)
 
     logger.info('Layouts folder: %s', mikser.options.layoutsFolder)
     await mkdir(mikser.options.layoutsFolder, { recursive: true })
     
-    watchEntities('layouts', mikser.options.layoutsFolder)
+    watchEntities(collection, mikser.options.layoutsFolder)
 })
 
 onImport(async () => {
@@ -133,8 +154,8 @@ onImport(async () => {
             id: path.join('/layouts', relativePath),
             uri,
             name: relativePath.replace(path.extname(relativePath), ''),
-            collection: 'layouts',
-            type: 'layout',
+            collection,
+            type,
         }
         Object.assign(layout, await getFormatInfo(relativePath))
         layouts[layout.name] = layout
@@ -145,11 +166,12 @@ onImport(async () => {
 onProcessed(async () => {
     const logger = useLogger()
 	const { layouts } = mikser.state.layouts
-	
+    
     const entitiesToAdd = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
     .map(operation => operation.entity)
-    .filter(entity => entity.collection != 'layouts')
+    .filter(entity => entity.collection != collection)
     for (let entity of entitiesToAdd) {
+        removePagesFromSitemap(entity)
         if (!entity.meta?.layout) {
             for (let pattern in mikser.config.layouts?.match || []) {
                 if (minimatch(pattern, entity.name)) {
@@ -179,22 +201,27 @@ onProcessed(async () => {
 
     const entitiesToRemove = useOperations([constants.OPERATION_DELETE])
     .map(operation => operation.entity)
-    .filter(entity => entity.collection != 'layouts')
+    .filter(entity => entity.collection != collection)
     for (let entity of entitiesToRemove) { 
-        removeFromSitemap(entity)
+        removePagesFromSitemap(entity)
     }
 })
 
 onBeforeRender(async () => {
     const entities = getSitemapEntities()
-    if (entities.length) mikser.cancel()
+
     for (let original of entities) {
+        delete original.page
+        delete original.pages
+        delete original.destination
+
         const entity = _.cloneDeep(original)
         entity.destination = '/' + entity.name
+        let data
         try {
-            var { load, plugins = [] } = await import(entity.layout.uri + '.js')
+            var { load, plugins = [] } = await import(`${path.join(mikser.options.layoutsFolder, entity.layout.name)}.js?stamp=${Date.now()}`)
             if (load) {
-                var data = await load({ mikser, entity })
+                data = await load(entity)
             }
         } catch (err) {
             if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
@@ -202,32 +229,40 @@ onBeforeRender(async () => {
 
         if (data?.pages) {
             if (!_.endsWith(entity.name, entity.format)) {
-                for (let page = 0; page < data.pages.length; page++) {
+                for (let page = 0; page < data.pages - 1; page++) {
                     const pageEntity = _.cloneDeep(entity)
-                    const pageData = _.clone(data)
-                    pageData.page = page + 1
+                    pageEntity.pages = data.pages
                     if (page) {
-                        pageEntity.id = entity.id.replace(`.${entity.format}`, `.${pageData.page}.${entity.layout.format}`)
-                        if (entity.meta?.href) {
-                            pageEntity.meta.href = `${entity.meta.href}.${page}`
-                        } 
+                        pageEntity.page = page + 1
+                        pageEntity.id = entity.id.replace(`.${entity.format}`, `.${pageEntity.page}.${entity.layout.format}`)
+                        if (entity.meta) {
+                            if (entity.meta.href) {
+                                pageEntity.meta.href = `${entity.meta.href}.${pageEntity.page}`
+                            } else {
+                                pageEntity.meta.href = `/${entity.name}.${pageEntity.page}`
+                            }
+                        }
 
                         if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
-                            pageEntity.destination = path.join(entity.destination, pageData.page, `index.${entity.layout.format}`)
+                            pageEntity.destination = path.join(entity.destination, pageEntity.page, `index.${entity.layout.format}`)
                         } else {
-                            pageEntity.destination += page ? `.${pageData.page}.html` : `.${entity.layout.format}`
+                            pageEntity.destination += page ? `.${pageEntity.page}.html` : `.${entity.layout.format}`
                         }
                     } else {
+                        removePagesFromSitemap(original)
+                        pageEntity.page = 1
                         if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
                             pageEntity.destination = path.join(entity.destination, `index.${entity.layout.format}`)
                         } else {
                             pageEntity.destination += `.${entity.layout.format}`
                         }
                     }
-                    await renderEntity(pageEntity, entity.layout.template, { data: pageData, plugins })
+                    addToSitemap(pageEntity)
+                    await renderEntity(pageEntity, entity.layout.template, { data, plugins })
                 }
             }
         } else {
+            removePagesFromSitemap(original)
             if (!_.endsWith(entity.name, entity.format)) {
                 if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
                     entity.destination = path.join(entity.destination, `index.${entity.layout.format}`)
@@ -235,6 +270,7 @@ onBeforeRender(async () => {
                     entity.destination += `.${entity.layout.format}`
                 }
             }
+            addToSitemap(entity)
             await renderEntity(entity, entity.layout.template, { data, plugins })
         }
     }
@@ -242,6 +278,7 @@ onBeforeRender(async () => {
 
 onAfterRender(async () => {
     const logger = useLogger()
+
     const entitiesToRender = useOperations(['render'])
     for(let { result, entity } of entitiesToRender) {
         if (result && entity.layout) {

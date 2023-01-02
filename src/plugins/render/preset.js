@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
 export async function load({ entity, runtime }) {
-    const preset = await import(`${entity.preset.uri}?v=${Date.now()}`)
+    const preset = await import(`${entity.preset.uri}?stamp=${Date.now()}`)
     runtime.preset = preset.default
 }
 

@@ -4,8 +4,10 @@ import { mkdir, readFile } from 'fs/promises'
 import { globby, globbySync } from 'globby'
 import _ from 'lodash'
 
-onSync(async ({ id, operation }) => {
-    const relativePath = id.replace('/documents/', '')
+export const collection = 'documents'
+export const type = 'document'
+
+onSync(async ({ id, operation, relativePath }) => {
     const uri = path.join(mikser.options.documentsFolder, relativePath)
     switch (operation) {
         case constants.OPERATION_CREATE:
@@ -13,8 +15,8 @@ onSync(async ({ id, operation }) => {
                 id,
                 uri,
                 name: relativePath.replace(path.extname(relativePath), ''),
-                collection: 'documents',
-                type: 'document',
+                collection,
+                type,
                 format: path.extname(relativePath).substring(1).toLowerCase(),
                 content: await readFile(uri, 'utf8') 
             })
@@ -24,8 +26,8 @@ onSync(async ({ id, operation }) => {
                 id,
                 uri,
                 name: relativePath.replace(path.extname(relativePath), ''),
-                collection: 'documents',
-                type: 'document',
+                collection,
+                type,
                 format: path.extname(relativePath).substring(1).toLowerCase(),
                 content: await readFile(uri, 'utf8') 
             })
@@ -33,22 +35,22 @@ onSync(async ({ id, operation }) => {
         case constants.OPERATION_DELETE:
             await deleteEntity({
                 id,
-                collection: 'documents',
-                type: 'document',
+                collection,
+                type,
                 format: path.extname(relativePath).substring(1).toLowerCase(),
             })
         break
     }
-}, 'documents')
+}, collection)
 
 onLoaded(async () => {
     const logger = useLogger()
-    mikser.options.documentsFolder = mikser.config.documents?.documentsFolder || path.join(mikser.options.workingFolder, 'documents')
+    mikser.options.documentsFolder = mikser.config.documents?.documentsFolder || path.join(mikser.options.workingFolder, collection)
 
     logger.info('Documents folder: %s', mikser.options.documentsFolder)
     await mkdir(mikser.options.documentsFolder, { recursive: true })
     
-    watchEntities('documents', mikser.options.documentsFolder)
+    watchEntities(collection, mikser.options.documentsFolder)
 })
 
 onImport(async () => {
@@ -62,8 +64,8 @@ onImport(async () => {
             id: path.join('/documents', relativePath),
             uri,
             name: relativePath.replace(path.extname(relativePath), ''),
-            collection: 'documents',
-            type: 'document',
+            collection,
+            type,
             format: path.extname(relativePath).substring(1).toLowerCase(),
             content: await readFile(uri, 'utf8') 
         })

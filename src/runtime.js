@@ -83,13 +83,12 @@ export async function run(options) {
         abortController = new AbortController()
         const { signal } = abortController
         await Promise.all(entitiesToRender.map(async operation => {
+            const { entity, renderer, context } = operation
             try {
-                const { entity, renderer, context } = operation
                 operation.result = await render(entity, renderer, context, signal)
             } catch (err) {
                 if (err.name != 'AbortError') {
-                    logger.error(err, 'Render error')
-                    throw err
+                    logger.error('Render error: %s %s', entity.id, err.message)
                 }
                 logger.trace('Render canceled')    
             } 
@@ -148,7 +147,7 @@ export async function render(entity, renderer, context, signal) {
         options: mikser.options,
         config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
         context,
-		state: mikser.state
+        state: mikser.state
     }, { signal })
     logger.info('Rendered %s: [%s] %s', entity.type, renderer, entity.destination)
     return result
@@ -161,10 +160,11 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
         clearTimeout(mikser.runtime.processTimeout)
     })
     .on('add', async fullPath => {
-        const relativePath = fullPath.replace(folder, '')
+        const relativePath = fullPath.replace(`${folder}/`, '')
         const synced = await mikser.sync({
             operation: constants.OPERATION_CREATE, 
-            id: path.join(`/${collection}`, relativePath)
+            id: path.join(`/${collection}`, relativePath),
+            relativePath
         })
 
         if (synced) {
@@ -173,10 +173,11 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
         }
     })
     .on('change', async fullPath => {
-        const relativePath = fullPath.replace(folder, '')
+        const relativePath = fullPath.replace(`${folder}/`, '')
         const synced = await mikser.sync({
             operation: constants.OPERATION_UPDATE, 
-            id: path.join(`/${collection}`, relativePath)
+            id: path.join(`/${collection}`, relativePath),
+            relativePath
         })
 
         if (synced) {
@@ -185,10 +186,11 @@ export function watchEntities(collection, folder, options = { interval: 1000, bi
         }
     })
     .on('unlink', async fullPath => {
-        const relativePath = fullPath.replace(folder, '')
+        const relativePath = fullPath.replace(`${folder}/`, '')
         const synced = await mikser.sync({
             operation: constants.OPERATION_DELETE, 
-            id: path.join(`/${collection}`, relativePath)
+            id: path.join(`/${collection}`, relativePath),
+            relativePath
         })
 
         if (synced) {

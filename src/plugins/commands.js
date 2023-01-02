@@ -1,6 +1,7 @@
 import { execaCommand } from 'execa'
 import lineReader from 'line-reader'
 import { promisify } from 'util'
+import _ from 'lodash'
 
 import { 
     mikser,
@@ -21,13 +22,25 @@ import {
 } from '../index.js'
 
 const eachLine = promisify(lineReader.eachLine)
+const running = {}
 
 export async function executeCommand(command) {
     const logger = useLogger()
     logger.info('Command: %s', command, mikser.options.wokrkingFolder)
-    const subprocess = execaCommand(command, { cwd: mikser.options.wokrkingFolder, all: true })
-    await eachLine(subprocess.all, line => logger.debug(line))
-    await subprocess
+    if (_.endsWith(command, '&')) {
+        command = command.slice(0, -1)
+        if (!running[command]) {
+            const subprocess = execaCommand(command, { cwd: mikser.options.wokrkingFolder, all: true })
+            eachLine(subprocess.all, line => logger.debug(line))
+            running[command] = subprocess
+            .then(() => delete running[command])
+            .catch(err => logger.error(err, 'Command error'))
+        }
+    } else {
+        const subprocess = execaCommand(command, { cwd: mikser.options.wokrkingFolder, all: true })
+        await eachLine(subprocess.all, line => logger.debug(line))
+        await subprocess
+    }
 }
 
 async function executeCommands(hook) {

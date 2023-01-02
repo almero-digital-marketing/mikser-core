@@ -70,9 +70,9 @@ export async function onFinalized(callback) {
 
 export async function onSync(callback, collection) {
     if (collection) {
-        Mikser.hooks.sync.push(async ({ operation, id }) => {
-            if (id.indexOf('/' + collection) == 0) {
-                return await callback({ operation, id })
+        Mikser.hooks.sync.push(async (operation) => {
+            if (operation.id.indexOf('/' + collection) == 0) {
+                return await callback(operation)
             }
         })
     } else {

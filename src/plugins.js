@@ -27,22 +27,18 @@ export async function loadPlugin(pluginName) {
     logger.error('Plugin not found: %s', pluginName)
 }
 
-export function userPlugins(filter) {
-    const plugins = mikser.options.plugins.concat(mikser.config.plugins)
-    if (!filter) return plugins
-    return plugins.filter(plugin => plugin && filter(plugin))
-}
-
 onLoad(async () => {
     const logger = useLogger()
 
-    const plugins = userPlugins(plugin => plugin.indexOf('render-') != 0)
-    if (!plugins.length) {
+    mikser.state.plugins = mikser.options.plugins.concat(mikser.config.plugins).filter(plugin => plugin)
+
+    const userPlugins =  mikser.state.plugins.filter(plugin => plugin.indexOf('render-') != 0)
+    if (!userPlugins.length) {
         logger.info('No plugins loaded')
     } else {
-        logger.info('Loading plugins: %s', plugins)
+        logger.info('Loading plugins: %s', userPlugins)
 
-        for (let plugin of plugins) {
+        for (let plugin of userPlugins) {
             await loadPlugin(plugin)
         }
     }
