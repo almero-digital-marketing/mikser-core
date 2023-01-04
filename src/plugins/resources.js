@@ -23,7 +23,8 @@ onLoaded(async () => {
 		resourceMap: {}
 	}
 
-    mikser.options.resourcesFolder = mikser.config.resources?.resourcesFolder || path.join(mikser.options.workingFolder, collection)
+    mikser.options.resources = mikser.config.resources?.resources || collection
+    mikser.options.resourcesFolder = path.join(mikser.options.workingFolder, mikser.options.resources)
     logger.info('Resources folder: %s', mikser.options.resourcesFolder)
     await mkdir(mikser.options.resourcesFolder, { recursive: true })
 
@@ -32,10 +33,11 @@ onLoaded(async () => {
         mikser.state.resources.resourceMap[resource.url] = library
     }
     
-    const uri = path.join(mikser.options.outputFolder, collection)
+    let link = path.join(mikser.options.outputFolder, mikser.options.resources)
+    if (mikser.config.resources?.output) link = path.join(mikser.options.outputFolder, mikser.config.resources?.output, mikser.options.resources)
     try {
-        await mkdir(mikser.options.outputFolder, { recursive: true }) 
-        await symlink(mikser.options.resourcesFolder, uri, 'dir')
+        await mkdir(path.dirname(link), { recursive: true }) 
+        await symlink(mikser.options.resourcesFolder, link, 'dir')
     } catch (err) {
         if (err.code != 'EEXIST')
         throw err

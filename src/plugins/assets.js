@@ -47,18 +47,21 @@ onLoaded(async () => {
 		assetsMap: {}
 	}
 
-    mikser.options.presetsFolder = mikser.config.assets?.presetsFolder || path.join(mikser.options.workingFolder, collection)
+    mikser.options.presets = mikser.config.presets?.presets || collection
+    mikser.options.presetsFolder = path.join(mikser.options.workingFolder, mikser.options.presets)
     logger.info('Presets folder: %s', mikser.options.presetsFolder)
     await mkdir(mikser.options.presetsFolder, { recursive: true })
 
-    mikser.options.assetsFolder = mikser.config.assets?.assetsFolder || path.join(mikser.options.workingFolder, 'assets')
+    mikser.options.assets = mikser.config.presets?.assets || 'assets'
+    mikser.options.assetsFolder = path.join(mikser.options.workingFolder, mikser.options.assets)
     logger.info('Assets folder: %s', mikser.options.assetsFolder)
     await mkdir(mikser.options.assetsFolder, { recursive: true })
 
-    const uri = path.join(mikser.options.outputFolder, 'assets')
+    let link = path.join(mikser.options.outputFolder, mikser.options.assets)
+    if (mikser.config.assets?.output) link = path.join(mikser.options.outputFolder, mikser.config.assets?.output, mikser.options.assets)
     try {
-        await mkdir(mikser.options.outputFolder, { recursive: true }) 
-        await symlink(mikser.options.assetsFolder, uri, 'dir')
+        await mkdir(path.dirname(link), { recursive: true }) 
+        await symlink(mikser.options.assetsFolder, link, 'dir')
     } catch (err) {
         if (err.code != 'EEXIST')
         throw err

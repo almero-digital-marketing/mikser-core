@@ -1,6 +1,6 @@
-export function load({ runtime, state }) {
+export function load({ runtime, options }) {
     runtime.asset = (preset, url) => {
         if (url[0] != '/') url = `/${url}`
-        return `/assets/${preset}${url}`
+        return `/${options.assets}/${preset}${url}`
     }
 }

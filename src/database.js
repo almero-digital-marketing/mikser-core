@@ -1,14 +1,17 @@
-import { mikser, onLoaded, useLogger, onPersist, constants } from './index.js'
-import { Low, Memory } from 'lowdb'
+import { mikser, onLoaded, useLogger, onPersist, constants, onFinalized, onAfterRender, useOperations } from './index.js'
+import { Low } from 'lowdb'
+import path from 'node:path'
+import { JSONFile } from 'lowdb/node'
 import _ from 'lodash'
 
 let database
 
 onLoaded(async () => {
-    const adapter = new Memory()
+    const adapter = new JSONFile(path.join(mikser.options.runtimeFolder, 'database.json'))
     database = new Low(adapter)
     database.data = {
-        entities: []
+        entities: [],
+        results: []
     }
     database.chain = _.chain(database).get('data')
 })
@@ -40,6 +43,28 @@ onPersist(async () => {
             break
         }
     }
+})
+
+onAfterRender(async () => {
+    const entitiesToRender = useOperations(['render'])
+    for(let { result, entity } of entitiesToRender) {
+        if (result) {
+            const index = database
+            .chain
+            .get('results')
+            .findIndex({ id: entity.id })
+            .value()
+            if (index < 0) {
+                database.data.results.push(entity)
+            } else {
+                Object.assign(database.data.results[index], entity)
+            }
+        }
+    }
+})
+
+onFinalized(async () => {
+    await database.write()
 })
 
 export async function findEntity(query) {

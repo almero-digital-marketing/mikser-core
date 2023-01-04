@@ -19,6 +19,7 @@ import {
     onBeforeRender,
     onRender,
     onAfterRender,
+    onFinalize
 } from '../index.js'
 
 const eachLine = promisify(lineReader.eachLine)
@@ -26,17 +27,18 @@ const running = {}
 
 export async function executeCommand(command) {
     const logger = useLogger()
-    logger.info('Command: %s', command, mikser.options.wokrkingFolder)
     if (_.endsWith(command, '&')) {
         command = command.slice(0, -1)
+        logger.info('Command: %s', command, mikser.options.wokrkingFolder)
         if (!running[command]) {
             const subprocess = execaCommand(command, { cwd: mikser.options.wokrkingFolder, all: true })
-            eachLine(subprocess.all, line => logger.debug(line))
+            eachLine(subprocess.all, line => logger.info(line))
             running[command] = subprocess
             .then(() => delete running[command])
             .catch(err => logger.error(err, 'Command error'))
         }
     } else {
+        logger.info('Command: %s', command, mikser.options.wokrkingFolder)
         const subprocess = execaCommand(command, { cwd: mikser.options.wokrkingFolder, all: true })
         await eachLine(subprocess.all, line => logger.debug(line))
         await subprocess
@@ -66,3 +68,4 @@ onRender(async () => await executeCommands('render'))
 onAfterRender(async () => await executeCommands('afterRender'))
 onCancel(async () => await executeCommands('cancel'))
 onCancelled(async () => await executeCommands('canceled'))
+onFinalize(async () => await executeCommands('finalize'))

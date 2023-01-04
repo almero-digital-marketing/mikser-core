@@ -70,7 +70,8 @@ onSync(async ({ id, operation, relativePath }) => {
 
 onLoaded(async () => {
     const logger = useLogger()
-    mikser.options.filesFolder = mikser.config.files?.filesFolder || path.join(mikser.options.workingFolder, collection)
+    mikser.options.files = mikser.config.files?.files || collection
+    mikser.options.filesFolder = path.join(mikser.options.workingFolder, mikser.options.files)
 
     logger.info('Files folder: %s', mikser.options.filesFolder)
     await mkdir(mikser.options.filesFolder, { recursive: true })

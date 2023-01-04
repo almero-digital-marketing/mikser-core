@@ -54,10 +54,11 @@ export async function run(options) {
             logger.level = 'trace'
         }
         mikser.options.workingFolder = path.resolve(mikser.options.workingFolder)
-        mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, 'runtime')
-        mikser.options.outputFolder = path.isAbsolute(mikser.options.output) ? mikser.options.output : path.join(mikser.options.workingFolder, mikser.options.output)
-        
         process.chdir(mikser.options.workingFolder)
+
+        mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || 'runtime')
+        mikser.options.outputFolder = path.join(mikser.options.workingFolder, mikser.options.outputFolder || 'out')
+        
         
         logger.debug(mikser.options, 'Mikser options')
         logger.info('Working folder: %s', mikser.options.workingFolder)
