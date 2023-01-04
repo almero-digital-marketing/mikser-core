@@ -117,6 +117,7 @@ export function useOperations(operations) {
 export async function createEntity(entity) {
     const logger = useLogger()
     entity.stamp = mikser.stamp
+    entity.time = Date.now()
     logger.debug('Create %s entity: %s', entity.collection, entity.id)
     mikser.operations.push({ operation: constants.OPERATION_CREATE, entity })
 }
@@ -130,6 +131,7 @@ export async function deleteEntity({ id, collection, type }) {
 export async function updateEntity(entity) {
     const logger = useLogger()
     entity.stamp = mikser.stamp
+    entity.time = Date.now()
     logger.debug('Update %s entity: %s', entity.collection, entity.id)
     mikser.operations.push({ operation: constants.OPERATION_UPDATE, entity })
 }

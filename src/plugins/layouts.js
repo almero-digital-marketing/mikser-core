@@ -209,7 +209,7 @@ onProcessed(async () => {
 })
 
 onBeforeRender(async () => {
-    const entities = getSitemapEntities()
+    const entities = Array.from(getSitemapEntities()).sort((a, b) => b.time - a.time)
 
     for (let original of entities) {
         delete original.page
