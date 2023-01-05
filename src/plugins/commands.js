@@ -29,8 +29,8 @@ export async function executeCommand(command) {
     const logger = useLogger()
     if (_.endsWith(command, '&')) {
         command = command.slice(0, -1)
-        logger.info('Command: %s', command, mikser.options.wokrkingFolder)
         if (!running[command]) {
+            logger.info('Command: %s', command, mikser.options.wokrkingFolder)
             const subprocess = execaCommand(command, { cwd: mikser.options.wokrkingFolder, all: true })
             eachLine(subprocess.all, line => logger.info(line))
             running[command] = subprocess
