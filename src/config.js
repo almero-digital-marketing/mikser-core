@@ -1,4 +1,3 @@
-// import { mikser, onLoad, useLogger } from './index.js'
 import mikser from './mikser.js'
 import { useLogger } from './runtime.js'
 import { onLoad } from './lifecycle.js'

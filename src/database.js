@@ -1,4 +1,3 @@
-// import { mikser, onLoaded, useLogger, onPersist, constants, onFinalized, onAfterRender, useOperations } from './index.js'
 import mikser from './mikser.js'
 import { useLogger, useOperations } from './runtime.js'
 import { onLoaded, onPersist, onFinalized, onAfterRender } from './lifecycle.js'

@@ -1,4 +1,3 @@
-// import { mikser, onLoad, useLogger } from './index.js'
 import { useLogger } from './runtime.js'
 import { onLoad } from './lifecycle.js'
 import mikser from './mikser.js'
@@ -8,9 +7,9 @@ export async function loadPlugin(pluginName) {
     const logger = useLogger()
 
     const resolveLocations = [
-        path.join(mikser.options.workingFolder || '.', 'node_modules', `mikser-core-${pluginName}`,'index.js'),
+        path.join(path.dirname(import.meta.url), 'plugins', `${pluginName}.js`),
         path.join(mikser.options.workingFolder || '.', 'plugins', `${pluginName}.js`),
-        path.join(path.dirname(import.meta.url), 'plugins', `${pluginName}.js`)
+        path.join(mikser.options.workingFolder || '.', 'node_modules', `mikser-core-${pluginName}`,'index.js'),
     ]
     for (let resolveLocation of resolveLocations) {
         try {
@@ -24,7 +23,7 @@ export async function loadPlugin(pluginName) {
             }
             return
         } catch (err) {
-            if (resolveLocations[0] == resolveLocation && 
+            if (resolveLocations[2] == resolveLocation && 
                 err.code == 'ERR_MODULE_NOT_FOUND' && 
                 err.message.indexOf(`Cannot find package 'mikser-core-${pluginName}`) != 0) throw err
             else if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
