@@ -1,5 +1,6 @@
-import { useLogger, onLoaded, mikser, } from '../index.js'
-import { mkdir, symlink, stat } from 'node:fs/promises'
+import { useLogger, onLoaded, mikser, onFinalize } from '../../index.js'
+import { mkdir, symlink, stat, lstat, realpath } from 'node:fs/promises'
+import { existsSync, unlink } from 'node:fs'
 
 import path from 'node:path'
 

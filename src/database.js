@@ -1,4 +1,8 @@
-import { mikser, onLoaded, useLogger, onPersist, constants, onFinalized, onAfterRender, useOperations } from './index.js'
+// import { mikser, onLoaded, useLogger, onPersist, constants, onFinalized, onAfterRender, useOperations } from './index.js'
+import mikser from './mikser.js'
+import { useLogger, useOperations } from './runtime.js'
+import { onLoaded, onPersist, onFinalized, onAfterRender } from './lifecycle.js'
+import { constants  } from './constants.js'
 import { Low } from 'lowdb'
 import path from 'node:path'
 import { JSONFile } from 'lowdb/node'
@@ -30,7 +34,7 @@ onPersist(async () => {
                 .chain
                 .get('entities')
                 .find({ id: entity.id })
-                .set(entity)
+                .assign(entity)
                 .value()
             break
             case constants.OPERATION_DELETE:

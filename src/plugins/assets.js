@@ -1,4 +1,4 @@
-import { mikser, onLoaded, useLogger, onImport, watchEntities, onProcessed, onBeforeRender, useOperations, createEntity, updateEntity, deleteEntity, renderEntity, onAfterRender, constants, onSync, onFinalize, findEntity } from '../index.js'
+import { mikser, onLoaded, useLogger, onImport, watch, onProcessed, onBeforeRender, useOperations, createEntity, updateEntity, deleteEntity, renderEntity, onAfterRender, constants, onSync, onFinalize, findEntity } from '../../index.js'
 import path from 'node:path'
 import { mkdir, writeFile, unlink, rm, readFile, symlink } from 'fs/promises'
 import { globby } from 'globby'
@@ -67,10 +67,12 @@ onLoaded(async () => {
         throw err
     }
 
-    watchEntities(collection, mikser.options.presetsFolder)
+    watch(collection, mikser.options.presetsFolder)
 })
 
-onSync(async ({ id, operation, relativePath }) => {
+onSync(async ({ operation, context: { relativePath } }) => {
+    if (!relativePath) return false
+
     const logger = useLogger()
 	const { presets } = mikser.state.assets
 	
@@ -130,7 +132,7 @@ onSync(async ({ id, operation, relativePath }) => {
         case constants.OPERATION_DELETE:
             delete presets[name]
             await deleteEntity({
-                id,
+                id: path.join('/presets', relativePath),
                 collection,
                 type,
             })
@@ -225,11 +227,11 @@ onBeforeRender(async () => {
         for (let entityPreset of assetsMap[original.id] || []) {
             const entity = _.cloneDeep(original)
             entity.preset = presets[entityPreset]
-            let entityName = entity.name
+            let destination = entity.name
             if (entity.preset.format) {
-                entityName = entity.name.replace(`.${entity.format}`, `.${entity.preset.format}`)
+                destination = destination.replace(`.${entity.format}`, `.${entity.preset.format}`)
             }
-            entity.destination = path.join(mikser.options.assetsFolder, entityPreset, entityName)
+            entity.destination = path.join(mikser.options.assetsFolder, entityPreset, destination)
             if (!presetRenders[entity.destination]) {
                 presetRenders[entity.destination] = true
 

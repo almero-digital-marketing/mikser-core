@@ -1,4 +1,4 @@
-import { onProcess, useLogger, useOperations, constants } from '../index.js'
+import { onProcess, useLogger, useOperations, constants } from '../../index.js'
 
 onProcess(() => {
     const logger = useLogger()

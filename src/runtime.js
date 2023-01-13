@@ -1,12 +1,15 @@
 import pino from 'pino'
 import path from 'node:path'
 import { Command } from 'commander'
-import { mikser, onInitialize, onInitialized, onRender, onCancel, onFinalized, constants } from './index.js'
-import { rmdir } from 'fs/promises'
+import { rmdir, lstat, realpath } from 'fs/promises'
+import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
 import { AbortController } from 'abort-controller'
-import chokidar from 'chokidar'
+import { constants  } from './constants.js'
+import mikser from './mikser.js'
+import { onInitialize, onInitialized, onRender, onCancel, onFinalized } from './lifecycle.js'
+import { globby } from 'globby'
 
 export function useLogger() {
     return mikser.runtime.logger
@@ -16,7 +19,7 @@ export function useCommander() {
     return mikser.runtime.commander
 }
 
-export async function run(options) {
+export async function setup(options) {
     const { default: { version } } = await import('../package.json', { assert: { type: 'json' } })
     mikser.runtime = {
         logger: pino(options?.logger || {
@@ -35,9 +38,11 @@ export async function run(options) {
         mikser.runtime.commander?.version(version)
         .option('--working-folder <folder>', 'set mikser working folder', './')
         .option('--plugins [plugins...]', 'list of mikser plugins to load', [])
+        .option('--config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
+        .option('--mode <mode>', 'set mikser runtime mode', 'development')
         .option('--clear', 'clear current state before execution', false)
         .option('-o --output <folder>', 'set mikser output folder realtive to working folder ot absolute', 'out')
-        .option('-w --watch [types]', 'watch entity types for changes', [])
+        .option('-w --watch', 'watch entities for changes', false)
         .option('-d --debug', 'display debug statements')
         .option('-t --trace', 'display trace statements')
     })
@@ -58,7 +63,6 @@ export async function run(options) {
 
         mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || 'runtime')
         mikser.options.outputFolder = path.join(mikser.options.workingFolder, mikser.options.outputFolder || 'out')
-        
         
         logger.debug(mikser.options, 'Mikser options')
         logger.info('Working folder: %s', mikser.options.workingFolder)
@@ -100,13 +104,25 @@ export async function run(options) {
         abortController?.abort()
     })
 
-    onFinalized(() => {
+    onFinalized(async () => {
         const logger = useLogger()
-        logger.info('Render completed')
+        
+        const paths = await globby('**/*', { cwd: mikser.options.outputFolder })
+        for (let relativePath of paths) {
+            let source = path.join(mikser.options.outputFolder, relativePath)
+            const linkStat = await lstat(source)
+            if (linkStat.isSymbolicLink()) {
+                const destination = await realpath(source)
+                if (!existsSync(destination)) {
+                    await unlink(source)
+                }
+            }
+        }
+        logger.info('Mikser completed')
     })
        
     console.info('Mikser: %s', version)
-    await mikser.start()
+    return mikser
 }
 
 export function useOperations(operations) {
@@ -154,51 +170,4 @@ export async function render(entity, renderer, context, signal) {
     }, { signal })
     logger.info('Rendered %s: [%s] %s', entity.type, renderer, entity.destination)
     return result
-}
-
-export function watchEntities(collection, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true }) {
-    if (mikser.options.watch === true || mikser.options.watch.indexOf(collection) > -1)
-    chokidar.watch(folder, options)
-    .on('all', () => {
-        clearTimeout(mikser.runtime.processTimeout)
-    })
-    .on('add', async fullPath => {
-        const relativePath = fullPath.replace(`${folder}/`, '')
-        const synced = await mikser.sync({
-            operation: constants.OPERATION_CREATE, 
-            id: path.join(`/${collection}`, relativePath),
-            relativePath
-        })
-
-        if (synced) {
-            clearTimeout(mikser.runtime.processTimeout)
-            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
-        }
-    })
-    .on('change', async fullPath => {
-        const relativePath = fullPath.replace(`${folder}/`, '')
-        const synced = await mikser.sync({
-            operation: constants.OPERATION_UPDATE, 
-            id: path.join(`/${collection}`, relativePath),
-            relativePath
-        })
-
-        if (synced) {
-            clearTimeout(mikser.runtime.processTimeout)
-            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
-        }
-    })
-    .on('unlink', async fullPath => {
-        const relativePath = fullPath.replace(`${folder}/`, '')
-        const synced = await mikser.sync({
-            operation: constants.OPERATION_DELETE, 
-            id: path.join(`/${collection}`, relativePath),
-            relativePath
-        })
-
-        if (synced) {
-            clearTimeout(mikser.runtime.processTimeout)
-            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
-        }
-    })
 }

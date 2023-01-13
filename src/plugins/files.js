@@ -1,14 +1,14 @@
-import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants, findEntity, checksum } from '../index.js'
+import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watch, onSync, constants, findEntity, checksum } from '../../index.js'
 import path from 'node:path'
-import { mkdir, symlink, unlink } from 'fs/promises'
+import { mkdir, symlink, unlink, lstat, realpath } from 'fs/promises'
 import { globby } from 'globby'
 
 export const collection = 'files'
 export const type = 'file'
 
 async function ensureLink(relativePath) {
-    const uri = path.join(mikser.options.outputFolder, relativePath)
     const source = path.join(mikser.options.filesFolder, relativePath)
+    const uri = path.join(mikser.options.outputFolder, relativePath)
     try {
         await mkdir(path.dirname(uri), { recursive: true })
         await symlink(source, uri, 'file')
@@ -19,10 +19,20 @@ async function ensureLink(relativePath) {
     return { uri, source }
 }
 
-onSync(async ({ id, operation, relativePath }) => {
+async function link(source) {
+    const stat = await lstat(source)
+    if (stat.isSymbolicLink()) {
+        return await realpath(source)
+    }
+}
+
+onSync(async ({ operation, context: { relativePath } }) => {
+    if (!relativePath) return false
+
     const uri = path.join(mikser.options.outputFolder, relativePath)
     const source = path.join(mikser.options.filesFolder, relativePath)
     const format = path.extname(relativePath).substring(1).toLowerCase()
+    const id = path.join(`/${collection}`, relativePath)
     
     let synced = true
     switch (operation) {
@@ -31,12 +41,13 @@ onSync(async ({ id, operation, relativePath }) => {
             await createEntity({
                 id,
                 uri,
-                name: relativePath.replace(path.extname(relativePath), ''),
+                name: relativePath,
                 collection,
                 type,
                 format,
                 source,
-                checksum: await checksum(source)
+                checksum: await checksum(source),
+                link: await link(source)
             })
         break
         case constants.OPERATION_UPDATE:
@@ -45,12 +56,13 @@ onSync(async ({ id, operation, relativePath }) => {
                 await updateEntity({
                     id,
                     uri,
-                    name: relativePath.replace(path.extname(relativePath), ''),
+                    name: relativePath,
                     collection,
                     type,
                     format,
                     source,
-                    checksum: await checksum(source)
+                    checksum: await checksum(source),
+                    link: await link(source)
                 })
             } else {
                 synced = false
@@ -76,7 +88,7 @@ onLoaded(async () => {
     logger.info('Files folder: %s', mikser.options.filesFolder)
     await mkdir(mikser.options.filesFolder, { recursive: true })
 
-    watchEntities(collection, mikser.options.filesFolder)
+    watch(collection, mikser.options.filesFolder)
 })
 
 onImport(async () => {
@@ -96,7 +108,8 @@ onImport(async () => {
             format: path.extname(relativePath).substring(1).toLowerCase(),
             name: relativePath,
             source,
-            checksum: await checksum(source)
+            checksum: await checksum(source),
+            link: await link(source)
         })
     }))
 })

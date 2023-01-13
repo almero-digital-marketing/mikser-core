@@ -20,7 +20,7 @@ import {
     onRender,
     onAfterRender,
     onFinalize
-} from '../index.js'
+} from '../../index.js'
 
 const eachLine = promisify(lineReader.eachLine)
 const running = {}

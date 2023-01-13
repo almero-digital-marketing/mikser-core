@@ -1,4 +1,4 @@
-import { useLogger, useOperations, constants, onLoaded, mikser, onCancel, createEntity, onProcessed, onFinalize, checksum } from '../index.js'
+import { useLogger, useOperations, constants, onLoaded, mikser, onCancel, createEntity, onProcessed, onFinalize, checksum } from '../../index.js'
 import { mkdir, symlink, rename, unlink } from 'node:fs/promises'
 import { createWriteStream } from 'node:fs'
 import lodash from 'lodash'

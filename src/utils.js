@@ -13,7 +13,7 @@ export async function checksum(uri) {
         const truncate = new TruncateStream({ maxBytes })
         const fileStream = createReadStream(uri)
         fileStream.pipe(truncate)
-        const checksum = size.toString() + ':' + await hasha.fromStream(truncate)
+        const checksum = size.toString() + ':' + await hasha.fromStream(truncate, {algorithm: 'md5'})
         return checksum
     }
 }

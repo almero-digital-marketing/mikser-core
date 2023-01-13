@@ -1,4 +1,4 @@
-import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onProcessed, onBeforeRender, useOperations, renderEntity, onAfterRender, constants, onSync } from '../index.js'
+import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watch, onProcessed, onBeforeRender, useOperations, renderEntity, onAfterRender, constants, onSync } from '../../index.js'
 import path from 'node:path'
 import { mkdir, writeFile, unlink } from 'node:fs/promises'
 import { globby } from 'globby'
@@ -82,7 +82,9 @@ function* getSitemapEntities() {
     }
 }
 
-onSync(async ({ id, operation, relativePath }) => {
+onSync(async ({ operation, context: { relativePath } }) => {
+    if (!relativePath) return false
+    let id = path.join(`/${collection}`, relativePath)
     if (_.endsWith(id, '.js')) id = id.replace(new RegExp('.js$'), '')
 
     const uri = path.join(mikser.options.layoutsFolder, relativePath)
@@ -143,7 +145,7 @@ onLoaded(async () => {
     logger.info('Layouts folder: %s', mikser.options.layoutsFolder)
     await mkdir(mikser.options.layoutsFolder, { recursive: true })
     
-    watchEntities(collection, mikser.options.layoutsFolder)
+    watch(collection, mikser.options.layoutsFolder)
 })
 
 onImport(async () => {

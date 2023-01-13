@@ -1,4 +1,7 @@
-import { mikser, onLoad, useLogger } from './index.js'
+// import { mikser, onLoad, useLogger } from './index.js'
+import { useLogger } from './runtime.js'
+import { onLoad } from './lifecycle.js'
+import mikser from './mikser.js'
 import path from 'node:path'
 
 export async function loadPlugin(pluginName) {

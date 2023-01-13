@@ -1,13 +1,15 @@
-import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watchEntities, onSync, constants } from '../index.js'
+import { mikser, onLoaded, useLogger, onImport, createEntity, updateEntity, deleteEntity, watch, onSync, constants } from '../../index.js'
 import path from 'node:path'
 import { mkdir, readFile } from 'fs/promises'
-import { globby, globbySync } from 'globby'
+import { globby } from 'globby'
 import _ from 'lodash'
 
 export const collection = 'documents'
 export const type = 'document'
 
-onSync(async ({ id, operation, relativePath }) => {
+onSync(async ({ operation, context: { relativePath } }) => {
+    if (!relativePath) return false
+    const id = path.join(`/${collection}`, relativePath)
     const uri = path.join(mikser.options.documentsFolder, relativePath)
     switch (operation) {
         case constants.OPERATION_CREATE:
@@ -51,7 +53,7 @@ onLoaded(async () => {
     logger.info('Documents folder: %s', mikser.options.documentsFolder)
     await mkdir(mikser.options.documentsFolder, { recursive: true })
     
-    watchEntities(collection, mikser.options.documentsFolder)
+    watch(collection, mikser.options.documentsFolder)
 })
 
 onImport(async () => {
@@ -62,7 +64,7 @@ onImport(async () => {
     return Promise.all(paths.map(async relativePath => {
         const uri = path.join(mikser.options.documentsFolder, relativePath)
         await createEntity({
-            id: path.join('/documents', relativePath),
+            id: path.join(`/${collection}`, relativePath),
             uri,
             name: relativePath.replace(path.extname(relativePath), ''),
             collection,
