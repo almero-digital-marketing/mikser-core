@@ -47,18 +47,18 @@ onLoaded(async () => {
 		assetsMap: {}
 	}
 
-    mikser.options.presets = mikser.config.presets?.presets || collection
+    mikser.options.presets = mikser.config.presets?.presetsFolder || collection
     mikser.options.presetsFolder = path.join(mikser.options.workingFolder, mikser.options.presets)
     logger.info('Presets folder: %s', mikser.options.presetsFolder)
     await mkdir(mikser.options.presetsFolder, { recursive: true })
 
-    mikser.options.assets = mikser.config.presets?.assets || 'assets'
+    mikser.options.assets = mikser.config.presets?.assetsFolder || 'assets'
     mikser.options.assetsFolder = path.join(mikser.options.workingFolder, mikser.options.assets)
     logger.info('Assets folder: %s', mikser.options.assetsFolder)
     await mkdir(mikser.options.assetsFolder, { recursive: true })
 
     let link = path.join(mikser.options.outputFolder, mikser.options.assets)
-    if (mikser.config.assets?.output) link = path.join(mikser.options.outputFolder, mikser.config.assets?.output, mikser.options.assets)
+    if (mikser.config.assets?.outputFolder) link = path.join(mikser.options.outputFolder, mikser.config.assets?.outputFolder, mikser.options.assets)
     try {
         await mkdir(path.dirname(link), { recursive: true }) 
         await symlink(mikser.options.assetsFolder, link, 'dir')

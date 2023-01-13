@@ -82,7 +82,7 @@ onSync(async ({ operation, context: { relativePath } }) => {
 
 onLoaded(async () => {
     const logger = useLogger()
-    mikser.options.files = mikser.config.files?.files || collection
+    mikser.options.files = mikser.config.files?.filesFolder || collection
     mikser.options.filesFolder = path.join(mikser.options.workingFolder, mikser.options.files)
 
     logger.info('Files folder: %s', mikser.options.filesFolder)

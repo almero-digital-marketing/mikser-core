@@ -24,7 +24,10 @@ export async function loadPlugin(pluginName) {
             }
             return
         } catch (err) {
-            if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
+            if (resolveLocations[0] == resolveLocation && 
+                err.code == 'ERR_MODULE_NOT_FOUND' && 
+                err.message.indexOf(`Cannot find package 'mikser-core-${pluginName}`) != 0) throw err
+            else if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
         }
     }
     logger.error('Plugin not found: %s', pluginName)

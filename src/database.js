@@ -50,7 +50,7 @@ onPersist(async () => {
 })
 
 onAfterRender(async () => {
-    const entitiesToRender = useOperations(['render'])
+    const entitiesToRender = useOperations([constants.OPERATION_RENDER])
     for(let { result, entity } of entitiesToRender) {
         if (result) {
             const index = database

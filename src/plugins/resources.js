@@ -23,7 +23,7 @@ onLoaded(async () => {
 		resourceMap: {}
 	}
 
-    mikser.options.resources = mikser.config.resources?.resources || collection
+    mikser.options.resources = mikser.config.resources?.resourcesFolder || collection
     mikser.options.resourcesFolder = path.join(mikser.options.workingFolder, mikser.options.resources)
     logger.info('Resources folder: %s', mikser.options.resourcesFolder)
     await mkdir(mikser.options.resourcesFolder, { recursive: true })
@@ -34,7 +34,7 @@ onLoaded(async () => {
     }
     
     let link = path.join(mikser.options.outputFolder, mikser.options.resources)
-    if (mikser.config.resources?.output) link = path.join(mikser.options.outputFolder, mikser.config.resources?.output, mikser.options.resources)
+    if (mikser.config.resources?.outputFolder) link = path.join(mikser.options.outputFolder, mikser.config.resources?.outputFolder, mikser.options.resources)
     try {
         await mkdir(path.dirname(link), { recursive: true }) 
         await symlink(mikser.options.resourcesFolder, link, 'dir')

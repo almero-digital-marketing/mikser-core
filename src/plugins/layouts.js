@@ -139,7 +139,7 @@ onLoaded(async () => {
 		sitemap: {}
 	}
 	
-    mikser.options.layouts = mikser.config.layouts?.layouts || collection
+    mikser.options.layouts = mikser.config.layouts?.layoutsFolder || collection
     mikser.options.layoutsFolder = path.join(mikser.options.workingFolder, mikser.options.layouts)
 
     logger.info('Layouts folder: %s', mikser.options.layoutsFolder)
