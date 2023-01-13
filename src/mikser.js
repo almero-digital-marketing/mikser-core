@@ -1,4 +1,4 @@
-export default class Mikser {
+export default class {
     static stamp = Date.now()
     static runtime = {}
     static options = {
