@@ -9,12 +9,12 @@ const maxBytes = 300 * 1024
 export async function checksum(uri) {
     const { size } = await stat(uri)
     if (size < maxBytes) {
-        return await hasha.fromFile(uri)
+        return await hasha.fromFile(uri, { algorithm: 'md5' })
     } else {
         const truncate = new TruncateStream({ maxBytes })
         const fileStream = createReadStream(uri)
         fileStream.pipe(truncate)
-        const checksum = size.toString() + ':' + await hasha.fromStream(truncate, {algorithm: 'md5'})
+        const checksum = size.toString() + ':' + await hasha.fromStream(truncate, { algorithm: 'md5' })
         return checksum
     }
 }
