@@ -9,6 +9,7 @@ import { AbortController } from 'abort-controller'
 import path from 'node:path'
 import { globby } from 'globby'
 import { existsSync } from 'node:fs'
+import escapeStringRegexp from 'escape-string-regexp'
 
 export const collection = 'resources'
 export const type = 'resource'
@@ -30,7 +31,7 @@ onLoaded(async () => {
 
     for (let library in (mikser.config.resources?.libraries || [])) {
         let resource = mikser.config.resources.libraries[library]
-        mikser.state.resources.resourceMap[resource.url] = library
+        mikser.state.resources.resourceMap[resource.match || escapeStringRegexp(resource.url)] = library
     }
     
     let link = path.join(mikser.options.outputFolder, mikser.options.resources)
@@ -59,7 +60,8 @@ onProcessed(async () => {
         _.eachDeep(entity.meta, value => {
             if (typeof value == 'string' && isUrl(value)) {
                 for (let library in resourceMap) {
-                    if (_.startsWith(value, library)) {
+                    const match = new RegExp(library)
+                    if (value.match(match)) {
                         resources.push({ library, url: value, entity })
                     }
                 }

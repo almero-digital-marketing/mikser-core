@@ -23,7 +23,7 @@ onLoad(async () => {
     for (const plugin of plugins) {
         if (!mikser.config[plugin]) {
             try {
-                const pluginConfig = path.join(mikser.options.workingFolder, `${plugin}.config.js`)
+                const pluginConfig = path.join(mikser.options.workingFolder, 'config', `${plugin}.config.js`)
                 const config = await import(pluginConfig)
                 if (typeof config.default == 'function') {
                     mikser.config[plugin] = await config.default(mikser)

@@ -246,7 +246,7 @@ onBeforeRender(async () => {
                             }
                         }
 
-                        if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
+                        if (mikser.config.layouts?.cleanUrls && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
                             pageEntity.destination = path.join(entity.destination, pageEntity.page, `index.${entity.layout.format}`)
                         } else {
                             pageEntity.destination += page ? `.${pageEntity.page}.html` : `.${entity.layout.format}`
@@ -254,7 +254,7 @@ onBeforeRender(async () => {
                     } else {
                         removePagesFromSitemap(original)
                         pageEntity.page = 1
-                        if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
+                        if (mikser.config.layouts?.cleanUrls && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
                             pageEntity.destination = path.join(entity.destination, `index.${entity.layout.format}`)
                         } else {
                             pageEntity.destination += `.${entity.layout.format}`
@@ -267,7 +267,7 @@ onBeforeRender(async () => {
         } else {
             removePagesFromSitemap(original)
             if (!_.endsWith(entity.name, entity.format)) {
-                if (mikser.config.layouts?.clean && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
+                if (mikser.config.layouts?.cleanUrls && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
                     entity.destination = path.join(entity.destination, `index.${entity.layout.format}`)
                 } else {
                     entity.destination += `.${entity.layout.format}`

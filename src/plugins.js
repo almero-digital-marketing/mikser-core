@@ -11,7 +11,8 @@ export async function loadPlugin(pluginName) {
         path.join(mikser.options.workingFolder || '.', 'plugins', `${pluginName}.js`),
         path.join(mikser.options.workingFolder || '.', 'node_modules', `mikser-core-${pluginName}`,'index.js'),
     ]
-    for (let resolveLocation of resolveLocations) {
+    for (let index = 0; index < resolveLocations.length; index++) {
+        const resolveLocation = resolveLocations[index]
         try {
             const plugin = await import(resolveLocation)
             const pluginRuntime = Object.keys(plugin)
@@ -23,11 +24,12 @@ export async function loadPlugin(pluginName) {
             }
             return
         } catch (err) {
-            if (resolveLocations[2] == resolveLocation && 
-                err.code == 'ERR_MODULE_NOT_FOUND' && 
-                err.message.indexOf(`Cannot find package 'mikser-core-${pluginName}`) != 0) throw err
-            else if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
+            logger.trace(err.message)
+            if (index == 2) throw err
+            if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
         }
+    }
+    for (let resolveLocations of resolveLocations) {
     }
     logger.error('Plugin not found: %s', pluginName)
 }

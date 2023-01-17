@@ -1,6 +1,6 @@
 {
   "name": "mikser-core",
-  "version": "1.0.8",
+  "version": "1.1.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -21,6 +21,7 @@
     "chokidar": "^3.5.3",
     "commander": "^10.0.0",
     "deepdash": "^5.3.9",
+    "escape-string-regexp": "^5.0.0",
     "execa": "^6.1.0",
     "front-matter": "^4.0.2",
     "globby": "^13.1.3",

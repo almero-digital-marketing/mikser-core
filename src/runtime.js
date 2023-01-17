@@ -1,7 +1,7 @@
 import pino from 'pino'
 import path from 'node:path'
 import { Command } from 'commander'
-import { rmdir, lstat, realpath } from 'fs/promises'
+import { rmdir, lstat, realpath, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
@@ -36,11 +36,11 @@ export async function setup(options) {
     
     onInitialize(async () => {
         mikser.runtime.commander?.version(version)
-        .option('--working-folder <folder>', 'set mikser working folder', './')
-        .option('--plugins [plugins...]', 'list of mikser plugins to load', [])
-        .option('--config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
-        .option('--mode <mode>', 'set mikser runtime mode', 'development')
-        .option('--clear', 'clear current state before execution', false)
+        .option('-i --working-folder <folder>', 'set mikser working folder', './')
+        .option('-p --plugins [plugins...]', 'list of mikser plugins to load', [])
+        .option('-c --config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
+        .option('-m --mode <mode>', 'set mikser runtime mode', 'development')
+        .option('-r --clear', 'clear current state before execution', false)
         .option('-o --output <folder>', 'set mikser output folder realtive to working folder ot absolute', 'out')
         .option('-w --watch', 'watch entities for changes', false)
         .option('-d --debug', 'display debug statements')
@@ -61,7 +61,8 @@ export async function setup(options) {
         mikser.options.workingFolder = path.resolve(mikser.options.workingFolder)
         process.chdir(mikser.options.workingFolder)
 
-        mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || 'runtime')
+        mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || '.runtime')
+        await mkdir(mikser.options.runtimeFolder , { recursive: true })
         mikser.options.outputFolder = path.join(mikser.options.workingFolder, mikser.options.outputFolder || 'out')
         
         logger.debug(mikser.options, 'Mikser options')
