@@ -8,14 +8,17 @@ import isUrl from 'is-url'
 import { AbortController } from 'abort-controller'
 import path from 'node:path'
 import { globby } from 'globby'
-import { existsSync } from 'node:fs'
 import escapeStringRegexp from 'escape-string-regexp'
+import * as stream from 'stream'
+import { promisify } from 'util'
 
 export const collection = 'resources'
 export const type = 'resource'
 
 const _ = deepdash(lodash)
 let abortController
+
+const finishedDownload = promisify(stream.finished)
 
 onLoaded(async () => {
     const logger = useLogger()
@@ -74,49 +77,60 @@ onProcessed(async () => {
     for (let { library, url, entity } of resources) {
         library = resourceMap[library]
 
+        if (!resourceDownloads[url]) {
+            resourceDownloads[url] = { library, entity }
+        }
+    }
+
+    const resourceFiles = await globby('**/*', { cwd: mikser.options.resourcesFolder })
+    const resourceFilesMap = new Set()
+    for (let resourceFile of resourceFiles) {
+        resourceFilesMap.add(resourceFile)
+    }
+
+    await Promise.all(Object.keys(resourceDownloads).map(async url => {
+        const { library, entity } = resourceDownloads[url]
         const { pathname } = new URL(url)
         const resource = path.join(mikser.options.resourcesFolder, library, pathname)
         const uri = path.join(mikser.options.outputFolder, library, pathname)
-    
-        if (!resourceDownloads[url]) {
-            resourceDownloads[url] = true
 
-            if (!existsSync(resource)) {
-                const resourceTemp = path.join(mikser.options.resourcesFolder, library, pathname + '.temp')
-                logger.debug('Downloading resource: %s %s', entity.id, url)
-                const config = mikser.config.resources.libraries[library]
-                const request = {
-                    method: 'get',
-                    ...config,
-                    url,
-                    responseType: 'stream',
-                    signal
+        let success = true
+        if (!resourceFilesMap.has(path.join(library, pathname))) {
+            const resourceTemp = path.join(mikser.options.resourcesFolder, library, pathname + '.temp')
+            logger.debug('Downloading resource: %s %s', entity.id, url)
+            const config = mikser.config.resources.libraries[library]
+            const request = {
+                method: 'get',
+                ...config,
+                url,
+                responseType: 'stream',
+                signal
+            }
+
+            try {
+                var response = await axios(request)
+            } catch (err) {
+                if (axios.isCancel(err)) {
+                    logger.trace('Downloading canceled')
+                    return
+                } else {
+                    logger.error('Resource error: %s %s %s', entity.id, url, err.message)
+                    success == false
                 }
-    
-                try {
-                    var response = await axios(request)
-                } catch (err) {
-                    if (axios.isCancel(err)) {
-                        logger.trace('Downloading canceled')
-                        return
-                    } else {
-                        logger.error('Resource error: %s %s %s', entity.id, url, err.message)
-                        continue
-                    }
-                }
-    
+            }
+
+            if (success) {
                 await mkdir(path.dirname(resource), { recursive: true })
-                await new Promise((resolve, reject) => {
-                    const writer = createWriteStream(resourceTemp)
-                    writer.on('finish', resolve)
-                    writer.on('error', reject)
-                    response.data.pipe(writer)
-                })
+                const writer = createWriteStream(resourceTemp)
+                response.data.pipe(writer)
+                await finishedDownload(writer)
     
                 logger.info('Resource: %s %s', entity.id, url)
                 await rename(resourceTemp, resource)
             }
-            
+        }
+        
+        if (success) {
             await createEntity({
                 id: path.join('/resources', library, pathname),
                 uri,
@@ -128,6 +142,10 @@ onProcessed(async () => {
                 checksum: await checksum(resource)
             })
         }
+    }))
+
+    if (resources.length) {
+        logger.info('Processing resources completed: %d', resources.length)
     }
 })
 

@@ -1,12 +1,15 @@
 import { mikser, onLoaded, useLogger, onImport, watch, onProcessed, onBeforeRender, useOperations, createEntity, updateEntity, deleteEntity, renderEntity, onAfterRender, constants, onSync, onFinalize, findEntity } from '../../index.js'
 import path from 'node:path'
-import { mkdir, writeFile, unlink, rm, readFile, symlink } from 'fs/promises'
+import { mkdir, writeFile, unlink, rm, readFile, symlink, } from 'fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
 import minimatch from 'minimatch'
 
 export const collection = 'presets'
 export const type = 'preset'
+
+
+const checksumMap = new Set()
 
 async function getEntityPresets(entity) {
     const entityPresets = []
@@ -21,16 +24,31 @@ async function getEntityPresets(entity) {
 }
 
 async function getRevisions(entity) {
-    let revisions = await globby(`${entity.destination}.*.md5`, { cwd: path.join(mikser.options.assetsFolder, entity.preset.name) })
+    let revisions = await globby(`${entity.destination}.*.md5`, { 
+        cwd: path.join(mikser.options.assetsFolder, entity.preset.name), 
+        expandDirectories: false, 
+        onlyFiles: true 
+    })
     return revisions
 }
 
 async function isPresetRendered(entity) {
     let result = false
-    const revisions = await getRevisions(entity)
+    let revisions = []
+    const currentRevision = path.join(entity.preset.name, `${entity.name}.${entity.preset.checksum}.md5`)
+    if (checksumMap.has(currentRevision)) {
+        revisions.push(currentRevision)
+    } else {
+        revisions = await getRevisions(entity)
+    }
+    
     for (let revision of revisions) {
         const [assetsRevision] = revision.split('.').slice(-2,-1)
         if (entity.preset.checksum <= Number.parseInt(assetsRevision)) {
+            if (entity.preset.options?.checksum === false) {
+                result = true
+                break
+            }
             let checksum = await readFile(revision, 'utf8')
             result ||= checksum == entity.checksum
             if (result) break
@@ -150,7 +168,7 @@ onImport(async () => {
         const uri = path.join(mikser.options.presetsFolder, relativePath)
         const source = uri
         try {
-            const { revision = 1, format } = await import(`${uri}?stamp=${Date.now()}`)
+            const { revision = 1, format, options } = await import(`${uri}?stamp=${Date.now()}`)
             const name = relativePath.replace(path.extname(relativePath), '')
             
             const preset = {
@@ -161,7 +179,8 @@ onImport(async () => {
                 name: relativePath.replace(path.extname(relativePath), ''),
                 source,
                 format, 
-                checksum: revision
+                checksum: revision,
+                options
             }
 
             await createEntity(preset)
@@ -221,9 +240,17 @@ onBeforeRender(async () => {
     entitiesToRender = _.uniqBy(entitiesToRender, 'id')
 
     logger.info('Processing assets: %d', entitiesToRender.length)
+
+    if (entitiesToRender) {
+        checksumMap.clear()
+        const checksumFiles = await globby('**/*.md5', { cwd: mikser.options.assetsFolder })
+        for (let checksumFile of checksumFiles) {
+            checksumMap.add(checksumFile)
+        }
+    }
 	
     const presetRenders = {}
-    for (let original of entitiesToRender) {
+    await Promise.all(entitiesToRender.map(async original => {
         for (let entityPreset of assetsMap[original.id] || []) {
             const entity = _.cloneDeep(original)
             entity.preset = presets[entityPreset]
@@ -234,12 +261,16 @@ onBeforeRender(async () => {
             entity.destination = path.join(mikser.options.assetsFolder, entityPreset, destination)
             if (!presetRenders[entity.destination]) {
                 presetRenders[entity.destination] = true
-
+    
                 if (!await isPresetRendered(entity)) {
                     await renderEntity(entity, 'preset')
                 }
             }
         }
+    }))
+
+    if (entitiesToRender.length) {
+        logger.info('Processing assets completed: %d', entitiesToRender.length)
     }
 })
 

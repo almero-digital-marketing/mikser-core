@@ -1,7 +1,7 @@
 import pino from 'pino'
 import path from 'node:path'
 import { Command } from 'commander'
-import { rmdir, lstat, realpath, mkdir } from 'fs/promises'
+import { rm, lstat, realpath, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
@@ -61,7 +61,7 @@ export async function setup(options) {
         mikser.options.workingFolder = path.resolve(mikser.options.workingFolder)
         process.chdir(mikser.options.workingFolder)
 
-        mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || '.runtime')
+        mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || 'runtime')
         await mkdir(mikser.options.runtimeFolder , { recursive: true })
         mikser.options.outputFolder = path.join(mikser.options.workingFolder, mikser.options.outputFolder || 'out')
         
@@ -72,8 +72,8 @@ export async function setup(options) {
         if (mikser.options.clear) {
             try {
                 logger.info('Clearing folders')
-                await rmdir(mikser.options.outputFolder, { recursive: true })
-                await rmdir(mikser.options.runtimeFolder, { recursive: true })
+                await rm(mikser.options.outputFolder, { recursive: true })
+                await rm(mikser.options.runtimeFolder, { recursive: true })
             } catch (err) {
                 if (err.code != 'ENOENT')
                 throw err
@@ -85,10 +85,13 @@ export async function setup(options) {
     onRender(async () => {
         const logger = useLogger()
         const entitiesToRender = useOperations(['render'])
+        const renderJobs = _.uniqWith(useOperations(['render']), (currObject, otherObject) => {
+            currObject.id == otherObject.id && currObject.destination == otherObject.destination
+        })
         logger.info('Render jobs: %d', entitiesToRender.length)
         abortController = new AbortController()
         const { signal } = abortController
-        await Promise.all(entitiesToRender.map(async operation => {
+        await Promise.all(renderJobs.map(async operation => {
             const { entity, renderer, context } = operation
             try {
                 operation.result = await render(entity, renderer, context, signal)
@@ -96,7 +99,7 @@ export async function setup(options) {
                 if (err.name != 'AbortError') {
                     logger.error('Render error: %s %s', entity.id, err.message)
                 }
-                logger.trace('Render canceled')    
+                logger.debug('Render canceled')    
             } 
         }))
     })

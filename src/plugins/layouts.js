@@ -178,16 +178,21 @@ onProcessed(async () => {
         if (!entity.meta?.layout) {
             for (let pattern in mikser.config.layouts?.match || []) {
                 if (minimatch(pattern, entity.name)) {
-                    entity.layout = mikser.config.layouts?.match[pattern]
+                    const layoutName = mikser.config.layouts?.match[pattern]
+                    entity.layout = layouts[layoutName]
                     break
                 }
             }
-            if (!entity.layout) {
-                const autoLayout = entity.name?.split('.').slice(1).join('.')
-                if (layouts[autoLayout]) {
-                    entity.layout = layouts[autoLayout]
-                } else {
-                    continue
+            if (!entity.layout &&  mikser.config.layouts?.autoLayouts) {
+                const nameChunks = entity.name?.split('.')
+                if (nameChunks?.length) {
+                    for (let index = 0; index < nameChunks.length - 1; index++) {
+                        const autoLayout = entity.name?.split('.').slice(index).join('.')
+                        if (layouts[autoLayout]) {
+                            entity.layout = layouts[autoLayout]
+                            break
+                        }
+                    }
                 }
             }
         } else {
@@ -246,10 +251,10 @@ onBeforeRender(async () => {
                             }
                         }
 
-                        if (mikser.config.layouts?.cleanUrls && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
-                            pageEntity.destination = path.join(entity.destination, pageEntity.page, `index.${entity.layout.format}`)
+                        if (mikser.config.layouts?.cleanUrls && entity.layout.format == 'html') {
+                            pageEntity.destination = path.join(entity.destination.replace('index', ''), pageEntity.page.toString(), `index.${entity.layout.format}`)
                         } else {
-                            pageEntity.destination += page ? `.${pageEntity.page}.html` : `.${entity.layout.format}`
+                            pageEntity.destination += page ? `.${pageEntity.page}.${entity.layout.format}` : `.${entity.layout.format}`
                         }
                     } else {
                         removePagesFromSitemap(original)

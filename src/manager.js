@@ -2,6 +2,10 @@ import mikser from './mikser.js'
 import chokidar from 'chokidar'
 import cron from 'node-cron'
 import { constants  } from './constants.js'
+import { onProcess, onFinalized } from './lifecycle.js'
+import { useLogger } from './runtime.js'
+
+const tasks = []
 
 export function watch(name, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true }) {
     if (mikser.options.watch !== true) return
@@ -54,7 +58,7 @@ export function watch(name, folder, options = { interval: 1000, binaryInterval: 
 export function schedule(name, expression, context) {
     if (mikser.options.watch !== true) return
 
-    cron.schedule(expression, async () => {
+    const taks = cron.schedule(expression, async () => {
         const synced = await mikser.sync({
             operation: constants.OPERATION_SCHEDULE, 
             name,
@@ -65,5 +69,26 @@ export function schedule(name, expression, context) {
             clearTimeout(mikser.runtime.processTimeout)
             mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
         }
+    }, {
+        scheduled: false
     })
+    tasks.push(taks)
 }
+
+onProcess(() => {
+    if (!tasks.length) return
+    const logger = useLogger()
+    logger.debug('Stopping scheduled tasks: %d', tasks.length)
+    for(let task of tasks) {
+        task.stop()
+    }
+})
+
+onFinalized(() => {
+    if (!tasks.length) return
+    const logger = useLogger()
+    logger.debug('Starting scheduled tasks: %d', tasks.length)
+    for(let task of tasks) {
+        task.start()
+    }
+})

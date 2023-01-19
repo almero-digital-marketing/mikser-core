@@ -6,6 +6,10 @@ export function load({ runtime }) {
         const relativePath = file.name || file
         return readFileSync(relativePath, { encoding: 'utf8' })
     }
+    runtime.jsonFile = (file) => {
+        const relativePath = file.name || file
+        return JSON.parse(readFileSync(relativePath, { encoding: 'utf8' }))
+    }
     runtime.glob = (pattern, options = {}) => {
         return globby.sync(pattern, options)
     }

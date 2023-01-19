@@ -19,7 +19,8 @@ import {
     onBeforeRender,
     onRender,
     onAfterRender,
-    onFinalize
+    onFinalize,
+    onFinalized
 } from '../../index.js'
 
 const eachLine = promisify(lineReader.eachLine)
@@ -69,3 +70,4 @@ onAfterRender(async () => await executeCommands('afterRender'))
 onCancel(async () => await executeCommands('cancel'))
 onCancelled(async () => await executeCommands('canceled'))
 onFinalize(async () => await executeCommands('finalize'))
+onFinalized(async () => await executeCommands('finalized'))
