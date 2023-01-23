@@ -141,6 +141,7 @@ onLoaded(async () => {
 	
     mikser.options.layouts = mikser.config.layouts?.layoutsFolder || collection
     mikser.options.layoutsFolder = path.join(mikser.options.workingFolder, mikser.options.layouts)
+    mikser.options.layoutsStateFolder = path.join(mikser.options.outputFolder, 'state')
 
     logger.info('Layouts folder: %s', mikser.options.layoutsFolder)
     await mkdir(mikser.options.layoutsFolder, { recursive: true })
@@ -202,8 +203,9 @@ onProcessed(async () => {
         if (entity.layout) {
             logger.debug('Layout matched for %s: %s', entity.collection, entity.id)
             addToSitemap(entity)
-        } else {
+        } else if (entity.meta?.href) {
             logger.trace('Layout missing for %s: %s', entity.collection, entity.id)
+            addToSitemap(entity)
         }
     }
 
@@ -216,7 +218,9 @@ onProcessed(async () => {
 })
 
 onBeforeRender(async () => {
-    const entities = Array.from(getSitemapEntities()).sort((a, b) => b.time - a.time)
+    const entities = Array.from(getSitemapEntities())
+    .filter(entity => entity.layout)
+    .sort((a, b) => b.time - a.time)
 
     for (let original of entities) {
         delete original.page
@@ -287,7 +291,7 @@ onBeforeRender(async () => {
 onAfterRender(async () => {
     const logger = useLogger()
 
-    const entitiesToRender = useOperations(['render'])
+    const entitiesToRender = useOperations([constants.OPERATION_RENDER])
     for(let { result, entity } of entitiesToRender) {
         if (result && entity.layout) {
             const destinationFile = path.join(mikser.options.outputFolder, entity.destination)

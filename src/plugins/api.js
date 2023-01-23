@@ -8,24 +8,30 @@ const format = 'api'
 async function syncEntities(apiName) {
     const logger = useLogger()
     const syncTime = Date.now()
+    const { 
+        collection = apiName, 
+        type = 'document', 
+        readMany, 
+        uri = '/' 
+    } = mikser.config.api[apiName]
+    
     let synced = 0
     let removed = 0
-    const { collection, type, readMany, uri = '/' } = mikser.config.api[apiName]
     const recent = new Set()
     const entities = await readMany(mikser)
     for (let meta of entities) {
-        if (collection && type) {
-            const relativePath = path.join(collection, apiName, meta.id)
-            const id = path.join('/api', relativePath)
+        if (collection && type && meta.id) {
+            const name = path.join(collection, meta.name || meta.id)
+            const id = path.join('/api', collection, meta.id)
             if (recent.has(id)) {
-                logger.error(meta, 'Duplicate entity found: %s', apiName)
+                logger.error(meta, 'Duplicate entity found: %s', id)
                 continue
             }
             recent.add(id)
             const entity = normalize({
                 id,
                 uri: uri + meta.id,
-                name: relativePath.replace(path.extname(relativePath), ''),
+                name,
                 collection,
                 type,
                 format,
@@ -57,7 +63,7 @@ async function syncEntities(apiName) {
         removed++
     }
     if (synced || removed) {
-        logger.info('Syncing api: [%s] synced: %d, removed: %d', apiName, synced, removed)
+        logger.info('Syncing api: [%s] synced: %d, removed: %d', collection, synced, removed)
     }
     return synced > 0 || removed > 0
 }
