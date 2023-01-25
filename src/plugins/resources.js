@@ -4,7 +4,6 @@ import { createWriteStream } from 'node:fs'
 import lodash from 'lodash'
 import deepdash from 'deepdash'
 import axios from 'axios'
-import isUrl from 'is-url'
 import { AbortController } from 'abort-controller'
 import path from 'node:path'
 import { globby } from 'globby'
@@ -90,7 +89,8 @@ onProcessed(async () => {
 
     await Promise.all(Object.keys(resourceDownloads).map(async url => {
         const { library, entity } = resourceDownloads[url]
-        const { pathname } = new URL(url)
+        let { pathname } = new URL(url)
+        pathname = decodeURI(pathname)
         const resource = path.join(mikser.options.resourcesFolder, library, pathname)
         const uri = path.join(mikser.options.outputFolder, library, pathname)
 
@@ -110,16 +110,16 @@ onProcessed(async () => {
             try {
                 var response = await axios(request)
             } catch (err) {
+                success == false
                 if (axios.isCancel(err)) {
                     logger.trace('Downloading canceled')
                     return
                 } else {
                     logger.error('Resource error: %s %s %s', entity.id, url, err.message)
-                    success == false
                 }
             }
 
-            if (success) {
+            if (response && success) {
                 await mkdir(path.dirname(resource), { recursive: true })
                 const writer = createWriteStream(resourceTemp)
                 response.data.pipe(writer)

@@ -7,6 +7,46 @@ import { useLogger } from './runtime.js'
 
 const tasks = []
 
+export async function createdHook(name, context) {
+    const synced = await mikser.sync({
+        operation: constants.OPERATION_CREATE, 
+        name,
+        context
+    })
+
+    if (synced) {
+        clearTimeout(mikser.runtime.processTimeout)
+        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+    }
+}
+
+export async function updatedHook(name, context) {
+    const synced = await mikser.sync({
+        operation: constants.OPERATION_UPDATE, 
+        name,
+        context
+    })
+
+    if (synced) {
+        clearTimeout(mikser.runtime.processTimeout)
+        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+    }
+}
+
+
+export async function deletedHook(name, context) {
+    const synced = await mikser.sync({
+        operation: constants.OPERATION_DELETE, 
+        name,
+        context
+    })
+
+    if (synced) {
+        clearTimeout(mikser.runtime.processTimeout)
+        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+    }
+}
+
 export function watch(name, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true }) {
     if (mikser.options.watch !== true) return
     
@@ -16,42 +56,15 @@ export function watch(name, folder, options = { interval: 1000, binaryInterval: 
     })
     .on('add', async fullPath => {
         const relativePath = fullPath.replace(`${folder}/`, '')
-        const synced = await mikser.sync({
-            operation: constants.OPERATION_CREATE, 
-            name,
-            context: { relativePath }
-        })
-
-        if (synced) {
-            clearTimeout(mikser.runtime.processTimeout)
-            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
-        }
+        createdHook(name, { relativePath })
     })
     .on('change', async fullPath => {
         const relativePath = fullPath.replace(`${folder}/`, '')
-        const synced = await mikser.sync({
-            operation: constants.OPERATION_UPDATE, 
-            name,
-            context: { relativePath }
-        })
-
-        if (synced) {
-            clearTimeout(mikser.runtime.processTimeout)
-            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
-        }
+        updatedHook(name, { relativePath })
     })
     .on('unlink', async fullPath => {
         const relativePath = fullPath.replace(`${folder}/`, '')
-        const synced = await mikser.sync({
-            operation: constants.OPERATION_DELETE, 
-            name,
-            context: { relativePath }
-        })
-
-        if (synced) {
-            clearTimeout(mikser.runtime.processTimeout)
-            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
-        }
+        deletedHook(name, { relativePath })
     })
 }
 
