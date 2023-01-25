@@ -130,8 +130,17 @@ onLoaded(async () => {
 })
 
 onSync(async ({ name, operation }) => {
+    const logger = useLogger()
     if (operation == constants.OPERATION_SCHEDULE) {
-        return await syncEntities(name)
+        if (name) {
+            logger.info('Syncing api: [%s]', name)
+            return await syncEntities(name)
+        } else {
+            for (let apiName in mikser.config.api || {}) {
+                logger.info('Syncing api: [%s]', apiName)
+                await syncEntities(apiName)
+            }
+        }
     }
 })
 

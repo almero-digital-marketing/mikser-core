@@ -33,6 +33,18 @@ export async function updatedHook(name, context) {
     }
 }
 
+export async function scheduleHook(name, context) {
+    const synced = await mikser.sync({
+        operation: constants.OPERATION_SCHEDULE, 
+        name,
+        context
+    })
+
+    if (synced) {
+        clearTimeout(mikser.runtime.processTimeout)
+        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+    }
+}
 
 export async function deletedHook(name, context) {
     const synced = await mikser.sync({
@@ -72,16 +84,7 @@ export function schedule(name, expression, context) {
     if (mikser.options.watch !== true) return
 
     const taks = cron.schedule(expression, async () => {
-        const synced = await mikser.sync({
-            operation: constants.OPERATION_SCHEDULE, 
-            name,
-            context
-        })
-
-        if (synced) {
-            clearTimeout(mikser.runtime.processTimeout)
-            mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
-        }
+        scheduleHook(name, context)
     }, {
         scheduled: false
     })
