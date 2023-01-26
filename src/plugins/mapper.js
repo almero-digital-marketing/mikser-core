@@ -11,7 +11,11 @@ onProcess(() => {
     
         for (let entity of entities) {
             logger.trace('Mapper: %s', entity.id)
-            map(entity)
+            try {
+                map(entity)
+            } catch (err) {
+                logger.error('Mapper error: %s %s', entity.id, err.message)
+            }
         }
     }
 })
