@@ -10,6 +10,7 @@ import { globby } from 'globby'
 import escapeStringRegexp from 'escape-string-regexp'
 import * as stream from 'stream'
 import { promisify } from 'util'
+import isUrl from 'is-url'
 
 export const collection = 'resources'
 export const type = 'resource'
