@@ -293,7 +293,7 @@ onAfterRender(async () => {
 
     const entitiesToRender = useOperations([constants.OPERATION_RENDER])
     for(let { result, entity } of entitiesToRender) {
-        if (result && entity.layout) {
+        if (result && entity.layout && entity.destination) {
             const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
             await mkdir(path.dirname(destinationFile), { recursive: true })
             try {

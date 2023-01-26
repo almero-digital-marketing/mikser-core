@@ -114,10 +114,10 @@ onProcessed(async () => {
                 success == false
                 if (axios.isCancel(err)) {
                     logger.trace('Downloading canceled')
-                    return
                 } else {
                     logger.error('Resource error: %s %s %s', entity.id, url, err.message)
                 }
+                return
             }
 
             if (response && success) {

@@ -125,7 +125,11 @@ onLoaded(async () => {
             logger.info('Schedule api: [%s] %s', apiName, cron)
             schedule(apiName, cron)
         }
-        onSync(async ({ context: { id } }) => syncEntity(apiName, id), apiName)
+        onSync(async ({ context }) => {
+            if (context?.id) {
+                return syncEntity(apiName, context.id)
+            }
+        }, apiName)
     }
 })
 
