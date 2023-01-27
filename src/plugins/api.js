@@ -38,6 +38,7 @@ async function syncEntities(apiName) {
                     format,
                     meta
                 })
+
                 entity.checksum = await hasha(JSON.stringify(entity.meta), { algorithm: 'md5' })
                 const current = await findEntity({ id })
                 if (current) {
@@ -125,28 +126,20 @@ onLoaded(async () => {
             logger.info('Schedule api: [%s] %s', apiName, cron)
             schedule(apiName, cron)
         }
-        onSync(async ({ context }) => {
+
+        onSync(apiName, async ({ context }) => {
             if (context?.id) {
                 return syncEntity(apiName, context.id)
+            } else {
+                return syncEntities(apiName)
             }
-        }, apiName)
-    }
-})
-
-onSync(async ({ name, operation, context }) => {
-    const logger = useLogger()
-    if (operation == constants.OPERATION_SCHEDULE) {
-        if (name) {
-            logger.info('Syncing api: [%s]', name)
-            return await syncEntities(name)
-        } else {
-            for (let apiName in mikser.config.api || {}) {
-                if (context.uri && mikser.config.api[apiName].uri.indexOf(context.uri) != 0) continue
-
-                logger.info('Syncing api: [%s]: %s', apiName, context.uri)
-                await syncEntities(apiName)
-            }
-        }
+        })
+        
+        const { origin } = new URL(mikser.config.api[apiName].uri)
+        onSync(origin, async ({ context }) => {
+            logger.info('Syncing api: [%s]: %s', apiName, context.uri)
+            return syncEntities(apiName)
+        })
     }
 })
 

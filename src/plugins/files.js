@@ -26,8 +26,9 @@ async function link(source) {
     }
 }
 
-onSync(async ({ operation, context: { relativePath } }) => {
-    if (!relativePath) return false
+onSync(collection, async ({ operation, context }) => {
+    if (!context.relativePath) return false
+    const { relativePath } = context
 
     const uri = path.join(mikser.options.outputFolder, relativePath)
     const source = path.join(mikser.options.filesFolder, relativePath)
@@ -78,7 +79,7 @@ onSync(async ({ operation, context: { relativePath } }) => {
         break
     }
     return synced
-}, collection)
+})
 
 onLoaded(async () => {
     const logger = useLogger()

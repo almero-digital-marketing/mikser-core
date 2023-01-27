@@ -68,14 +68,10 @@ export async function onFinalized(callback) {
     mikser.hooks.finalized.push(callback)
 }
 
-export async function onSync(callback, name) {
-    if (name) {
-        mikser.hooks.sync.push(async (operation) => {
-            if (operation.name == name) {
-                return await callback(operation)
-            }
-        })
-    } else {
-        mikser.hooks.sync.push(callback)
-    }
+export async function onSync(name, callback) {
+    mikser.hooks.sync.push(async (operation) => {
+        if (operation.name == name) {
+            return await callback(operation)
+        }
+    })
 }

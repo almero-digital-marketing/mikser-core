@@ -37,7 +37,7 @@ async function isPresetRendered(entity) {
     let revisions = []
     const currentRevision = path.join(entity.preset.name, `${entity.name}.${entity.preset.checksum}.md5`)
     if (checksumMap.has(currentRevision)) {
-        revisions.push(currentRevision)
+        revisions.push(path.join(mikser.options.assetsFolder, currentRevision))
     } else {
         revisions = await getRevisions(entity)
     }
@@ -49,6 +49,7 @@ async function isPresetRendered(entity) {
                 result = true
                 break
             }
+
             let checksum = await readFile(revision, 'utf8')
             result ||= checksum == entity.checksum
             if (result) break
@@ -88,8 +89,9 @@ onLoaded(async () => {
     watch(collection, mikser.options.presetsFolder)
 })
 
-onSync(async ({ operation, context: { relativePath } }) => {
-    if (!relativePath) return false
+onSync(collection, async ({ operation, context }) => {
+    if (!context.relativePath) return false
+    const { relativePath } = context
 
     const logger = useLogger()
 	const { presets } = mikser.state.assets
@@ -157,7 +159,7 @@ onSync(async ({ operation, context: { relativePath } }) => {
         break
     }
     return synced
-}, collection)
+})
 
 onImport(async () => {
     const logger = useLogger()

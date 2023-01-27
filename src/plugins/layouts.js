@@ -82,8 +82,9 @@ function* getSitemapEntities() {
     }
 }
 
-onSync(async ({ operation, context: { relativePath } }) => {
-    if (!relativePath) return false
+onSync(collection, async ({ operation, context }) => {
+    if (!context.relativePath) return false
+    const { relativePath } = context
     let id = path.join(`/${collection}`, relativePath)
     if (_.endsWith(id, '.js')) id = id.replace(new RegExp('.js$'), '')
 
@@ -129,7 +130,7 @@ onSync(async ({ operation, context: { relativePath } }) => {
             await deleteEntity(layout)
         break
     }
-}, collection)
+})
 
 onLoaded(async () => {
     const logger = useLogger()

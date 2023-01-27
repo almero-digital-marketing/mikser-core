@@ -7,8 +7,9 @@ import _ from 'lodash'
 export const collection = 'documents'
 export const type = 'document'
 
-onSync(async ({ operation, context: { relativePath } }) => {
-    if (!relativePath) return false
+onSync(collection, async ({ operation, context }) => {
+    if (!context.relativePath) return false
+    const { relativePath } = context
     const id = path.join(`/${collection}`, relativePath)
     const uri = path.join(mikser.options.documentsFolder, relativePath)
     switch (operation) {
@@ -43,7 +44,7 @@ onSync(async ({ operation, context: { relativePath } }) => {
             })
         break
     }
-}, collection)
+})
 
 onLoaded(async () => {
     const logger = useLogger()
