@@ -82,8 +82,10 @@ export async function setup(options) {
     })
     
     let abortController
-    onRender(async () => {
+    onRender(async ({ aborted }) => {
+        if (aborted) return
         const logger = useLogger()
+        
         const entitiesToRender = useOperations(['render'])
         const renderJobs = _.uniqWith(useOperations(['render']), (currObject, otherObject) => {
             currObject.id == otherObject.id && currObject.destination == otherObject.destination
@@ -108,7 +110,8 @@ export async function setup(options) {
         abortController?.abort()
     })
 
-    onFinalized(async () => {
+    onFinalized(async ({ aborted }) => {
+        if (aborted) return
         const logger = useLogger()
         
         const paths = await globby('**/*', { cwd: mikser.options.outputFolder })

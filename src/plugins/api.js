@@ -65,7 +65,7 @@ async function syncEntities(apiName) {
             removed++
         }
         if (synced || removed) {
-            logger.info('Syncing api: [%s] synced: %d, removed: %d', collection, synced, removed)
+            logger.info('Syncing api [%s] synced: %d, removed: %d', collection, synced, removed)
         }
     } catch (err) {
         logger.error('Api sync entities error: %s', err.message)
@@ -137,8 +137,10 @@ onLoaded(async () => {
         
         const { origin } = new URL(mikser.config.api[apiName].uri)
         onSync(origin, async ({ context }) => {
-            logger.info('Syncing api: [%s]: %s', apiName, context.uri)
-            return syncEntities(apiName)
+            if (context.uri) {                
+                logger.info('Syncing api: [%s] %s', apiName, context.uri)
+                return syncEntities(apiName)
+            }
         })
     }
 })

@@ -3,7 +3,7 @@ const constants = {
     OPERATION_UPDATE: 'update',
     OPERATION_DELETE: 'delete',
     OPERATION_RENDER: 'render',
-    OPERATION_SCHEDULE: 'schedule',
+    OPERATION_TRIGGER: 'trigger',
 }
 
 export {

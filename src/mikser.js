@@ -1,5 +1,8 @@
+import { constants } from "./constants.js"
+
 export default class {
     static stamp = Date.now()
+    static processTime
     static runtime = {}
     static options = {
         plugins: []
@@ -26,6 +29,13 @@ export default class {
         finalized: [],
         sync: [],
     }
+    static abortController
+    static abort(signal) {
+        if (signal.aborted) {
+            this.operations = []
+        }
+        return signal.aborted
+    }
     static async start() {
         for(let hook of this.hooks.initialize) await hook()
         for(let hook of this.hooks.initialized) await hook()
@@ -38,30 +48,54 @@ export default class {
         await this.process()
     }
     static async process() {
+        this.abortController?.abort()
         await this.cancel()
+
+        this.abortController = new AbortController()
+        const { signal } = this.abortController
 
         for(let hook of this.hooks.process) await hook()
         for(let hook of this.hooks.processed) await hook()
-
+        
         for(let hook of this.hooks.persist) await hook()
         for(let hook of this.hooks.persisted) await hook()
-
-        await this.render()
+        
+        await this.render(signal)
     }
-    static async render() {
-        for(let hook of this.hooks.beforeRender) await hook()
-        for(let hook of this.hooks.render) await hook()
-        for(let hook of this.hooks.afterRender) await hook()
+    static async render(signal) {
+        for(let hook of this.hooks.beforeRender) {
+            if (this.abort(signal)) return
+            await hook(signal)
+        } 
 
-        await this.finalize()
+        this.operations = this.operations.filter(({operation}) => operation == constants.OPERATION_RENDER)
+
+        for(let hook of this.hooks.render) {
+            if (this.abort(signal)) return
+            await hook(signal)
+        } 
+        for(let hook of this.hooks.afterRender) {
+            if (this.abort(signal)) return
+            await hook(signal)
+        } 
+        
+        await this.finalize(signal)
     }
     static async cancel() {
         for(let hook of this.hooks.cancel) await hook()
         for(let hook of this.hooks.cancelled) await hook()
+
+        this.operations = this.operations.filter(({operation}) => operation != constants.OPERATION_RENDER)
     }
-    static async finalize() {
-        for(let hook of this.hooks.finalize) await hook()
-        for(let hook of this.hooks.finalized) await hook()
+    static async finalize(signal) {
+        for(let hook of this.hooks.finalize) {
+            if (this.abort(signal)) return
+            await hook(signal)
+        } 
+        for(let hook of this.hooks.finalized) {
+            if (this.abort(signal)) return
+            await hook(signal)
+        } 
 
         this.operations = []
     }

@@ -93,7 +93,7 @@ onSync(collection, async ({ operation, context }) => {
     switch (operation) {
         case constants.OPERATION_CREATE:
             var layout = {
-                id,
+                id, 
                 uri,
                 collection,
                 type,
@@ -218,12 +218,14 @@ onProcessed(async () => {
     }
 })
 
-onBeforeRender(async () => {
+onBeforeRender(async (signal) => {
     const entities = Array.from(getSitemapEntities())
     .filter(entity => entity.layout)
     .sort((a, b) => b.time - a.time)
 
     for (let original of entities) {
+        if (signal.aborted) return
+
         delete original.page
         delete original.pages
         delete original.destination
@@ -234,7 +236,7 @@ onBeforeRender(async () => {
         try {
             var { load, plugins = [] } = await import(`${path.join(mikser.options.layoutsFolder, entity.layout.name)}.js?stamp=${Date.now()}`)
             if (load) {
-                data = await load(entity)
+                data = await load(entity, signal)
             }
         } catch (err) {
             if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
@@ -289,11 +291,12 @@ onBeforeRender(async () => {
     }
 })
 
-onAfterRender(async () => {
+onAfterRender(async (signal) => {
     const logger = useLogger()
 
     const entitiesToRender = useOperations([constants.OPERATION_RENDER])
     for(let { result, entity } of entitiesToRender) {
+        if (signal.aborted) return
         if (result && entity.layout && entity.destination) {
             const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
             await mkdir(path.dirname(destinationFile), { recursive: true })

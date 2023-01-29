@@ -33,9 +33,9 @@ export async function updatedHook(name, context) {
     }
 }
 
-export async function scheduleHook(name, context) {
+export async function triggerHook(name, context) {
     const synced = await mikser.sync({
-        operation: constants.OPERATION_SCHEDULE, 
+        operation: constants.OPERATION_TRIGGER, 
         name,
         context
     })
@@ -82,9 +82,10 @@ export function watch(name, folder, options = { interval: 1000, binaryInterval: 
 
 export function schedule(name, expression, context) {
     if (mikser.options.watch !== true) return
-
+    const logger = useLogger()
     const taks = cron.schedule(expression, async () => {
-        scheduleHook(name, context)
+        logger.info('Scheduled task executed: %s %s', name, expression)
+        triggerHook(name, context)
     }, {
         scheduled: false
     })
