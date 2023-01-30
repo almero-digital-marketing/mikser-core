@@ -22,14 +22,14 @@ function addToSitemap(entity) {
         sitemap[href] = sitemap[href] || {};
         let previous = sitemap[href][lang];
         if (previous && (previous.id != entity.id)) {
-            logger.warn('Entity with equal href: %s and %s', previous.collection, previous.id, entity.id);
+            logger.warn('Entity with equal href: [%s] %s and %s', previous.collection, previous.id, entity.id);
         }
         sitemap[href][lang] = entity
     }
     else {
         let previous = sitemap[href];
         if (previous && (previous.id != entity.id)) {
-            logger.warn('Entity with equal href: %s and %s', previous.collection, previous.id, entity.id);
+            logger.warn('Entity with equal href: [%s] %s and %s', previous.collection, previous.id, entity.id);
         }
         sitemap[href] = entity
     }
