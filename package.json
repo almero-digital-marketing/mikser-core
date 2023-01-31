@@ -1,6 +1,6 @@
 {
   "name": "mikser-core",
-  "version": "1.4.0",
+  "version": "2.0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -17,7 +17,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.2.2",
+    "axios": "^1.2.6",
     "chokidar": "^3.5.3",
     "commander": "^10.0.0",
     "deepdash": "^5.3.9",
@@ -32,7 +32,7 @@
     "line-reader": "^0.4.0",
     "lodash": "^4.17.21",
     "lowdb": "^5.0.5",
-    "minimatch": "^6.0.4",
+    "minimatch": "^6.1.6",
     "node-cron": "^3.0.2",
     "pino": "^8.8.0",
     "pino-pretty": "^9.1.1",
