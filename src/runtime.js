@@ -96,7 +96,11 @@ export async function setup(options) {
         await Promise.all(renderJobs.map(async operation => {
             const { entity, renderer, context } = operation
             try {
-                operation.result = await render(entity, renderer, context, signal)
+                if (context.abortable !== false) {
+                    operation.result = await render(entity, renderer, context, signal)
+                } else {
+                    operation.result = await render(entity, renderer, context)
+                }
             } catch (err) {
                 if (err.name != 'AbortError') {
                     logger.error('Render error: %s %s', entity.id, err.message)

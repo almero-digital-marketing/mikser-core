@@ -120,7 +120,7 @@ export default ({
         switch (operation) {
             case constants.OPERATION_CREATE:
                 try {
-                    const { revision = 1, format } = await import(`${uri}?stamp=${Date.now()}`)
+                    const { revision = 1, format, options } = await import(`${uri}?stamp=${Date.now()}`)
                     const preset = {
                         id: path.join('/presets', relativePath),
                         collection,
@@ -129,7 +129,8 @@ export default ({
                         name: relativePath.replace(path.extname(relativePath), ''),
                         source,
                         format, 
-                        checksum: revision
+                        checksum: revision,
+                        options
                     }
                     presets[name] = preset
                     await createEntity(preset)
@@ -140,7 +141,7 @@ export default ({
             break
             case constants.OPERATION_UPDATE:
                 try {
-                    const { revision = 1, format } = await import(`${uri}?stamp=${Date.now()}`)
+                    const { revision = 1, format, options } = await import(`${uri}?stamp=${Date.now()}`)
                     const preset = {
                         id: path.join('/presets', relativePath),
                         collection,
@@ -149,7 +150,8 @@ export default ({
                         name: relativePath.replace(path.extname(relativePath), ''),
                         checksum: revision,
                         source,
-                        format
+                        format,
+                        options
                     }
                     if (!preset[name]) {
                         presets[name] = preset
@@ -198,6 +200,7 @@ export default ({
                     source,
                     format, 
                     checksum: revision,
+                    options,
                     options
                 }
     
@@ -281,7 +284,7 @@ export default ({
                     presetRenders[entity.destination] = true
         
                     if (!await isPresetRendered(entity)) {
-                        await renderEntity(entity, 'preset')
+                        await renderEntity(entity, 'preset', entity.preset.options)
                     }
                 }
             }
