@@ -1,4 +1,3 @@
-import { useLogger, useOperations, constants, onLoaded, mikser, onCancel, createEntity, onProcessed, onFinalize, checksum } from '../../index.js'
 import { mkdir, symlink, rename, unlink } from 'node:fs/promises'
 import { createWriteStream } from 'node:fs'
 import lodash from 'lodash'
@@ -12,152 +11,171 @@ import * as stream from 'stream'
 import { promisify } from 'util'
 import isUrl from 'is-url'
 
-export const collection = 'resources'
-export const type = 'resource'
 
-const _ = deepdash(lodash)
-let abortController
+export default ({ 
+    useLogger, 
+    useOperations, 
+    constants, 
+    onLoaded, 
+    mikser, 
+    onCancel, 
+    createEntity, 
+    onProcessed, 
+    onFinalize, 
+    checksum 
+}) => {
+    const collection = 'resources'
+    const type = 'resource'
 
-const finishedDownload = promisify(stream.finished)
-
-onLoaded(async () => {
-    const logger = useLogger()
-	
-	mikser.state.resources = {
-		resourceMap: {}
-	}
-
-    mikser.options.resources = mikser.config.resources?.resourcesFolder || collection
-    mikser.options.resourcesFolder = path.join(mikser.options.workingFolder, mikser.options.resources)
-    logger.info('Resources folder: %s', mikser.options.resourcesFolder)
-    await mkdir(mikser.options.resourcesFolder, { recursive: true })
-
-    for (let library in (mikser.config.resources?.libraries || [])) {
-        let resource = mikser.config.resources.libraries[library]
-        mikser.state.resources.resourceMap[resource.match || escapeStringRegexp(resource.url)] = library
-    }
+    const _ = deepdash(lodash)
+    let abortController
     
-    let link = path.join(mikser.options.outputFolder, mikser.options.resources)
-    if (mikser.config.resources?.outputFolder) link = path.join(mikser.options.outputFolder, mikser.config.resources?.outputFolder, mikser.options.resources)
-    try {
-        await mkdir(path.dirname(link), { recursive: true }) 
-        await symlink(mikser.options.resourcesFolder, link, 'dir')
-    } catch (err) {
-        if (err.code != 'EEXIST')
-        throw err
-    }
-})
-
-onProcessed(async () => {
-    const logger = useLogger()
-    const { resourceMap } = mikser.state.resources
-	abortController = new AbortController()
-    const { signal } = abortController
-
-    const entities = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
-    .map(operation => operation.entity)
-    .filter(entity => entity.collection != collection && entity.meta)
-
-    const resources = []
-    for (let entity of entities) {      
-        _.eachDeep(entity.meta, value => {
-            if (typeof value == 'string' && isUrl(value)) {
-                for (let library in resourceMap) {
-                    const match = new RegExp(library)
-                    if (value.match(match)) {
-                        resources.push({ library, url: value, entity })
-                    }
-                }
-            }
-        })
-    }
+    const finishedDownload = promisify(stream.finished)
     
-    const resourceDownloads = {}
-    logger.info('Processing resources: %d', resources.length)
-    for (let { library, url, entity } of resources) {
-        library = resourceMap[library]
-
-        if (!resourceDownloads[url]) {
-            resourceDownloads[url] = { library, entity }
+    onLoaded(async () => {
+        const logger = useLogger()
+        
+        mikser.state.resources = {
+            resourceMap: {}
         }
-    }
-
-    const resourceFiles = await globby('**/*', { cwd: mikser.options.resourcesFolder })
-    const resourceFilesMap = new Set()
-    for (let resourceFile of resourceFiles) {
-        resourceFilesMap.add(resourceFile)
-    }
-
-    await Promise.all(Object.keys(resourceDownloads).map(async url => {
-        const { library, entity } = resourceDownloads[url]
-        let { pathname } = new URL(url)
-        pathname = decodeURI(pathname)
-        const resource = path.join(mikser.options.resourcesFolder, library, pathname)
-        const uri = path.join(mikser.options.outputFolder, library, pathname)
-
-        let success = true
-        if (!resourceFilesMap.has(path.join(library, pathname))) {
-            const resourceTemp = path.join(mikser.options.resourcesFolder, library, pathname + '.temp')
-            logger.debug('Downloading resource: %s %s', entity.id, url)
-            const config = mikser.config.resources.libraries[library]
-            const request = {
-                method: 'get',
-                ...config,
-                url,
-                responseType: 'stream',
-                signal
-            }
-
-            try {
-                var response = await axios(request)
-            } catch (err) {
-                success == false
-                if (axios.isCancel(err)) {
-                    logger.trace('Downloading canceled')
-                } else {
-                    logger.error('Resource error: %s %s %s', entity.id, url, err.message)
-                }
-                return
-            }
-
-            if (response && success) {
-                await mkdir(path.dirname(resource), { recursive: true })
-                const writer = createWriteStream(resourceTemp)
-                response.data.pipe(writer)
-                await finishedDownload(writer)
     
-                logger.info('Resource: %s %s', entity.id, url)
-                await rename(resourceTemp, resource)
-            }
+        mikser.options.resources = mikser.config.resources?.resourcesFolder || collection
+        mikser.options.resourcesFolder = path.join(mikser.options.workingFolder, mikser.options.resources)
+        logger.info('Resources folder: %s', mikser.options.resourcesFolder)
+        await mkdir(mikser.options.resourcesFolder, { recursive: true })
+    
+        for (let library in (mikser.config.resources?.libraries || [])) {
+            let resource = mikser.config.resources.libraries[library]
+            mikser.state.resources.resourceMap[resource.match || escapeStringRegexp(resource.url)] = library
         }
         
-        if (success) {
-            await createEntity({
-                id: path.join('/resources', library, pathname),
-                uri,
-                collection,
-                type,
-                format: path.extname(resource).substring(1).toLowerCase(),
-                name: path.join(library, pathname),
-                source: resource,
-                checksum: await checksum(resource)
+        let link = path.join(mikser.options.outputFolder, mikser.options.resources)
+        if (mikser.config.resources?.outputFolder) link = path.join(mikser.options.outputFolder, mikser.config.resources?.outputFolder, mikser.options.resources)
+        try {
+            await mkdir(path.dirname(link), { recursive: true }) 
+            await symlink(mikser.options.resourcesFolder, link, 'dir')
+        } catch (err) {
+            if (err.code != 'EEXIST')
+            throw err
+        }
+    })
+    
+    onProcessed(async () => {
+        const logger = useLogger()
+        const { resourceMap } = mikser.state.resources
+        abortController = new AbortController()
+        const { signal } = abortController
+    
+        const entities = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
+        .map(operation => operation.entity)
+        .filter(entity => entity.collection != collection && entity.meta)
+    
+        const resources = []
+        for (let entity of entities) {      
+            _.eachDeep(entity.meta, value => {
+                if (typeof value == 'string' && isUrl(value)) {
+                    for (let library in resourceMap) {
+                        const match = new RegExp(library)
+                        if (value.match(match)) {
+                            resources.push({ library, url: value, entity })
+                        }
+                    }
+                }
             })
         }
-    }))
+        
+        const resourceDownloads = {}
+        logger.info('Processing resources: %d', resources.length)
+        for (let { library, url, entity } of resources) {
+            library = resourceMap[library]
+    
+            if (!resourceDownloads[url]) {
+                resourceDownloads[url] = { library, entity }
+            }
+        }
+    
+        const resourceFiles = await globby('**/*', { cwd: mikser.options.resourcesFolder })
+        const resourceFilesMap = new Set()
+        for (let resourceFile of resourceFiles) {
+            resourceFilesMap.add(resourceFile)
+        }
+    
+        await Promise.all(Object.keys(resourceDownloads).map(async url => {
+            const { library, entity } = resourceDownloads[url]
+            let { pathname } = new URL(url)
+            pathname = decodeURI(pathname)
+            const resource = path.join(mikser.options.resourcesFolder, library, pathname)
+            const uri = path.join(mikser.options.outputFolder, library, pathname)
+    
+            let success = true
+            if (!resourceFilesMap.has(path.join(library, pathname))) {
+                const resourceTemp = path.join(mikser.options.resourcesFolder, library, pathname + '.temp')
+                logger.debug('Downloading resource: %s %s', entity.id, url)
+                const config = mikser.config.resources.libraries[library]
+                const request = {
+                    method: 'get',
+                    ...config,
+                    url,
+                    responseType: 'stream',
+                    signal
+                }
+    
+                try {
+                    var response = await axios(request)
+                } catch (err) {
+                    success == false
+                    if (axios.isCancel(err)) {
+                        logger.trace('Downloading canceled')
+                    } else {
+                        logger.error('Resource error: %s %s %s', entity.id, url, err.message)
+                    }
+                    return
+                }
+    
+                if (response && success) {
+                    await mkdir(path.dirname(resource), { recursive: true })
+                    const writer = createWriteStream(resourceTemp)
+                    response.data.pipe(writer)
+                    await finishedDownload(writer)
+        
+                    logger.info('Resource: %s %s', entity.id, url)
+                    await rename(resourceTemp, resource)
+                }
+            }
+            
+            if (success) {
+                await createEntity({
+                    id: path.join('/resources', library, pathname),
+                    uri,
+                    collection,
+                    type,
+                    format: path.extname(resource).substring(1).toLowerCase(),
+                    name: path.join(library, pathname),
+                    source: resource,
+                    checksum: await checksum(resource)
+                })
+            }
+        }))
+    
+        if (resources.length) {
+            logger.info('Processing resources completed: %d', resources.length)
+        }
+    })
+    
+    onFinalize(async () => {
+        const paths = await globby('**/*.temp', { cwd: mikser.options.resourcesFolder })
+        for (let relativePath of paths) {
+            let resourceTemp = path.join(mikser.options.resourcesFolder, relativePath)
+            await unlink(resourceTemp)
+        }
+    })
+    
+    onCancel(() => {
+        abortController?.abort()
+    })
 
-    if (resources.length) {
-        logger.info('Processing resources completed: %d', resources.length)
+    return {
+        collection,
+        type
     }
-})
-
-onFinalize(async () => {
-    const paths = await globby('**/*.temp', { cwd: mikser.options.resourcesFolder })
-    for (let relativePath of paths) {
-        let resourceTemp = path.join(mikser.options.resourcesFolder, relativePath)
-        await unlink(resourceTemp)
-    }
-})
-
-onCancel(() => {
-    abortController?.abort()
-})
+}

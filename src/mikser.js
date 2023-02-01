@@ -68,8 +68,6 @@ export default class {
             await hook(signal)
         } 
 
-        this.operations = this.operations.filter(({operation}) => operation == constants.OPERATION_RENDER)
-
         for(let hook of this.hooks.render) {
             if (this.abort(signal)) return
             await hook(signal)

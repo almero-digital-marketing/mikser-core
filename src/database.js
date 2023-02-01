@@ -17,6 +17,7 @@ onLoaded(async () => {
         results: []
     }
     database.chain = _.chain(database).get('data')
+    mikser.database = database
 })
 
 onPersist(async () => {
@@ -88,8 +89,4 @@ export async function findEntities(query) {
     .get('entities')
     .filter(query)
     .value()
-}
-
-export function useDatabase() {
-    return database
 }

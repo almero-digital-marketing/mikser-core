@@ -3,6 +3,8 @@ import { onLoad } from './lifecycle.js'
 import mikser from './mikser.js'
 import path from 'node:path'
 
+import * as core from '../index.js'
+
 export async function loadPlugin(pluginName) {
     const logger = useLogger()
 
@@ -15,9 +17,9 @@ export async function loadPlugin(pluginName) {
         const resolveLocation = resolveLocations[index]
         try {
             const plugin = await import(resolveLocation)
-            const pluginRuntime = Object.keys(plugin)
-            if (pluginRuntime.length) {
-                mikser.runtime[pluginName] = plugin
+            const pluginRuntime = plugin.default(core)
+            mikser.runtime[pluginName] = pluginRuntime
+            if (pluginRuntime) {
                 logger.trace('Loaded %s plugin: %s', pluginName, pluginRuntime)
             } else {
                 logger.trace('Loaded %s plugin', pluginName)
