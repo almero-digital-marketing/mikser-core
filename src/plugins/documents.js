@@ -13,18 +13,18 @@ export default ({
     deleteEntity, 
     watch, 
     onSync, 
-    constants 
+    constants: { ACTION }
 }) => {
     const collection = 'documents'
     const type = 'document'
     
-    onSync(collection, async ({ operation, context }) => {
+    onSync(collection, async ({ action, context }) => {
         if (!context.relativePath) return false
         const { relativePath } = context
         const id = path.join(`/${collection}`, relativePath)
         const uri = path.join(mikser.options.documentsFolder, relativePath)
-        switch (operation) {
-            case constants.OPERATION_CREATE:
+        switch (action) {
+            case ACTION.CREATE:
                 await createEntity({
                     id,
                     uri,
@@ -35,7 +35,7 @@ export default ({
                     content: await readFile(uri, 'utf8') 
                 })
             break
-            case constants.OPERATION_UPDATE:
+            case ACTION.UPDATE:
                 await updateEntity({
                     id,
                     uri,
@@ -46,7 +46,7 @@ export default ({
                     content: await readFile(uri, 'utf8') 
                 })
             break
-            case constants.OPERATION_DELETE:
+            case ACTION.DELETE:
                 await deleteEntity({
                     id,
                     collection,

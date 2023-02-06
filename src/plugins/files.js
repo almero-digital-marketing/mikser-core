@@ -12,9 +12,9 @@ export default ({
     deleteEntity, 
     watch, 
     onSync, 
-    constants, 
     findEntity, 
-    checksum 
+    checksum, 
+    constants: { ACTION }, 
 }) => {
     const collection = 'files'
     const type = 'file'
@@ -39,7 +39,7 @@ export default ({
         }
     }
     
-    onSync(collection, async ({ operation, context }) => {
+    onSync(collection, async ({ action, context }) => {
         if (!context.relativePath) return false
         const { relativePath } = context
     
@@ -49,8 +49,8 @@ export default ({
         const id = path.join(`/${collection}`, relativePath)
         
         let synced = true
-        switch (operation) {
-            case constants.OPERATION_CREATE:
+        switch (action) {
+            case ACTION.CREATE:
                 await ensureLink(relativePath)
                 await createEntity({
                     id,
@@ -64,7 +64,7 @@ export default ({
                     link: await link(source)
                 })
             break
-            case constants.OPERATION_UPDATE:
+            case ACTION.UPDATE:
                 const current = await findEntity({ id })
                 if (current.checksum != checksum) {
                     await updateEntity({
@@ -82,7 +82,7 @@ export default ({
                     synced = false
                 }
             break
-            case constants.OPERATION_DELETE:
+            case ACTION.DELETE:
                 await unlink(path.join(mikser.options.outputFolder, relativePath))
                 await deleteEntity({
                     id,

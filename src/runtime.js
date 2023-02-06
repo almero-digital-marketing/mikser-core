@@ -5,18 +5,13 @@ import { rm, lstat, realpath, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
-import { AbortController } from 'abort-controller'
-import { constants  } from './constants.js'
 import mikser from './mikser.js'
-import { onInitialize, onInitialized, onRender, onCancel, onFinalized } from './lifecycle.js'
+import { onInitialize, onInitialized, onRender, onCancelled, onFinalized, useJournal, clearJournal } from './lifecycle.js'
 import { globby } from 'globby'
+import { OPERATION } from './constants.js'
 
 export function useLogger() {
     return mikser.runtime.logger
-}
-
-export function useCommander() {
-    return mikser.runtime.commander
 }
 
 export async function setup(options) {
@@ -29,7 +24,8 @@ export async function setup(options) {
         }),
         commander: new Command(),
         renderPool: new Piscina({
-            filename: new URL('./render.js', import.meta.url).href
+            filename: new URL('./render.js', import.meta.url).href,
+            maxThreads: options?.threads !== undefined ? options.threads : 4
         })
     }
 	mikser.state = {}
@@ -49,9 +45,8 @@ export async function setup(options) {
     
     onInitialized(async () => {
         const logger = useLogger()
-        const commander = useCommander()
         
-        Object.assign(mikser.options, options || commander.parse(process.argv).opts())
+        Object.assign(mikser.options, options || mikser.runtime.commander.parse(process.argv).opts())
         if (mikser.options.debug) {
             logger.level = 'debug'
         }
@@ -81,43 +76,47 @@ export async function setup(options) {
         }
     })
     
-    let abortController
-    onRender(async ({ aborted }) => {
-        if (aborted) return
+    onRender(async (signal) => {
         const logger = useLogger()
-        
-        const entitiesToRender = useOperations(['render'])
-        const renderJobs = _.uniqWith(useOperations(['render']), (currObject, otherObject) => {
-            currObject.id == otherObject.id && currObject.destination == otherObject.destination
+
+        const entitiesToRender = useJournal(OPERATION.RENDER)
+        const renderJobs = _.uniqWith(entitiesToRender, (currObject, otherObject) => {
+            currObject.entity.id == otherObject.entity.id && currObject.entity.destination == otherObject.entity.destination
         })
-        logger.info('Render jobs: %d', entitiesToRender.length)
-        abortController = new AbortController()
-        const { signal } = abortController
+        logger.info('Render jobs: %d', renderJobs.length)
         await Promise.all(renderJobs.map(async operation => {
-            const { entity, renderer, context } = operation
+            const { entity, options, context } = operation
             try {
-                if (context.abortable !== false) {
-                    operation.result = await render(entity, renderer, context, signal)
-                } else {
-                    operation.result = await render(entity, renderer, context)
-                }
+                operation.result = await mikser.runtime.renderPool.run({ 
+                    entity,
+                    options: { ...mikser.options, ...options },
+                    config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
+                    context,
+                    state: mikser.state
+                }, options.abortable === false ? {} : { signal })
+                logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
             } catch (err) {
                 if (err.name != 'AbortError') {
                     logger.error('Render error: %s %s', entity.id, err.message)
                 }
-                logger.debug('Render canceled')    
+                logger.debug('Render canceled')
             } 
         }))
     })
 
-    onCancel(async () => {
-        abortController?.abort()
+    onCancelled(async () => {
+        if (mikser.runtime.renderPool.queueSize) {
+            return new Promise(resolve => {
+                mikser.runtime.renderPool.once('drain', resolve)
+            })
+        }
     })
 
-    onFinalized(async ({ aborted }) => {
-        if (aborted) return
+    onFinalized(async (signal) => {
         const logger = useLogger()
         
+        clearJournal(signal.aborted)
+
         const paths = await globby('**/*', { cwd: mikser.options.outputFolder })
         for (let relativePath of paths) {
             let source = path.join(mikser.options.outputFolder, relativePath)
@@ -134,51 +133,4 @@ export async function setup(options) {
        
     console.info('Mikser: %s', version)
     return mikser
-}
-
-export function useOperations(operations) {
-    return mikser.operations
-    .filter(({ operation }) => operations.indexOf(operation) != -1)
-}
-
-export async function createEntity(entity) {
-    const logger = useLogger()
-    entity.stamp = mikser.stamp
-    entity.time = Date.now()
-    logger.debug('Create %s entity: %s', entity.collection, entity.id)
-    mikser.operations.push({ operation: constants.OPERATION_CREATE, entity })
-}
-
-export async function deleteEntity({ id, collection, type }) {
-    const logger = useLogger()
-    logger.debug('Delete %s entity: %s %s', collection, type, id)
-    mikser.operations.push({ operation: constants.OPERATION_DELETE, entity: { id, type, collection } })
-}
-
-export async function updateEntity(entity) {
-    const logger = useLogger()
-    entity.stamp = mikser.stamp
-    entity.time = Date.now()
-    logger.debug('Update %s entity: %s', entity.collection, entity.id)
-    mikser.operations.push({ operation: constants.OPERATION_UPDATE, entity })
-}
-
-export async function renderEntity(entity, renderer, context = {}) {
-    const logger = useLogger()
-    logger.debug('Render %s entity: [%s] %s → %s', entity.collection, renderer, entity.id, entity.destination)
-    mikser.operations.push({ operation: constants.OPERATION_RENDER, entity, renderer, context })
-}
-
-export async function render(entity, renderer, context, signal) {
-    const logger = useLogger()
-    const result = await mikser.runtime.renderPool.run({ 
-        entity,
-        renderer,
-        options: mikser.options,
-        config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
-        context,
-        state: mikser.state
-    }, { signal })
-    logger.info('Rendered %s: [%s] %s', entity.type, renderer, entity.destination)
-    return result
 }

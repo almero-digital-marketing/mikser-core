@@ -1,5 +1,3 @@
-import { constants } from "./constants.js"
-
 export default class {
     static stamp = Date.now()
     static processTime
@@ -8,7 +6,7 @@ export default class {
         plugins: []
     }
     static config = {}
-    static operations = []
+    static journal = []
     static hooks = {
         initialize: [],
         initialized: [],
@@ -29,27 +27,23 @@ export default class {
         finalized: [],
         sync: [],
     }
-    static abortController
-    static abort(signal) {
-        if (signal.aborted) {
-            this.operations = []
-        }
-        return signal.aborted
-    }
     static async start() {
         for(let hook of this.hooks.initialize) await hook()
         for(let hook of this.hooks.initialized) await hook()
         for(let hook of this.hooks.load) await hook()
         for(let hook of this.hooks.loaded) await hook()
-
+        
         for(let hook of this.hooks.import) await hook()
         for(let hook of this.hooks.imported) await hook()
-
+        
         await this.process()
     }
+    static abortController
     static async process() {
-        this.abortController?.abort()
-        await this.cancel()
+        if (this.abortController?.signal.aborted) return
+        else if (this.abortController) {
+            await this.cancel()            
+        }
 
         this.abortController = new AbortController()
         const { signal } = this.abortController
@@ -64,16 +58,15 @@ export default class {
     }
     static async render(signal) {
         for(let hook of this.hooks.beforeRender) {
-            if (this.abort(signal)) return
+            if (signal.aborted) break
             await hook(signal)
         } 
-
         for(let hook of this.hooks.render) {
-            if (this.abort(signal)) return
+            if (signal.aborted) break
             await hook(signal)
         } 
         for(let hook of this.hooks.afterRender) {
-            if (this.abort(signal)) return
+            if (signal.aborted) break
             await hook(signal)
         } 
         
@@ -81,21 +74,19 @@ export default class {
     }
     static async cancel() {
         for(let hook of this.hooks.cancel) await hook()
+        this.abortController?.abort()
         for(let hook of this.hooks.cancelled) await hook()
-
-        this.operations = this.operations.filter(({operation}) => operation != constants.OPERATION_RENDER)
     }
     static async finalize(signal) {
         for(let hook of this.hooks.finalize) {
-            if (this.abort(signal)) return
+            if (signal.aborted) break
             await hook(signal)
         } 
         for(let hook of this.hooks.finalized) {
-            if (this.abort(signal)) return
+            if (signal.aborted) break
             await hook(signal)
         } 
-
-        this.operations = []
+        this.abortController = undefined
     }
     static async sync(operation) {
         let synced

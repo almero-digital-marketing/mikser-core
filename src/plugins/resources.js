@@ -11,18 +11,17 @@ import * as stream from 'stream'
 import { promisify } from 'util'
 import isUrl from 'is-url'
 
-
 export default ({ 
     useLogger, 
-    useOperations, 
-    constants, 
+    useJournal, 
     onLoaded, 
     mikser, 
     onCancel, 
     createEntity, 
     onProcessed, 
     onFinalize, 
-    checksum 
+    checksum,
+    constants: { OPERATION }, 
 }) => {
     const collection = 'resources'
     const type = 'resource'
@@ -66,7 +65,7 @@ export default ({
         abortController = new AbortController()
         const { signal } = abortController
     
-        const entities = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
+        const entities = useJournal(OPERATION.CREATE, OPERATION.UPDATE)
         .map(operation => operation.entity)
         .filter(entity => entity.collection != collection && entity.meta)
     

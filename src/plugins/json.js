@@ -1,12 +1,12 @@
 export default ({ 
     onProcess, 
     useLogger, 
-    useOperations, 
-    constants
+    useJournal, 
+    constants: { OPERATION }
 }) => {
     onProcess(() => {
         const logger = useLogger()
-        const entities = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
+        const entities = useJournal(OPERATION.CREATE, OPERATION.UPDATE)
         .map(operation => operation.entity)
         .filter(entity => entity.content && entity.format == 'json')
     

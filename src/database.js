@@ -1,7 +1,7 @@
 import mikser from './mikser.js'
-import { useLogger, useOperations } from './runtime.js'
-import { onLoaded, onPersist, onFinalized, onAfterRender } from './lifecycle.js'
-import { constants  } from './constants.js'
+import { useLogger } from './runtime.js'
+import { onLoaded, onPersist, onFinalized, onAfterRender, useJournal } from './lifecycle.js'
+import { OPERATION } from './constants.js'
 import { Low } from 'lowdb'
 import path from 'node:path'
 import { JSONFile } from 'lowdb/node'
@@ -22,13 +22,13 @@ onLoaded(async () => {
 
 onPersist(async () => {
     const logger = useLogger()
-    for (let { operation, entity } of mikser.operations) {
+    for (let { operation, entity } of mikser.journal) {
         switch (operation) {
-            case constants.OPERATION_CREATE:
+            case OPERATION.CREATE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
                 database.data.entities.push(entity)
             break
-            case constants.OPERATION_UPDATE:
+            case OPERATION.UPDATE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
                 database
                 .chain
@@ -37,7 +37,7 @@ onPersist(async () => {
                 .assign(entity)
                 .value()
             break
-            case constants.OPERATION_DELETE:
+            case OPERATION.DELETE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
                 database
                 .chain
@@ -50,7 +50,7 @@ onPersist(async () => {
 })
 
 onAfterRender(async () => {
-    const entitiesToRender = useOperations([constants.OPERATION_RENDER])
+    const entitiesToRender = useJournal(OPERATION.RENDER)
     for(let { result, entity } of entitiesToRender) {
         if (result) {
             const index = database

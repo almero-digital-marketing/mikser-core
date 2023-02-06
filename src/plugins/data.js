@@ -5,14 +5,14 @@ import { mkdir, writeFile, unlink } from 'fs/promises'
 export default ({ 
     onLoaded, 
     useLogger, 
-    constants, 
     mikser, 
-    useOperations, 
+    useJournal, 
     normalize, 
     findEntities, 
     onAfterRender, 
     onFinalize, 
-    onBeforeRender 
+    onBeforeRender,
+    constants: { OPERATION }, 
 }) => {
     onLoaded(async () => {
         const logger = useLogger()
@@ -28,22 +28,22 @@ export default ({
     
         for (let entitiesName in mikser.config.data?.entities || {}) {
             const { query, pick, destination = entity => entity.name } = mikser.config.data?.entities[entitiesName]
-            const operations = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE, constants.OPERATION_DELETE])
+            const operations = useJournal(OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE)
             .filter(({ entity }) => query(entity))
     
             for (let { operation, entity } of operations) {
                 const entityName = destination(entity)
                 const entityFile = path.join(mikser.options.dataFolder, entityName ,`${entitiesName}.json`)
                 switch (operation) {
-                    case constants.OPERATION_CREATE:
-                    case constants.OPERATION_UPDATE:
+                    case OPERATION.CREATE:
+                    case OPERATION.UPDATE:
                         logger.debug('Data export entity %s %s: %s', entity.collection, operation, entity.id)
                         const normalized = pick ? normalize(_.pick(entity, pick)) : entity
                     
                         await mkdir(path.dirname(entityFile), { recursive: true })
                         await writeFile(entityFile, JSON.stringify(normalized), 'utf8')
                     break
-                    case constants.OPERATION_DELETE:
+                    case OPERATION.DELETE:
                         await unlink(entityFile)
                     break
                 }
@@ -54,7 +54,7 @@ export default ({
     onAfterRender(async () => {
         const logger = useLogger()
     
-        const operations = useOperations([constants.OPERATION_RENDER])
+        const operations = useJournal(OPERATION.RENDER)
         for (let contextName in mikser.config.data?.context || {}) {
             const { query, pick, destination = entity => entity.name } = mikser.config.data?.context[contextName]
             const contextOperations = operations

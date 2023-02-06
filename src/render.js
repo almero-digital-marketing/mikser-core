@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import _ from 'lodash'
 
-export default async ({ entity, renderer, options, config, context, state }) => {
+export default async ({ entity, options, config, context, state }) => {  
+      
     async function loadPlugin(pluginName) {   
         const resolveLocations = [
             path.join(options.workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
@@ -21,6 +22,7 @@ export default async ({ entity, renderer, options, config, context, state }) => 
         }
     }
 
+    const { renderer } = options
     const plugins = {}
     let pluginsToLoad = [...context.plugins || []]
     pluginsToLoad.push(`render-${renderer}`)

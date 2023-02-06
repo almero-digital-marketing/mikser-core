@@ -1,11 +1,13 @@
-const constants = {
-    OPERATION_CREATE: 'create',
-    OPERATION_UPDATE: 'update',
-    OPERATION_DELETE: 'delete',
-    OPERATION_RENDER: 'render',
-    OPERATION_TRIGGER: 'trigger',
+export const OPERATION = {
+    CREATE: 'create',
+    UPDATE: 'update',
+    DELETE: 'delete',
+    RENDER: 'render',
 }
 
-export {
-    constants
+export const ACTION = {
+    CREATE: 'create',
+    UPDATE: 'update',
+    DELETE: 'delete',
+    TRIGGER: 'trigger',
 }

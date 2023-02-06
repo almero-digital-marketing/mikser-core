@@ -1,15 +1,15 @@
 import mikser from './mikser.js'
 import chokidar from 'chokidar'
 import cron from 'node-cron'
-import { constants  } from './constants.js'
 import { onProcess, onFinalized } from './lifecycle.js'
 import { useLogger } from './runtime.js'
+import { ACTION } from './constants.js'
 
 const tasks = []
 
 export async function createdHook(name, context) {
     const synced = await mikser.sync({
-        operation: constants.OPERATION_CREATE, 
+        action: ACTION.CREATE, 
         name,
         context
     })
@@ -22,7 +22,7 @@ export async function createdHook(name, context) {
 
 export async function updatedHook(name, context) {
     const synced = await mikser.sync({
-        operation: constants.OPERATION_UPDATE, 
+        action: ACTION.UPDATE, 
         name,
         context
     })
@@ -33,9 +33,9 @@ export async function updatedHook(name, context) {
     }
 }
 
-export async function triggerHook(name, context) {
+export async function triggeredHook(name, context) {
     const synced = await mikser.sync({
-        operation: constants.OPERATION_TRIGGER, 
+        action: ACTION.TRIGGER, 
         name,
         context
     })
@@ -48,7 +48,7 @@ export async function triggerHook(name, context) {
 
 export async function deletedHook(name, context) {
     const synced = await mikser.sync({
-        operation: constants.OPERATION_DELETE, 
+        action: ACTION.DELETE, 
         name,
         context
     })
@@ -85,7 +85,7 @@ export function schedule(name, expression, context) {
     const logger = useLogger()
     const taks = cron.schedule(expression, async () => {
         logger.info('Scheduled task executed: %s %s', name, expression)
-        triggerHook(name, context)
+        triggeredHook(name, context)
     }, {
         scheduled: false
     })

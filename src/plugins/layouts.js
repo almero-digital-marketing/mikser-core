@@ -16,11 +16,11 @@ export default ({
     watch, 
     onProcessed, 
     onBeforeRender, 
-    useOperations, 
+    useJournal, 
     renderEntity, 
     onAfterRender, 
-    constants, 
-    onSync 
+    onSync,
+    constants: { ACTION, OPERATION }, 
 }) => {   
     const collection = 'layouts'
     const type = 'layout'
@@ -99,7 +99,7 @@ export default ({
         }
     }
     
-    onSync(collection, async ({ operation, context }) => {
+    onSync(collection, async ({ action, context }) => {
         if (!context.relativePath) return false
         const { relativePath } = context
         let id = path.join(`/${collection}`, relativePath)
@@ -107,8 +107,8 @@ export default ({
     
         const uri = path.join(mikser.options.layoutsFolder, relativePath)
         const { layouts } = mikser.state.layouts
-        switch (operation) {
-            case constants.OPERATION_CREATE:
+        switch (action) {
+            case ACTION.CREATE:
                 var layout = {
                     id, 
                     uri,
@@ -120,7 +120,7 @@ export default ({
                 layouts[layout.name] = layout
                 await createEntity(layout)
             break
-            case constants.OPERATION_UPDATE:
+            case ACTION.UPDATE:
                 var layout = {
                     id,
                     uri,
@@ -132,7 +132,7 @@ export default ({
                 layouts[layout.name] = layout
                 await updateEntity(layout)
             break
-            case constants.OPERATION_DELETE:
+            case ACTION.DELETE:
                 var layout = {
                     id,
                     collection,
@@ -189,7 +189,7 @@ export default ({
         const logger = useLogger()
         const { layouts } = mikser.state.layouts
         
-        const entitiesToAdd = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
+        const entitiesToAdd = useJournal(OPERATION.CREATE, OPERATION.UPDATE)
         .map(operation => operation.entity)
         .filter(entity => entity.collection != collection)
         for (let entity of entitiesToAdd) {
@@ -227,7 +227,7 @@ export default ({
             }
         }
     
-        const entitiesToRemove = useOperations([constants.OPERATION_DELETE])
+        const entitiesToRemove = useJournal(OPERATION.DELETE)
         .map(operation => operation.entity)
         .filter(entity => entity.collection != collection)
         for (let entity of entitiesToRemove) { 
@@ -290,7 +290,7 @@ export default ({
                             }
                         }
                         addToSitemap(pageEntity)
-                        await renderEntity(pageEntity, entity.layout.template, { data, plugins })
+                        await renderEntity(pageEntity, { renderer: entity.layout.template }, { data, plugins })
                     }
                 }
             } else {
@@ -304,7 +304,7 @@ export default ({
                 }
                 addToSitemap(entity)
                 if (entity.destination) {
-                    await renderEntity(entity, entity.layout.template, { data, plugins })
+                    await renderEntity(entity, { renderer: entity.layout.template }, { data, plugins })
                 }
             }
         }
@@ -313,7 +313,7 @@ export default ({
     onAfterRender(async (signal) => {
         const logger = useLogger()
     
-        const entitiesToRender = useOperations([constants.OPERATION_RENDER])
+        const entitiesToRender = useJournal(OPERATION.RENDER)
         for(let { result, entity } of entitiesToRender) {
             if (signal.aborted) return
             if (result && entity.layout && entity.destination) {

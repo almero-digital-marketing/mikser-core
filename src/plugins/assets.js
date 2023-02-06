@@ -12,16 +12,16 @@ export default ({
     watch, 
     onProcessed, 
     onBeforeRender, 
-    useOperations, 
+    useJournal, 
     createEntity, 
     updateEntity, 
     deleteEntity, 
     renderEntity, 
     onAfterRender, 
-    constants, 
     onSync, 
     onFinalize, 
-    findEntity 
+    findEntity,
+    constants: { ACTION, OPERATION }, 
 }) => {
     const collection = 'presets'
     const type = 'preset'
@@ -105,7 +105,7 @@ export default ({
         watch(collection, mikser.options.presetsFolder)
     })
     
-    onSync(collection, async ({ operation, context }) => {
+    onSync(collection, async ({ action, context }) => {
         if (!context.relativePath) return false
         const { relativePath } = context
     
@@ -117,8 +117,8 @@ export default ({
         const source = uri
     
         let synced = true
-        switch (operation) {
-            case constants.OPERATION_CREATE:
+        switch (action) {
+            case ACTION.CREATE:
                 try {
                     const { revision = 1, format, options } = await import(`${uri}?stamp=${Date.now()}`)
                     const preset = {
@@ -139,7 +139,7 @@ export default ({
                     logger.error('Preset loading error: %s %s', uri, err.message)
                 }
             break
-            case constants.OPERATION_UPDATE:
+            case ACTION.UPDATE:
                 try {
                     const { revision = 1, format, options } = await import(`${uri}?stamp=${Date.now()}`)
                     const preset = {
@@ -167,7 +167,7 @@ export default ({
                     logger.error('Preset loading error: %s %s', uri, err.message)
                 }
             break
-            case constants.OPERATION_DELETE:
+            case ACTION.DELETE:
                 delete presets[name]
                 await deleteEntity({
                     id: path.join('/presets', relativePath),
@@ -216,7 +216,7 @@ export default ({
         const logger = useLogger()
         const { assetsMap } = mikser.state.assets
         
-        const entitiesToAdd = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
+        const entitiesToAdd = useJournal(OPERATION.CREATE, OPERATION.UPDATE)
         .map(operation => operation.entity)
         .filter(entity => entity.collection != collection)
         for (let entity of entitiesToAdd) {
@@ -227,7 +227,7 @@ export default ({
             }
         }
     
-        const entitiesToRemove = useOperations([constants.OPERATION_DELETE])
+        const entitiesToRemove = useJournal(OPERATION.DELETE)
         .map(operation => operation.entity)
         .filter(entity => entity.collection != collection)
         for (let entity of entitiesToRemove) {
@@ -240,7 +240,7 @@ export default ({
         const { presets, assetsMap } = mikser.state.assets
         let entitiesToRender = []
         
-        const entities = useOperations([constants.OPERATION_CREATE, constants.OPERATION_UPDATE])
+        const entities = useJournal(OPERATION.CREATE, OPERATION.UPDATE)
         .map(operation => operation.entity)
         for (let entity of entities) {
             if (entity.collection == collection) {
@@ -284,7 +284,7 @@ export default ({
                     presetRenders[entity.destination] = true
         
                     if (!await isPresetRendered(entity)) {
-                        await renderEntity(entity, 'preset', entity.preset.options)
+                        await renderEntity(entity, { ...entity.preset.options, renderer: 'preset' })
                     }
                 }
             }
@@ -297,7 +297,7 @@ export default ({
     
     onAfterRender(async () => {
         const logger = useLogger()
-        const entitiesToRender = useOperations(['render'])
+        const entitiesToRender = useJournal(OPERATION.RENDER)
         for(let { result, entity } of entitiesToRender) {
             if (result && entity.preset) {
                 await mkdir(path.dirname(entity.destination), { recursive: true })
