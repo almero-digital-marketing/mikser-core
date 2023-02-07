@@ -9,10 +9,7 @@ import mikser from './mikser.js'
 import { onInitialize, onInitialized, onRender, onCancelled, onFinalized, useJournal, clearJournal } from './lifecycle.js'
 import { globby } from 'globby'
 import { OPERATION } from './constants.js'
-
-export function useLogger() {
-    return mikser.runtime.logger
-}
+import render from './render.js'
 
 export async function setup(options) {
     const { default: { version } } = await import('../package.json', { assert: { type: 'json' } })
@@ -86,14 +83,27 @@ export async function setup(options) {
         logger.info('Render jobs: %d', renderJobs.length)
         await Promise.all(renderJobs.map(async operation => {
             const { entity, options, context } = operation
+            const renderOptions = { 
+                entity,
+                options: { ...mikser.options, ...options },
+                config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
+                context,
+                state: mikser.state,
+                niceIncrement: 10
+            }
             try {
-                operation.result = await mikser.runtime.renderPool.run({ 
-                    entity,
-                    options: { ...mikser.options, ...options },
-                    config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
-                    context,
-                    state: mikser.state
-                }, options.abortable === false ? {} : { signal })
+                if (options.immediate) {
+                    if (options.abortable) {
+                        renderOptions.signal = signal
+                        if (!signal.aborted) {
+                            operation.result = await render(renderOptions)
+                        }
+                    } else {
+                        operation.result = await render(renderOptions)
+                    }
+                } else {
+                    operation.result = await mikser.runtime.renderPool.run(renderOptions, options.abortable === false ? {} : { signal })
+                }
                 logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
             } catch (err) {
                 if (err.name != 'AbortError') {
@@ -133,4 +143,8 @@ export async function setup(options) {
        
     console.info('Mikser: %s', version)
     return mikser
+}
+
+export function useLogger() {
+    return mikser.runtime.logger
 }
