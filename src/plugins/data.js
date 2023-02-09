@@ -44,19 +44,19 @@ export default ({
                     await unlink(entityFile)
                 }
             } = mikser.config.data?.entities[entitiesName]
-            const operations = useJournal(OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE)
-            .filter(({ entity }) => query(entity))
-    
-            for (let { operation, entity } of operations) {
-                switch (operation) {
-                    case OPERATION.CREATE:
-                    case OPERATION.UPDATE:
-                        logger.debug('Data export entity %s %s: %s', entity.collection, operation, entity.id)
-                        await saveEntity(map ? map(entity) : entity)
-                    break
-                    case OPERATION.DELETE:
-                        await deleteEntity(entity)
-                    break
+
+            for (let { operation, entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE)) {
+                if (query(entity)) {
+                    switch (operation) {
+                        case OPERATION.CREATE:
+                        case OPERATION.UPDATE:
+                            logger.debug('Data export entity %s %s: %s', entity.collection, operation, entity.id)
+                            await saveEntity(map ? map(entity) : entity)
+                        break
+                        case OPERATION.DELETE:
+                            await deleteEntity(entity)
+                        break
+                    }
                 }
             }
         }
@@ -65,7 +65,6 @@ export default ({
     onAfterRender(async () => {
         const logger = useLogger()
     
-        const operations = useJournal(OPERATION.RENDER)
         for (let contextName in mikser.config.data?.context || {}) {
             const { 
                 query, 
@@ -78,11 +77,12 @@ export default ({
                     await writeFile(contextFile, JSON.stringify(context), 'utf8')
                 }
             } = mikser.config.data?.context[contextName]
-            const contextOperations = operations
-            .filter(({ entity }) => query(entity))
-            for(let { entity, context } of contextOperations) {
-                logger.debug('Data export context: %s', entityName)
-                await saveConext(entity, map ? map(context) : context)
+
+            for(let { entity, context } of useJournal(OPERATION.RENDER)) {
+                if (query(entity)) {
+                    logger.debug('Data export context: %s', entityName)
+                    await saveConext(entity, map ? map(context) : context)
+                }
             }
         }
     })

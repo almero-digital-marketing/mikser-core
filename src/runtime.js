@@ -76,42 +76,45 @@ export async function setup(options) {
     onRender(async (signal) => {
         const logger = useLogger()
 
-        const entitiesToRender = useJournal(OPERATION.RENDER)
-        const renderJobs = _.uniqWith(entitiesToRender, (currObject, otherObject) => {
-            currObject.entity.id == otherObject.entity.id && currObject.entity.destination == otherObject.entity.destination
-        })
-        logger.info('Render jobs: %d', renderJobs.length)
-        await Promise.all(renderJobs.map(async operation => {
-            const { entity, options, context } = operation
-            const renderOptions = { 
-                entity,
-                options: { ...mikser.options, ...options },
-                config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
-                context,
-                state: mikser.state,
-                niceIncrement: 10
-            }
-            try {
-                if (options.immediate) {
-                    if (options.abortable) {
-                        renderOptions.signal = signal
-                        if (!signal.aborted) {
-                            operation.result = await render(renderOptions)
-                        }
-                    } else {
-                        operation.result = await render(renderOptions)
+        const renderJobs = new Map()
+        for (let entry of useJournal(OPERATION.RENDER)) {
+            const { entity, options, context } = entry
+            const jobId = entity.id + ':' + entity.destination
+            if (!renderJobs.has(jobId)) {
+                const renderJob = async () => {
+                    const renderOptions = { 
+                        entity,
+                        options: { ...mikser.options, ...options },
+                        config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
+                        context,
+                        state: mikser.state,
+                        niceIncrement: 10
                     }
-                } else {
-                    operation.result = await mikser.runtime.renderPool.run(renderOptions, options.abortable === false ? {} : { signal })
+                    try {
+                        if (options.immediate) {
+                            if (options.abortable) {
+                                renderOptions.signal = signal
+                                if (!signal.aborted) {
+                                    entry.result = await render(renderOptions)
+                                }
+                            } else {
+                                entry.result = await render(renderOptions)
+                            }
+                        } else {
+                            entry.result = await mikser.runtime.renderPool.run(renderOptions, options.abortable === false ? {} : { signal })
+                        }
+                        logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
+                    } catch (err) {
+                        if (err.name != 'AbortError') {
+                            logger.error('Render error: %s %s', entity.id, err.message)
+                        }
+                        logger.debug('Render canceled')
+                    }    
                 }
-                logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
-            } catch (err) {
-                if (err.name != 'AbortError') {
-                    logger.error('Render error: %s %s', entity.id, err.message)
-                }
-                logger.debug('Render canceled')
-            } 
-        }))
+                renderJobs.set(jobId, renderJob())
+            }
+        }
+        return Promise.all(renderJobs.values())
     })
 
     onCancelled(async () => {

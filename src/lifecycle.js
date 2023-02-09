@@ -2,9 +2,13 @@ import mikser from './mikser.js'
 import { OPERATION } from './constants.js'
 import { useLogger } from './runtime.js'
 
-export function useJournal(...args) {
-    return mikser.journal
-    .filter(({ operation }) => args.indexOf(operation) != -1)
+export function* useJournal(...args) {
+    for(let entry of mikser.journal) {
+        const { operation } = entry
+        if (args.indexOf(operation) != -1) {
+            yield entry
+        }
+    }
 }
 
 export function clearJournal(aborted) {

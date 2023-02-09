@@ -216,22 +216,20 @@ export default ({
         const logger = useLogger()
         const { assetsMap } = mikser.state.assets
         
-        const entitiesToAdd = useJournal(OPERATION.CREATE, OPERATION.UPDATE)
-        .map(operation => operation.entity)
-        .filter(entity => entity.collection != collection)
-        for (let entity of entitiesToAdd) {
-            const entityPresets = await getEntityPresets(entity)
-            if (entityPresets.length) {
-                logger.debug('Presets matched for: %s %s', entity.collection, entity.id, entityPresets.length)
-                assetsMap[entity.id] = entityPresets
+        for (let { entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE)) {
+            if (entity.collection != collection) {
+                const entityPresets = await getEntityPresets(entity)
+                if (entityPresets.length) {
+                    logger.debug('Presets matched for: %s %s', entity.collection, entity.id, entityPresets.length)
+                    assetsMap[entity.id] = entityPresets
+                }
             }
         }
     
-        const entitiesToRemove = useJournal(OPERATION.DELETE)
-        .map(operation => operation.entity)
-        .filter(entity => entity.collection != collection)
-        for (let entity of entitiesToRemove) {
-            delete assetsMap[entity.id]
+        for (let { entity } of useJournal(OPERATION.DELETE)) {
+            if (entity.collection != collection) {
+                delete assetsMap[entity.id]
+            }
         }
     })
     
@@ -240,9 +238,7 @@ export default ({
         const { presets, assetsMap } = mikser.state.assets
         let entitiesToRender = []
         
-        const entities = useJournal(OPERATION.CREATE, OPERATION.UPDATE)
-        .map(operation => operation.entity)
-        for (let entity of entities) {
+        for (let { entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE)) {
             if (entity.collection == collection) {
                 for (let entityId in assetsMap) {
                     if (assetsMap[entityId].find(preset => preset == entity.name)) {
@@ -297,8 +293,7 @@ export default ({
     
     onAfterRender(async () => {
         const logger = useLogger()
-        const entitiesToRender = useJournal(OPERATION.RENDER)
-        for(let { result, entity } of entitiesToRender) {
+        for(let { result, entity } of useJournal(OPERATION.RENDER)) {
             if (result && entity.preset) {
                 await mkdir(path.dirname(entity.destination), { recursive: true })
                 const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`

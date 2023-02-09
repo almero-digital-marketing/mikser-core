@@ -65,22 +65,20 @@ export default ({
         abortController = new AbortController()
         const { signal } = abortController
     
-        const entities = useJournal(OPERATION.CREATE, OPERATION.UPDATE)
-        .map(operation => operation.entity)
-        .filter(entity => entity.collection != collection && entity.meta)
-    
         const resources = []
-        for (let entity of entities) {      
-            _.eachDeep(entity.meta, value => {
-                if (typeof value == 'string' && isUrl(value)) {
-                    for (let library in resourceMap) {
-                        const match = new RegExp(library)
-                        if (value.match(match)) {
-                            resources.push({ library, url: value, entity })
+        for (let { entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE)) {    
+            if (entity.collection != collection && entity.meta) {
+                _.eachDeep(entity.meta, value => {
+                    if (typeof value == 'string' && isUrl(value)) {
+                        for (let library in resourceMap) {
+                            const match = new RegExp(library)
+                            if (value.match(match)) {
+                                resources.push({ library, url: value, entity })
+                            }
                         }
                     }
-                }
-            })
+                })
+            }
         }
         
         const resourceDownloads = {}

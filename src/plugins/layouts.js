@@ -189,10 +189,9 @@ export default ({
         const logger = useLogger()
         const { layouts } = mikser.state.layouts
         
-        const entitiesToAdd = useJournal(OPERATION.CREATE, OPERATION.UPDATE)
-        .map(operation => operation.entity)
-        .filter(entity => entity.collection != collection)
-        for (let entity of entitiesToAdd) {
+        for (let { entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE)) {
+            if (entity.collection == collection) continue
+
             removePagesFromSitemap(entity)
             if (!entity.meta?.layout) {
                 for (let pattern in mikser.config.layouts?.match || []) {
@@ -227,11 +226,10 @@ export default ({
             }
         }
     
-        const entitiesToRemove = useJournal(OPERATION.DELETE)
-        .map(operation => operation.entity)
-        .filter(entity => entity.collection != collection)
-        for (let entity of entitiesToRemove) { 
-            removePagesFromSitemap(entity)
+        for (let { entity } of useJournal(OPERATION.DELETE)) { 
+            if (entity.collection != collection) {
+                removePagesFromSitemap(entity)
+            }
         }
     })
     
@@ -313,8 +311,7 @@ export default ({
     onAfterRender(async (signal) => {
         const logger = useLogger()
     
-        const entitiesToRender = useJournal(OPERATION.RENDER)
-        for(let { result, entity } of entitiesToRender) {
+        for(let { result, entity } of useJournal(OPERATION.RENDER)) {
             if (signal.aborted) return
             if (result && entity.layout && entity.destination) {
                 const destinationFile = path.join(mikser.options.outputFolder, entity.destination)

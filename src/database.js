@@ -50,8 +50,7 @@ onPersist(async () => {
 })
 
 onAfterRender(async () => {
-    const entitiesToRender = useJournal(OPERATION.RENDER)
-    for(let { result, entity } of entitiesToRender) {
+    for(let { result, entity } of useJournal(OPERATION.RENDER)) {
         if (result) {
             const index = database
             .chain
