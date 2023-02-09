@@ -54,7 +54,6 @@ export async function setup(options) {
         process.chdir(mikser.options.workingFolder)
 
         mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || 'runtime')
-        await mkdir(mikser.options.runtimeFolder , { recursive: true })
         mikser.options.outputFolder = path.join(mikser.options.workingFolder, mikser.options.outputFolder || 'out')
         
         logger.debug(mikser.options, 'Mikser options')
@@ -71,6 +70,7 @@ export async function setup(options) {
                 throw err
             }
         }
+        await mkdir(mikser.options.runtimeFolder , { recursive: true })
     })
     
     onRender(async (signal) => {
