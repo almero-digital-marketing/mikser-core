@@ -216,19 +216,21 @@ export default ({
         const logger = useLogger()
         const { assetsMap } = mikser.state.assets
         
-        for (let { entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE)) {
+        for (let { entity, operation } of useJournal(OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE)) {
             if (entity.collection != collection) {
-                const entityPresets = await getEntityPresets(entity)
-                if (entityPresets.length) {
-                    logger.debug('Presets matched for: %s %s', entity.collection, entity.id, entityPresets.length)
-                    assetsMap[entity.id] = entityPresets
+                switch (operation) {
+                    case OPERATION.CREATE:
+                    case OPERATION.UPDATE:
+                        const entityPresets = await getEntityPresets(entity)
+                        if (entityPresets.length) {
+                            logger.debug('Presets matched for: %s %s', entity.collection, entity.id, entityPresets.length)
+                            assetsMap[entity.id] = entityPresets
+                        }
+                    break
+                    case OPERATION.DELETE:
+                        delete assetsMap[entity.id]
+                    break
                 }
-            }
-        }
-    
-        for (let { entity } of useJournal(OPERATION.DELETE)) {
-            if (entity.collection != collection) {
-                delete assetsMap[entity.id]
             }
         }
     })

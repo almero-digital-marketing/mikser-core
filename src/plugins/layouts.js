@@ -189,47 +189,50 @@ export default ({
         const logger = useLogger()
         const { layouts } = mikser.state.layouts
         
-        for (let { entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE)) {
+        for (let { entity, operation } of useJournal(OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE)) {
             if (entity.collection == collection) continue
 
-            removePagesFromSitemap(entity)
-            if (!entity.meta?.layout) {
-                for (let pattern in mikser.config.layouts?.match || []) {
-                    if (minimatch(pattern, entity.name)) {
-                        const layoutName = mikser.config.layouts?.match[pattern]
-                        entity.layout = layouts[layoutName]
-                        break
-                    }
-                }
-                if (!entity.layout &&  mikser.config.layouts?.autoLayouts) {
-                    const nameChunks = entity.name?.split('.')
-                    if (nameChunks?.length) {
-                        for (let index = 0; index < nameChunks.length - 1; index++) {
-                            const autoLayout = entity.name?.split('.').slice(index).join('.')
-                            if (layouts[autoLayout]) {
-                                entity.layout = layouts[autoLayout]
+            switch (operation) {
+                case OPERATION.CREATE:
+                case OPERATION.UPDATE:
+                    removePagesFromSitemap(entity)
+                    if (!entity.meta?.layout) {
+                        for (let pattern in mikser.config.layouts?.match || []) {
+                            if (minimatch(pattern, entity.name)) {
+                                const layoutName = mikser.config.layouts?.match[pattern]
+                                entity.layout = layouts[layoutName]
                                 break
                             }
                         }
+                        if (!entity.layout &&  mikser.config.layouts?.autoLayouts) {
+                            const nameChunks = entity.name?.split('.')
+                            if (nameChunks?.length) {
+                                for (let index = 0; index < nameChunks.length - 1; index++) {
+                                    const autoLayout = entity.name?.split('.').slice(index).join('.')
+                                    if (layouts[autoLayout]) {
+                                        entity.layout = layouts[autoLayout]
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        entity.layout = layouts[entity.meta.layout]
                     }
-                }
-            } else {
-                entity.layout = layouts[entity.meta.layout]
+            
+                    if (entity.layout) {
+                        logger.debug('Layout matched for %s: %s', entity.collection, entity.id)
+                        addToSitemap(entity)
+                    } else if (entity.meta?.href) {
+                        logger.trace('Layout missing for %s: %s', entity.collection, entity.id)
+                        addToSitemap(entity)
+                    }
+                break
+                case OPERATION.DELETE:
+                    removePagesFromSitemap(entity)
+                break
             }
-    
-            if (entity.layout) {
-                logger.debug('Layout matched for %s: %s', entity.collection, entity.id)
-                addToSitemap(entity)
-            } else if (entity.meta?.href) {
-                logger.trace('Layout missing for %s: %s', entity.collection, entity.id)
-                addToSitemap(entity)
-            }
-        }
-    
-        for (let { entity } of useJournal(OPERATION.DELETE)) { 
-            if (entity.collection != collection) {
-                removePagesFromSitemap(entity)
-            }
+
         }
     })
     
