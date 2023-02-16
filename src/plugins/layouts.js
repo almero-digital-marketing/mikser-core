@@ -204,11 +204,11 @@ export default ({
                                 break
                             }
                         }
-                        if (!entity.layout &&  mikser.config.layouts?.autoLayouts) {
-                            const nameChunks = entity.name?.split('.')
+                        if (!entity.layout && mikser.config.layouts?.autoLayouts && entity.name) {
+                            const nameChunks = path.basename(entity.name).split('.')
                             if (nameChunks?.length) {
                                 for (let index = 0; index < nameChunks.length - 1; index++) {
-                                    const autoLayout = entity.name?.split('.').slice(index).join('.')
+                                    const autoLayout = path.basename(entity.name).split('.').slice(index).join('.')
                                     if (layouts[autoLayout]) {
                                         entity.layout = layouts[autoLayout]
                                         break
