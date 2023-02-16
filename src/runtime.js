@@ -6,7 +6,7 @@ import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
 import mikser from './mikser.js'
-import { onInitialize, onInitialized, onRender, onCancelled, onFinalized, useJournal, clearJournal } from './lifecycle.js'
+import { onInitialize, onInitialized, onRender, onCancelled, onFinalized, useJournal, clearJournal, onLoaded } from './lifecycle.js'
 import { globby } from 'globby'
 import { OPERATION } from './constants.js'
 import render from './render.js'
@@ -34,7 +34,7 @@ export async function setup(options) {
         .option('-c --config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
         .option('-m --mode <mode>', 'set mikser runtime mode', 'development')
         .option('-r --clear', 'clear current state before execution', false)
-        .option('-o --output <folder>', 'set mikser output folder realtive to working folder ot absolute', 'out')
+        .option('-o --output-folder <folder>', 'set mikser output folder realtive to working folder ot absolute', 'out')
         .option('-w --watch', 'watch entities for changes', false)
         .option('-d --debug', 'display debug statements')
         .option('-t --trace', 'display trace statements')
@@ -56,7 +56,6 @@ export async function setup(options) {
         mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || 'runtime')
         mikser.options.outputFolder = path.join(mikser.options.workingFolder, mikser.options.outputFolder || 'out')
         
-        logger.debug(mikser.options, 'Mikser options')
         logger.info('Working folder: %s', mikser.options.workingFolder)
         logger.info('Output folder: %s', mikser.options.outputFolder)
         
@@ -72,6 +71,11 @@ export async function setup(options) {
         }
         await mkdir(mikser.options.runtimeFolder , { recursive: true })
     })
+
+    onLoaded(async () => {
+        const logger = useLogger()
+        logger.debug(mikser.options, 'Mikser options')
+    })
     
     onRender(async (signal) => {
         const logger = useLogger()
@@ -80,7 +84,7 @@ export async function setup(options) {
         for (let entry of useJournal(OPERATION.RENDER)) {
             const { entity, options, context } = entry
             const jobId = entity.id + ':' + entity.destination
-            if (!renderJobs.has(jobId)) {
+            if (!renderJobs.has(jobId) && !options.ignore) {
                 const renderJob = async () => {
                     const renderOptions = { 
                         entity,

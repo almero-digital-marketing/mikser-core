@@ -29,7 +29,7 @@ export default async ({ entity, options, config, context, state }) => {
     if (entity.meta?.plugins) {
         pluginsToLoad.push(...entity.meta.plugins)
     }
-    pluginsToLoad.push(...state.plugins)
+    pluginsToLoad.push(...options.plugins)
     pluginsToLoad = _.uniq(pluginsToLoad.filter(pluginName => pluginName && pluginName.indexOf('render-') == 0))
     
     const runtime = {

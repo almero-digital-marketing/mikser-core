@@ -1,6 +1,6 @@
 {
   "name": "mikser-core",
-  "version": "3.0.6",
+  "version": "3.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -39,6 +39,6 @@
     "pino-pretty": "^9.1.1",
     "piscina": "^3.2.0",
     "truncate-stream": "^1.0.2",
-    "yamljs": "^0.3.0"
+    "yaml": "^2.2.1"
   }
 }

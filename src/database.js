@@ -10,7 +10,7 @@ import _ from 'lodash'
 let database
 
 onLoaded(async () => {
-    const adapter = new JSONFile(path.join(mikser.options.runtimeFolder, 'database.json'))
+    const adapter = new JSONFile(path.join(mikser.options.runtimeFolder, `database.${mikser.options.mode}.json`))
     database = new Low(adapter)
     database.data = {
         entities: [],

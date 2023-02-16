@@ -30,7 +30,8 @@ export default ({
     async function getEntityPresets(entity) {
         const entityPresets = []
         for(let preset in (mikser.config.assets?.presets || {})) {
-            for (let match of mikser.config.assets.presets[preset]) {
+            const matches = Array.isArray(mikser.config.assets.presets[preset]) ? mikser.config.assets.presets[preset] : [mikser.config.assets.presets[preset]]
+            for (let match of matches) {
                 if (minimatch(entity.id, match)) {
                     entityPresets.push(preset)
                 }
@@ -87,7 +88,7 @@ export default ({
         logger.info('Presets folder: %s', mikser.options.presetsFolder)
         await mkdir(mikser.options.presetsFolder, { recursive: true })
     
-        mikser.options.assets = mikser.config.presets?.assetsFolder || 'assets'
+        mikser.options.assets = mikser.config.assets?.assetsFolder || 'assets'
         mikser.options.assetsFolder = path.join(mikser.options.workingFolder, mikser.options.assets)
         logger.info('Assets folder: %s', mikser.options.assetsFolder)
         await mkdir(mikser.options.assetsFolder, { recursive: true })
@@ -281,9 +282,11 @@ export default ({
                 if (!presetRenders[entity.destination]) {
                     presetRenders[entity.destination] = true
         
-                    if (!await isPresetRendered(entity)) {
-                        await renderEntity(entity, { ...entity.preset.options, renderer: 'preset' })
-                    }
+                    await renderEntity(entity, { 
+                        ...entity.preset.options, 
+                        renderer: 'preset',
+                        ignore: await isPresetRendered(entity)
+                    })
                 }
             }
         }))
