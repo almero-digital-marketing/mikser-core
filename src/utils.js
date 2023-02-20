@@ -37,7 +37,13 @@ export function normalize(object) {
 
 export function matchEntity(entity, match) {
     if (typeof match == 'function') return match(entity)
-    else if (typeof match == 'string') return minimatch(match, entity.id)
+    else if (typeof match == 'string') {
+        if (match.substring(0,1) == '@/') {
+            return minimatch(entity.name, match.substring(2))
+        } else {
+            return minimatch(entity.id, match)
+        }
+    }
     else if (typeof match == 'object') return _.isMatch(entity, match)
     throw new Error('Ivalid match type')
 }
