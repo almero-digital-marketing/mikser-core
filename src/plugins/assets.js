@@ -2,7 +2,6 @@ import path from 'node:path'
 import { mkdir, writeFile, unlink, rm, readFile, symlink, } from 'fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
-import minimatch from 'minimatch'
 
 export default ({ 
     mikser, 
@@ -21,6 +20,7 @@ export default ({
     onSync, 
     onFinalize, 
     findEntity,
+    matchEntity,
     constants: { ACTION, OPERATION }, 
 }) => {
     const collection = 'presets'
@@ -32,7 +32,7 @@ export default ({
         for(let preset in (mikser.config.assets?.presets || {})) {
             const matches = Array.isArray(mikser.config.assets.presets[preset]) ? mikser.config.assets.presets[preset] : [mikser.config.assets.presets[preset]]
             for (let match of matches) {
-                if (minimatch(entity.id, match)) {
+                if (matchEntity(entity, match)) {
                     entityPresets.push(preset)
                 }
             }

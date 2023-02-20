@@ -2,8 +2,6 @@ import path from 'node:path'
 import { mkdir, writeFile, unlink } from 'node:fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
-import minimatch from 'minimatch'
-
 
 export default ({ 
     mikser, 
@@ -20,6 +18,7 @@ export default ({
     renderEntity, 
     onAfterRender, 
     onSync,
+    matchEntity,
     constants: { ACTION, OPERATION }, 
 }) => {   
     const collection = 'layouts'
@@ -198,7 +197,7 @@ export default ({
                     removePagesFromSitemap(entity)
                     if (!entity.meta?.layout) {
                         for (let pattern in mikser.config.layouts?.match || []) {
-                            if (minimatch(pattern, entity.name)) {
+                            if (matchEntity( entity, pattern)) {
                                 const layoutName = mikser.config.layouts?.match[pattern]
                                 entity.layout = layouts[layoutName]
                                 break

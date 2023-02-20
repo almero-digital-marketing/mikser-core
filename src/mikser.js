@@ -7,12 +7,14 @@ export default class {
     }
     static config = {}
     static journal = []
+    static validators = []
     static hooks = {
         initialize: [],
         initialized: [],
         load: [],
         loaded: [],
         import: [],
+        validate: [],
         imported: [],
         process: [],
         processed: [],
@@ -99,5 +101,11 @@ export default class {
             }
         }
         return synced === undefined || synced
+    }
+    static async validate(entry) {
+        for(let validator of this.validators) {
+            if (!await validator(entry)) return false
+        }
+        return true
     }
 }

@@ -23,31 +23,40 @@ export async function createEntity(entity) {
     const logger = useLogger()
     entity.stamp = mikser.stamp
     entity.time = Date.now()
-    logger.debug('Create %s entity: %s', entity.collection, entity.id)
-    mikser.journal.push({ operation: OPERATION.CREATE, entity })
+    const entry = { operation: OPERATION.CREATE, entity }
+    if (await mikser.validate(entry)) {
+        logger.debug('Create %s entity: %s', entity.collection, entity.id)
+        mikser.journal.push(entry)
+    }
 }
 
 export async function deleteEntity({ id, collection, type }) {
     const logger = useLogger()
-    logger.debug('Delete %s entity: %s %s', collection, type, id)
-    mikser.journal.push({ 
-        operation: OPERATION.DELETE, 
-        entity: { id, type, collection } 
-    })
+    const entry = { operation: OPERATION.DELETE, entity: { id, type, collection } }
+    if (await mikser.validate(entry)) {
+        logger.debug('Delete %s entity: %s %s', collection, type, id)
+        mikser.journal.push(entry)
+    }
 }
 
 export async function updateEntity(entity) {
     const logger = useLogger()
     entity.stamp = mikser.stamp
     entity.time = Date.now()
-    logger.debug('Update %s entity: %s', entity.collection, entity.id)
-    mikser.journal.push({ operation: OPERATION.UPDATE, entity })
+    const entry = { operation: OPERATION.UPDATE, entity }
+    if (await mikser.validate(entry)) {
+        logger.debug('Update %s entity: %s', entity.collection, entity.id)
+        mikser.journal.push(entry)
+    }
 }
 
 export async function renderEntity(entity, options = {}, context = {}) {
     const logger = useLogger()
-    logger.debug('Render %s entity: [%s] %s → %s', entity.collection, options.renderer, entity.id, entity.destination)
-    mikser.journal.push({ operation: OPERATION.RENDER, entity, options, context, })
+    const entry = { operation: OPERATION.RENDER, entity, options, context, }
+    if (await mikser.validate(entry)) {
+        logger.debug('Render %s entity: [%s] %s → %s', entity.collection, options.renderer, entity.id, entity.destination)
+        mikser.journal.push(entry)
+    }
 }
 
 export async function onInitialize(callback) {
@@ -199,10 +208,28 @@ export async function onFinalized(callback, once) {
     }
 }
 
-export async function onSync(name, callback) {
+export function onSync(name, callback) {
     mikser.hooks.sync.push(async (operation) => {
         if (operation.name == name) {
             return await callback(operation)
+        }
+    })
+}
+
+export function onValidate(operations, callback) {
+    const logger = useLogger()
+    mikser.validators.push(async (entry) => {
+        if (operations.indexOf(entry.operation) != -1) {
+            try {
+                const message = await callback(entry)
+                if (message) {
+                    logger.warning('Validation problem: [%s] %s %s', entry.operation, entry.entity.name, message)
+                }
+                return true
+            } catch (err) {
+                logger.error('Validation error: [%s] %s %s', entry.operation, entry.entity.name, err.message)
+                return false
+            }
         }
     })
 }
