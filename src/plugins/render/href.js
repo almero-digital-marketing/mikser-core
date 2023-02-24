@@ -16,14 +16,18 @@ export function load({ entity, runtime, state }) {
         if (typeof href == 'object') return href
         if (href.indexOf('http') == 0) return href
 
-        const found = runtime.hrefLang(href, page)
-        if (!found.id) {
-            found = langs[lang]
+        let found = runtime.hrefLang(href, page)
+        if (!found) {
+            return { link: href }
+        } else {
+            if (!found.id) {
+                found = found[lang]
+            }
+            if (found) {
+                found.link = found.destination.replace('index.html', '')
+            }
+            return found
         }
-        if (found) {
-            found.link = found.destination.replace('index.html', '')
-        }
-        return found
     }
 
     runtime.prev = entity.page > 1 ? entity.page - 1 : false

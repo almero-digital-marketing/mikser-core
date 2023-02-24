@@ -66,7 +66,7 @@ export default ({
             break
             case ACTION.UPDATE:
                 const current = await findEntity({ id })
-                if (current.checksum != checksum) {
+                if (current?.checksum != checksum) {
                     await updateEntity({
                         id,
                         uri,
