@@ -270,8 +270,8 @@ export default ({
             }
         }
         
-        const presetRenders = {}
-        await Promise.all(entitiesToRender.map(async original => {
+        const presetRenders = new Set()
+        for(let original of entitiesToRender) {
             for (let entityPreset of assetsMap[original.id] || []) {
                 const entity = _.cloneDeep(original)
                 entity.preset = presets[entityPreset]
@@ -280,8 +280,8 @@ export default ({
                     destination = changeExtension(destination, entity.preset.format)
                 }
                 entity.destination = path.join(mikser.options.assetsFolder, entityPreset, destination)
-                if (!presetRenders[entity.destination]) {
-                    presetRenders[entity.destination] = true
+                if (!presetRenders.has(entity.destination)) {
+                    presetRenders.add(entity.destination)
         
                     await renderEntity(entity, { 
                         ...entity.preset.options, 
@@ -290,7 +290,7 @@ export default ({
                     })
                 }
             }
-        }))
+        }
     
         if (entitiesToRender.length) {
             logger.info('Processing assets completed: %d', entitiesToRender.length)
@@ -299,12 +299,12 @@ export default ({
     
     onAfterRender(async () => {
         const logger = useLogger()
-        for(let { result, entity } of useJournal(OPERATION.RENDER)) {
-            if (result && entity.preset) {
+        for(let { success, entity } of useJournal(OPERATION.RENDER)) {
+            if (success && entity.preset) {
                 await mkdir(path.dirname(entity.destination), { recursive: true })
                 const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`
                 await writeFile(assetChecksum, entity.checksum)
-                logger.info('Render finished: %s', result.replace(mikser.options.workingFolder, ''))
+                logger.info('Render finished: [%s] %s', entity.preset.name, entity.destination.replace(mikser.options.workingFolder, ''))
             }
         }
     })

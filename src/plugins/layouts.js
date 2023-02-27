@@ -314,15 +314,15 @@ export default ({
     onAfterRender(async (signal) => {
         const logger = useLogger()
     
-        for(let { result, entity } of useJournal(OPERATION.RENDER)) {
+        for(let { success, output, entity } of useJournal(OPERATION.RENDER)) {
             if (signal.aborted) return
-            if (result && entity.layout && entity.destination) {
+            if (success && entity.layout && entity.destination) {
                 const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
                 await mkdir(path.dirname(destinationFile), { recursive: true })
                 try {
                     await unlink(destinationFile)
                 } catch {}
-                await writeFile(destinationFile, result)
+                await writeFile(destinationFile, output)
                 logger.debug('Render finished: %s', entity.destination.replace(mikser.options.workingFolder, ''))
             }
         }

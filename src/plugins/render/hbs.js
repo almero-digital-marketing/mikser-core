@@ -39,6 +39,7 @@ export async function render({ entity, runtime }) {
         }
     }
     const source = await readFile(entity.layout.uri, 'utf8')
-    const result = runtime.hbs(source, sandbox)
-    return result
+    const output = runtime.hbs(source, sandbox)
+    await writeFile(assetChecksum, entity.checksum)
+    return output
 }

@@ -71,6 +71,7 @@ export default ({
         }
         
         const resourceDownloads = {}
+        const localResources = new Set()
         logger.info('Processing resources: %d', resources.length)
         for (let { library, resource, entity } of resources) {
             library = resourceMap[library]
@@ -80,17 +81,21 @@ export default ({
                 }
             } else {
                 try {
-                    await createEntity({
-                        id: resource.indexOf(`/${library}`) == 0 ? resource : path.join(`/${library}`, resource),
-                        uri: path.join(mikser.options.workingFolder, resource),
-                        collection,
-                        type,
-                        format: path.extname(resource).substring(1).toLowerCase(),
-                        name: resource.indexOf('/') == 0 ? resource.substring(1) : resource,
-                        source: path.join(mikser.options.workingFolder, resource),
-                        checksum: await checksum(path.join(mikser.options.workingFolder, resource))
-                    })
-                    logger.info('Resource: %s %s', entity.id, resource)
+                    const id = resource.indexOf(`/${library}`) == 0 ? resource : path.join(`/${library}`, resource)
+                    if (!localResources.has(id)) {
+                        await createEntity({
+                            id,
+                            uri: path.join(mikser.options.workingFolder, resource),
+                            collection,
+                            type,
+                            format: path.extname(resource).substring(1).toLowerCase(),
+                            name: resource.indexOf('/') == 0 ? resource.substring(1) : resource,
+                            source: path.join(mikser.options.workingFolder, resource),
+                            checksum: await checksum(path.join(mikser.options.workingFolder, resource))
+                        })
+                        logger.info('Resource: %s %s', id, resource)
+                        localResources.add(id)
+                    }
                 } catch (err) {
                     logger.error('Resource error: %s %s %s', entity.id, resource, err.message)
                 }

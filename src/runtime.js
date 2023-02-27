@@ -89,7 +89,7 @@ export async function setup(options) {
             const jobId = entity.id + ':' + entity.destination
             if (!renderJobs.has(jobId) && !options.ignore) {
                 pending++
-                const renderJob = async () => {
+                renderJobs.set(jobId, async () => {
                     const renderOptions = { 
                         entity,
                         options: { ...mikser.options, ...options },
@@ -103,16 +103,16 @@ export async function setup(options) {
                             if (options.abortable) {
                                 renderOptions.signal = signal
                                 if (!signal.aborted) {
-                                    entry.result = await render(renderOptions)
-                                    pending--
+                                    entry.output = await render(renderOptions)
+                                    entry.success = true
                                 }
                             } else {
-                                entry.result = await render(renderOptions)
-                                pending--
+                                entry.output = await render(renderOptions)
+                                entry.success = true
                             }
                         } else {
-                            entry.result = await mikser.runtime.renderPool.run(renderOptions, options.abortable === false ? {} : { signal })
-                            pending--
+                            entry.output = await mikser.runtime.renderPool.run(renderOptions, options.abortable === false ? {} : { signal })
+                            entry.success = true
                         }
                         logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
                     } catch (err) {
@@ -120,9 +120,9 @@ export async function setup(options) {
                             logger.error('Render error: %s %s', entity.id, err.message)
                         }
                         logger.debug('Render canceled')
-                    }    
-                }
-                renderJobs.set(jobId, renderJob)
+                    }
+                    pending-- 
+                })
             }
         }
         await Promise.all(Array.from(renderJobs.values()).map(renderJob => renderJob()))

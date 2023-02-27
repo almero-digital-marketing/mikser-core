@@ -50,12 +50,12 @@ onPersist(async () => {
 })
 
 onAfterRender(async () => {
-    for(let { result, entity } of useJournal(OPERATION.RENDER)) {
-        if (result) {
+    for(let { success, entity } of useJournal(OPERATION.RENDER)) {
+        if (success && entity.output) {
             const index = database
             .chain
             .get('results')
-            .findIndex({ id: entity.id })
+            .findIndex({ id: entity.id, destinatoin: entity.destinatoin })
             .value()
             if (index < 0) {
                 database.data.results.push(entity)
