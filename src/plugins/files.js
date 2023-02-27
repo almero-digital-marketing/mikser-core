@@ -12,16 +12,19 @@ export default ({
     deleteEntity, 
     watch, 
     onSync, 
+    onFinalize,
     findEntity, 
     checksum, 
-    constants: { ACTION }, 
+    useJournal,
+    constants: { ACTION, OPERATION }, 
 }) => {
     const collection = 'files'
     const type = 'file'
 
     async function ensureLink(relativePath) {
         const source = path.join(mikser.options.filesFolder, relativePath)
-        const uri = path.join(mikser.options.outputFolder, relativePath)
+        let uri = path.join(mikser.options.outputFolder, relativePath)
+        if (mikser.config.files?.outputFolder) uri = path.join(mikser.options.outputFolder, mikser.config.files.outputFolder, relativePath)
         try {
             await mkdir(path.dirname(uri), { recursive: true })
             await symlink(source, uri, 'file')
@@ -43,10 +46,15 @@ export default ({
         if (!context.relativePath) return false
         const { relativePath } = context
     
-        const uri = path.join(mikser.options.outputFolder, relativePath)
         const source = path.join(mikser.options.filesFolder, relativePath)
         const format = path.extname(relativePath).substring(1).toLowerCase()
         const id = path.join(`/${collection}`, relativePath)
+        let uri = path.join(mikser.options.outputFolder, relativePath)
+        let name = relativePath
+        if (mikser.config.files?.outputFolder) {
+            uri = path.join(mikser.options.outputFolder, mikser.config.files.outputFolder, relativePath)
+            name = path.join(mikser.config.files.outputFolder, relativePath)
+        }
         
         let synced = true
         switch (action) {
@@ -55,7 +63,7 @@ export default ({
                 await createEntity({
                     id,
                     uri,
-                    name: relativePath,
+                    name,
                     collection,
                     type,
                     format,
@@ -108,19 +116,24 @@ export default ({
     onImport(async () => {
         const logger = useLogger()
         await mkdir(mikser.options.outputFolder, { recursive: true }) 
+        if (mikser.config.files?.outputFolder) await mkdir(path.join(mikser.options.outputFolder, mikser.config.files.outputFolder), { recursive: true })
+
         const paths = await globby('**/*', { cwd: mikser.options.filesFolder })
         logger.info('Importing files: %d', paths.length)
     
         return Promise.all(paths.map(async relativePath => {
             const { uri, source } = await ensureLink(relativePath)
-    
+            let name = relativePath
+            if (mikser.config.files?.outputFolder) {
+                name = path.join(mikser.config.files.outputFolder, relativePath)
+            }
             await createEntity({
-                id: path.join('/files', relativePath),
+                id: path.join(`/${collection}`, relativePath),
                 uri,
                 collection,
                 type,
                 format: path.extname(relativePath).substring(1).toLowerCase(),
-                name: relativePath,
+                name,
                 source,
                 checksum: await checksum(source),
                 link: await link(source)

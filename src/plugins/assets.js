@@ -21,6 +21,7 @@ export default ({
     onFinalize, 
     findEntity,
     matchEntity,
+    changeExtension,
     constants: { ACTION, OPERATION }, 
 }) => {
     const collection = 'presets'
@@ -276,7 +277,7 @@ export default ({
                 entity.preset = presets[entityPreset]
                 let destination = entity.name
                 if (entity.preset.format) {
-                    destination = destination.replace(`.${entity.format}`, `.${entity.preset.format}`)
+                    destination = changeExtension(destination, entity.preset.format)
                 }
                 entity.destination = path.join(mikser.options.assetsFolder, entityPreset, destination)
                 if (!presetRenders[entity.destination]) {

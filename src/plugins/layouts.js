@@ -19,6 +19,7 @@ export default ({
     onAfterRender, 
     onSync,
     matchEntity,
+    changeExtension,
     constants: { ACTION, OPERATION }, 
 }) => {   
     const collection = 'layouts'
@@ -266,7 +267,7 @@ export default ({
                         pageEntity.pages = data.pages
                         if (page) {
                             pageEntity.page = page + 1
-                            pageEntity.id = entity.id.replace(`.${entity.format}`, `.${pageEntity.page}.${entity.layout.format}`)
+                            pageEntity.id = changeExtension(entity.id, `${pageEntity.page}.${entity.layout.format}`)
                             if (entity.meta) {
                                 if (entity.meta.href) {
                                     pageEntity.meta.href = `${entity.meta.href}.${pageEntity.page}`
@@ -322,7 +323,7 @@ export default ({
                     await unlink(destinationFile)
                 } catch {}
                 await writeFile(destinationFile, result)
-                logger.info('Render finished: %s', entity.destination.replace(mikser.options.workingFolder, ''))
+                logger.debug('Render finished: %s', entity.destination.replace(mikser.options.workingFolder, ''))
             }
         }
     })

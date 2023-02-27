@@ -4,6 +4,7 @@ import TruncateStream from 'truncate-stream'
 import { createReadStream } from 'node:fs'
 import _ from 'lodash'
 import minimatch from 'minimatch'
+import path from 'path'
 
 export async function checksum(uri) {
     const maxBytes = 300 * 1024
@@ -36,6 +37,7 @@ export function normalize(object) {
 }
 
 export function matchEntity(entity, match) {
+    if (!match) return false
     if (typeof match == 'function') return match(entity)
     else if (typeof match == 'string') {
         if (match.substring(0,1) == '@/') {
@@ -46,4 +48,10 @@ export function matchEntity(entity, match) {
     }
     else if (typeof match == 'object') return _.isMatch(entity, match)
     throw new Error('Ivalid match type')
+}
+
+export function changeExtension(file, format) {
+    let extension = path.extname(file)
+    let result = file.substring(0, file.length - extension.length) +  '.' + format
+    return result
 }

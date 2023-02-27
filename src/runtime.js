@@ -79,12 +79,16 @@ export async function setup(options) {
     
     onRender(async (signal) => {
         const logger = useLogger()
-
+        let pending = 0
+        let interval = setInterval(() => {
+            logger.info('Pending renders: %d', pending)
+        }, 1000)
         const renderJobs = new Map()
         for (let entry of useJournal(OPERATION.RENDER)) {
             const { entity, options, context } = entry
             const jobId = entity.id + ':' + entity.destination
             if (!renderJobs.has(jobId) && !options.ignore) {
+                pending++
                 const renderJob = async () => {
                     const renderOptions = { 
                         entity,
@@ -100,12 +104,15 @@ export async function setup(options) {
                                 renderOptions.signal = signal
                                 if (!signal.aborted) {
                                     entry.result = await render(renderOptions)
+                                    pending--
                                 }
                             } else {
                                 entry.result = await render(renderOptions)
+                                pending--
                             }
                         } else {
                             entry.result = await mikser.runtime.renderPool.run(renderOptions, options.abortable === false ? {} : { signal })
+                            pending--
                         }
                         logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
                     } catch (err) {
@@ -115,10 +122,14 @@ export async function setup(options) {
                         logger.debug('Render canceled')
                     }    
                 }
-                renderJobs.set(jobId, renderJob())
+                renderJobs.set(jobId, renderJob)
             }
         }
-        return Promise.all(renderJobs.values())
+        await Promise.all(Array.from(renderJobs.values()).map(renderJob => renderJob()))
+        clearInterval(interval)
+        if (pending > 0) {
+            logger.warn('Unfinished renders: %d', pending)
+        }
     })
 
     onCancelled(async () => {
