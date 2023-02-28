@@ -49,6 +49,23 @@ onPersist(async () => {
     }
 })
 
+onAfterRender(async () => {
+    for(let { success, output, entity } of useJournal(OPERATION.RENDER)) {
+        if (success && output) {
+            const index = database
+            .chain
+            .get('results')
+            .findIndex({ id: entity.id, destinatoin: entity.destinatoin })
+            .value()
+            if (index < 0) {
+                database.data.results.push(entity)
+            } else {
+                Object.assign(database.data.results[index], entity)
+            }
+        }
+    }
+})
+
 onFinalized(async () => {
     await database.write()
 })
