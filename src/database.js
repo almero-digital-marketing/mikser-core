@@ -10,7 +10,7 @@ import _ from 'lodash'
 let database
 
 onLoaded(async () => {
-    const adapter = new JSONFile(path.join(mikser.options.runtimeFolder, `database.${mikser.options.mode}.json`))
+    const adapter = new JSONFile(path.join(mikser.options.runtimeFolder, `database.${mikser.config.database || mikser.options.mode}.json`))
     database = new Low(adapter)
     database.data = {
         entities: [],
@@ -45,23 +45,6 @@ onPersist(async () => {
                 .remove({ id: entity.id })
                 .value()
             break
-        }
-    }
-})
-
-onAfterRender(async () => {
-    for(let { success, entity } of useJournal(OPERATION.RENDER)) {
-        if (success && entity.output) {
-            const index = database
-            .chain
-            .get('results')
-            .findIndex({ id: entity.id, destinatoin: entity.destinatoin })
-            .value()
-            if (index < 0) {
-                database.data.results.push(entity)
-            } else {
-                Object.assign(database.data.results[index], entity)
-            }
         }
     }
 })

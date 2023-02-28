@@ -123,9 +123,13 @@ export async function setup(options) {
                     }
                     pending-- 
                 })
+            } else {
+                entry.success = true
             }
         }
-        await Promise.all(Array.from(renderJobs.values()).map(renderJob => renderJob()))
+        await Promise.all(Array.from(renderJobs.values())
+        .map(renderJob => renderJob()))
+        
         clearInterval(interval)
         if (pending > 0) {
             logger.warn('Unfinished renders: %d', pending)
