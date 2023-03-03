@@ -12,11 +12,9 @@ export default ({
     deleteEntity, 
     watch, 
     onSync, 
-    onFinalize,
     findEntity, 
     checksum, 
-    useJournal,
-    constants: { ACTION, OPERATION }, 
+    constants: { ACTION }, 
 }) => {
     const collection = 'files'
     const type = 'file'
@@ -33,6 +31,13 @@ export default ({
             throw err
         }
         return { uri, source }
+    }
+
+    async function removeLink(relativePath) {
+        const source = path.join(mikser.options.filesFolder, relativePath)
+        let uri = path.join(mikser.options.outputFolder, relativePath)
+        if (mikser.config.files?.outputFolder) uri = path.join(mikser.options.outputFolder, mikser.config.files.outputFolder, relativePath)
+        await unlink(uri)
     }
     
     async function link(source) {
@@ -91,7 +96,7 @@ export default ({
                 }
             break
             case ACTION.DELETE:
-                await unlink(path.join(mikser.options.outputFolder, relativePath))
+                await removeLink(relativePath)
                 await deleteEntity({
                     id,
                     collection,

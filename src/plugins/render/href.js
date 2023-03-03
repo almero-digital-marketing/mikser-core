@@ -23,7 +23,7 @@ export function load({ entity, runtime, state }) {
             if (!found.id) {
                 found = found[lang]
             }
-            if (found) {
+            if (found?.destination) {
                 found.link = found.destination.replace('index.html', '')
             }
             return found
