@@ -42,7 +42,7 @@ export default ({
     }
     
     async function getRevisions(entity) {
-        let revisions = await globby(`${entity.destination}.*.md5`, { 
+        let revisions = await globby(`${entity.destination.replaceAll('(','\\(').replaceAll(')','\\)')}.*.md5`, { 
             cwd: path.join(mikser.options.assetsFolder, entity.preset.name), 
             expandDirectories: false, 
             onlyFiles: true 
@@ -53,9 +53,9 @@ export default ({
     async function isPresetRendered(entity) {
         let result = false
         let revisions = []
-        const currentRevision = path.join(entity.preset.name, `${entity.name}.${entity.preset.checksum}.md5`)
-        if (checksumMap.has(currentRevision)) {
-            revisions.push(path.join(mikser.options.assetsFolder, currentRevision))
+        const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`
+        if (checksumMap.has(assetChecksum)) {
+            revisions.push(path.join(mikser.options.assetsFolder, assetChecksum))
         } else {
             revisions = await getRevisions(entity)
         }

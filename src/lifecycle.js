@@ -53,10 +53,12 @@ export async function updateEntity(entity) {
 export async function renderEntity(entity, options = {}, context = {}) {
     const logger = useLogger()
     const entry = { operation: OPERATION.RENDER, entity, options, context, }
-    if (await mikser.validate(entry)) {
-        logger.debug('Render %s entity: [%s] %s → %s', entity.collection, options.renderer, entity.id, entity.destination)
-        mikser.journal.push(entry)
+    if (options.ignore) {
+        logger.trace('Render %s entity: [%s] %s → %s %s', entity.collection, options.renderer, entity.id, entity.destination, !options.ignore)
+    } else {
+        logger.debug('Render %s entity: [%s] %s → %s %s', entity.collection, options.renderer, entity.id, entity.destination, !options.ignore)
     }
+    mikser.journal.push(entry)
 }
 
 export async function onInitialize(callback) {
