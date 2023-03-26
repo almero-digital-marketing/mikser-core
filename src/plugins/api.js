@@ -14,7 +14,9 @@ export default ({
     findEntity, 
     findEntities, 
     schedule, 
-    normalize 
+    normalize,
+    trackProgress,
+    updateProgress,
 }) => {  
     const format = 'api'
 
@@ -33,6 +35,7 @@ export default ({
         try {
             const recent = new Set()
             const entities = await readMany(mikser)
+            trackProgress(`Api sync ${apiName}`, entities.length)
             for (let meta of entities) {
                 if (collection && type && meta.id) {
                     const name = path.join(collection, meta.name || meta.id.toString())
@@ -64,6 +67,7 @@ export default ({
                         synced++
                     }
                 }
+                updateProgress()
             }
         
             const entitiesToRemove = await findEntities(entity => 
@@ -73,12 +77,14 @@ export default ({
                 entity.time < syncTime && 
                 !recent.has(entity.id)
             )
+            if (entitiesToRemove.length) trackProgress(`Api remove ${apiName}`, entitiesToRemove.length)
             for (let entity of entitiesToRemove) {
                 deleteEntity(entity)
                 removed++
+                updateProgress()
             }
             if (synced || removed) {
-                logger.info('Syncing api [%s] synced: %d, removed: %d', collection, synced, removed)
+                logger.debug('Syncing api [%s] synced: %d, removed: %d', collection, synced, removed)
             }
         } catch (err) {
             logger.error('Api sync [%s] error: %s', collection, err.message)

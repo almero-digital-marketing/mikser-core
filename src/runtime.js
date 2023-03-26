@@ -1,15 +1,17 @@
 import pino from 'pino'
 import path from 'node:path'
 import { Command } from 'commander'
-import { rm, lstat, realpath, mkdir } from 'fs/promises'
+import { rm, lstat, realpath, mkdir, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
 import mikser from './mikser.js'
-import { onInitialize, onInitialized, onRender, onCancelled, onFinalized, useJournal, clearJournal, onLoaded } from './lifecycle.js'
+import { onInitialize, onInitialized, onRender, onCancelled, onFinalized, onLoaded, onAfterRender } from './lifecycle.js'
+import { useJournal, clearJournal, updateEntry } from './journal.js'
 import { globby } from 'globby'
 import { OPERATION } from './constants.js'
 import render from './render.js'
+import pMap from 'p-map'
 
 export async function setup(options) {
     const { default: { version } } = await import('../package.json', { assert: { type: 'json' } })
@@ -38,18 +40,24 @@ export async function setup(options) {
         .option('-w --watch', 'watch entities for changes', false)
         .option('-d --debug', 'display debug statements')
         .option('-t --trace', 'display trace statements')
+        
+        Object.assign(mikser.options, options || mikser.runtime.commander.parse(process.argv).opts())
+        mikser.options.info = true
+        if (mikser.options.debug) {
+            mikser.runtime.logger.level = 'debug'
+            mikser.options.info = false
+        }
+        if (mikser.options.trace) {
+            mikser.runtime.logger.level = 'trace'
+            mikser.options.debug = false
+            mikser.options.info = false
+        }
+        mikser.runtime.logger.notice = mikser.runtime.logger.info
     })
     
     onInitialized(async () => {
         const logger = useLogger()
         
-        Object.assign(mikser.options, options || mikser.runtime.commander.parse(process.argv).opts())
-        if (mikser.options.debug) {
-            logger.level = 'debug'
-        }
-        if (mikser.options.trace) {
-            logger.level = 'trace'
-        }
         mikser.options.workingFolder = path.resolve(mikser.options.workingFolder)
         process.chdir(mikser.options.workingFolder)
 
@@ -79,61 +87,70 @@ export async function setup(options) {
     
     onRender(async (signal) => {
         const logger = useLogger()
-        let pending = 0
-        let interval = setInterval(() => {
-            logger.info('Pending renders: %d', pending)
-        }, 1000)
-        const renderJobs = new Map()
-        for (let entry of useJournal(OPERATION.RENDER)) {
-            const { entity, options, context } = entry
+        const renderJobs = new Set()
+        await pMap(useJournal('Rendering', [OPERATION.RENDER]), async entry => {
+            const { id, entity, options, context } = entry
             const jobId = entity.id + ':' + entity.destination
             if (!renderJobs.has(jobId) && !options.ignore) {
-                pending++
-                renderJobs.set(jobId, async () => {
-                    const renderOptions = { 
-                        entity,
-                        options: { ...mikser.options, ...options },
-                        config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
-                        context,
-                        state: mikser.state,
-                        niceIncrement: 10
-                    }
-                    try {
-                        if (options.immediate) {
-                            if (options.abortable) {
-                                renderOptions.signal = signal
-                                if (!signal.aborted) {
-                                    entry.output = await render(renderOptions)
-                                    entry.success = true
+                renderJobs.add(jobId)
+                const renderOptions = { 
+                    entity,
+                    options: { ...mikser.options, ...options },
+                    config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
+                    context,
+                    state: mikser.state,
+                    niceIncrement: 10
+                }
+                try {
+                    if (options.immediate) {
+                        if (options.abortable) {
+                            renderOptions.signal = signal
+                            if (!signal.aborted) {
+                                const output = {
+                                    result: await render(renderOptions),
+                                    success: true
                                 }
-                            } else {
-                                entry.output = await render(renderOptions)
-                                entry.success = true
+                                await updateEntry({ id, output })
                             }
                         } else {
-                            entry.output = await mikser.runtime.renderPool.run(renderOptions, options.abortable === false ? {} : { signal })
-                            entry.success = true
+                            const output = {
+                                result: await render(renderOptions),
+                                success: true
+                            }
+                            await updateEntry({ id, output })
                         }
-                        logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
-                    } catch (err) {
-                        if (err.name != 'AbortError') {
-                            logger.error('Render error: %s %s', entity.id, err.message)
+                    } else {
+                        const output = {
+                            result: await mikser.runtime.renderPool.run(renderOptions, options.abortable === false ? {} : { signal }),
+                            success: true
                         }
-                        logger.debug('Render canceled')
+                        await updateEntry({ id, output })
                     }
-                    pending-- 
-                })
+                    logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
+                } catch (err) {
+                    if (err.name != 'AbortError') {
+                        await updateEntry({ id, output: { success: false } })
+                        logger.error('Render error: %s %s', entity.id, err.message)
+                    }
+                    logger.debug('Render canceled')
+                }
             } else {
-                entry.success = true
+                await updateEntry({ id, output: { success: true } })
+            }
+        }, { concurrency: 100 })
+        renderJobs.size && logger.info('Rendered: %d', renderJobs.size)
+    })
+
+    onAfterRender(async () => {
+        const results = new Map()
+        for await (let { success, output, entity } of useJournal('Output', [OPERATION.RENDER])) {
+            if (success && output) {
+                const jobId = entity.id + ':' + entity.destination
+                results.set(jobId, entity)
             }
         }
-        await Promise.all(Array.from(renderJobs.values())
-        .map(renderJob => renderJob()))
-        
-        clearInterval(interval)
-        if (pending > 0) {
-            logger.warn('Unfinished renders: %d', pending)
-        }
+        const renderOutput = path.join(mikser.options.runtimeFolder, `output.${mikser.options.mode}.json`)
+        await writeFile(renderOutput, JSON.stringify(Array.from(results.values())), 'utf8')
     })
 
     onCancelled(async () => {
@@ -160,7 +177,7 @@ export async function setup(options) {
                 }
             }
         }
-        logger.info('Mikser completed')
+        logger.notice('Mikser completed')
     })
        
     console.info('Mikser: %s', version)

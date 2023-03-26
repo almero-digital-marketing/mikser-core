@@ -45,7 +45,7 @@ export default ({
                 }
             } = mikser.config.data?.entities[entitiesName]
 
-            for (let { operation, entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE)) {
+            for await (let { operation, entity } of useJournal('Data entities', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE])) {
                 if (query(entity)) {
                     switch (operation) {
                         case OPERATION.CREATE:
@@ -78,7 +78,7 @@ export default ({
                 }
             } = mikser.config.data?.context[contextName]
 
-            for(let { entity, context } of useJournal(OPERATION.RENDER)) {
+            for await (let { entity, context } of useJournal('Data context', [OPERATION.RENDER])) {
                 if (query(entity)) {
                     logger.debug('Data export context: %s', entityName)
                     await saveConext(entity, map ? map(context) : context)
@@ -89,18 +89,18 @@ export default ({
     
     onFinalize(async () => {
         const logger = useLogger()
-        for (let dataName in mikser.config.data?.database || {}) {
+        for (let dataName in mikser.config.data?.catalog || {}) {
             const { 
                 query, 
                 map,
                 save: saveEntities = async entities => {
                     const entitiesFile = path.join(mikser.options.dataFolder, `${dataName}.json`)
-                    logger.debug('Data export database %s %s: %s', dataName, dataEntities.length, entitiesFile)
+                    logger.debug('Data export catalog %s %s: %s', dataName, dataEntities.length, entitiesFile)
                     await writeFile(entitiesFile, JSON.stringify(entities), 'utf8')
                 }
-            } = mikser.config.data?.database[dataName]
+            } = mikser.config.data?.catalog[dataName]
             const entities = await findEntities(query).map(entity => map ? map(entity) : entity)
-            logger.debug('Data export database: %s %s', dataName, dataEntities.length)
+            logger.debug('Data export catalog: %s %s', dataName, dataEntities.length)
             await saveEntities(entities)
         }
     })

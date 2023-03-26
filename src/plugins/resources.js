@@ -10,6 +10,7 @@ import escapeStringRegexp from 'escape-string-regexp'
 import * as stream from 'stream'
 import { promisify } from 'util'
 import isUrl from 'is-url'
+import pMap from 'p-map'
 
 export default ({ 
     useLogger, 
@@ -21,6 +22,8 @@ export default ({
     onProcessed, 
     onFinalize, 
     checksum,
+    trackProgress,
+    updateProgress,
     constants: { OPERATION }, 
 }) => {
     const collection = 'resources'
@@ -55,7 +58,7 @@ export default ({
         const { signal } = abortController
     
         const resources = []
-        for (let { entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE)) {    
+        for await (let { entity } of useJournal('Resources provision', [OPERATION.CREATE, OPERATION.UPDATE])) {    
             if (entity.collection != collection && entity.meta) {
                 _.eachDeep(entity.meta, resource => {
                     if (typeof resource == 'string') {
@@ -69,10 +72,11 @@ export default ({
                 })
             }
         }
+        resources.length && logger.info('Resources: %d', resources.length)
         
         const resourceDownloads = {}
         const localResources = new Set()
-        logger.info('Processing resources: %d', resources.length)
+        trackProgress('Resources processing', resources.length)
         for (let { library, resource, entity } of resources) {
             library = resourceMap[library]
             if (isUrl(resource)) {
@@ -100,6 +104,7 @@ export default ({
                     logger.error('Resource error: %s %s %s', entity.id, resource, err.message)
                 }
             }
+            updateProgress()
         }
     
         const resourceFiles = await globby('**/*', { cwd: mikser.options.resourcesFolder })
@@ -110,6 +115,7 @@ export default ({
 
         const downloads = Object.keys(resourceDownloads)
         if (downloads.length) {
+            trackProgress('Resources download', downloads.length)
             await mkdir(mikser.options.resourcesFolder, { recursive: true })
             let link = path.join(mikser.options.outputFolder, mikser.options.resources)
             if (mikser.config.resources?.outputFolder) link = path.join(mikser.options.outputFolder, mikser.config.resources?.outputFolder, mikser.options.resources)
@@ -120,7 +126,8 @@ export default ({
                 if (err.code != 'EEXIST')
                 throw err
             }
-            await Promise.all(downloads.map(async url => {
+            let count = 0
+            await pMap(downloads, async url => {
                 const { library, entity } = resourceDownloads[url]
                 let { pathname } = new URL(url)
                 pathname = decodeURI(pathname)
@@ -141,6 +148,7 @@ export default ({
                     }
         
                     try {
+                        count++
                         var response = await axios(request)
                     } catch (err) {
                         success == false
@@ -175,12 +183,10 @@ export default ({
                         checksum: await checksum(resource)
                     })
                 }
-            }))
+                updateProgress()
+            }, { concurrency: 10 })
+            count && logger.info('Downloaded: %d', count)
         }    
-    
-        if (resources.length) {
-            logger.info('Processing resources completed: %d', resources.length)
-        }
     })
     
     onFinalize(async () => {

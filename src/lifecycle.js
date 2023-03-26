@@ -1,23 +1,7 @@
 import mikser from './mikser.js'
 import { OPERATION } from './constants.js'
 import { useLogger } from './runtime.js'
-
-export function* useJournal(...args) {
-    for(let entry of mikser.journal) {
-        const { operation } = entry
-        if (args.indexOf(operation) != -1) {
-            yield entry
-        }
-    }
-}
-
-export function clearJournal(aborted) {
-    if (aborted) {
-        mikser.journal = mikser.journal.filter(({ options }) => options?.abortable !== false)
-    } else {
-        mikser.journal = []
-    }
-}
+import { addEntry } from './journal.js'
 
 export async function createEntity(entity) {
     const logger = useLogger()
@@ -26,7 +10,7 @@ export async function createEntity(entity) {
     const entry = { operation: OPERATION.CREATE, entity }
     if (await mikser.validate(entry)) {
         logger.debug('Create %s entity: %s', entity.collection, entity.id)
-        mikser.journal.push(entry)
+        await addEntry(entry)
     }
 }
 
@@ -35,7 +19,7 @@ export async function deleteEntity({ id, collection, type }) {
     const entry = { operation: OPERATION.DELETE, entity: { id, type, collection } }
     if (await mikser.validate(entry)) {
         logger.debug('Delete %s entity: %s %s', collection, type, id)
-        mikser.journal.push(entry)
+        await addEntry(entry)
     }
 }
 
@@ -46,7 +30,7 @@ export async function updateEntity(entity) {
     const entry = { operation: OPERATION.UPDATE, entity }
     if (await mikser.validate(entry)) {
         logger.debug('Update %s entity: %s', entity.collection, entity.id)
-        mikser.journal.push(entry)
+        await addEntry(entry)
     }
 }
 
@@ -58,7 +42,7 @@ export async function renderEntity(entity, options = {}, context = {}) {
     } else {
         logger.debug('Render %s entity: [%s] %s → %s %s', entity.collection, options.renderer, entity.id, entity.destination, !options.ignore)
     }
-    mikser.journal.push(entry)
+    await addEntry(entry)
 }
 
 export async function onInitialize(callback) {

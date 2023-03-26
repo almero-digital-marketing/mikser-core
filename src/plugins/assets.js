@@ -2,6 +2,7 @@ import path from 'node:path'
 import { mkdir, writeFile, unlink, rm, readFile, symlink, } from 'fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
+import pMap from 'p-map'
 
 export default ({ 
     mikser, 
@@ -74,6 +75,26 @@ export default ({
             }
         }
         return result
+    }
+
+    async function renderPresets(entityToRender) {
+        const { presets, assetsMap } = mikser.state.assets
+
+        for (let entityPreset of assetsMap[entityToRender.id] || []) {
+            const entity = _.cloneDeep(entityToRender)
+            entity.preset = presets[entityPreset]
+            let destination = entity.name
+            if (entity.preset.format) {
+                destination = changeExtension(destination, entity.preset.format)
+            }
+            entity.destination = path.join(mikser.options.assetsFolder, entityPreset, destination)
+            const ignore = await isPresetRendered(entity)
+            await renderEntity(entity, { 
+                ...entity.preset.options, 
+                renderer: 'preset',
+                ignore
+            })
+        }
     }
     
     onLoaded(async () => {
@@ -218,7 +239,7 @@ export default ({
         const logger = useLogger()
         const { assetsMap } = mikser.state.assets
         
-        for (let { entity, operation } of useJournal(OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE)) {
+        for await (let { entity, operation } of useJournal('Assets processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE])) {
             if (entity.collection != collection) {
                 switch (operation) {
                     case OPERATION.CREATE:
@@ -238,74 +259,51 @@ export default ({
     })
     
     onBeforeRender(async () => {
-        const logger = useLogger()
-        const { presets, assetsMap } = mikser.state.assets
-        let entitiesToRender = []
-        
-        for (let { entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE)) {
+        const { assetsMap } = mikser.state.assets
+
+        checksumMap.clear()
+        const checksumFiles = await globby('**/*.md5', { cwd: mikser.options.assetsFolder })
+        for (let checksumFile of checksumFiles) {
+            checksumMap.add(path.join(mikser.options.assetsFolder, checksumFile))
+        }
+
+        const entitiesToRender = new Set()
+        await pMap(useJournal('Assets provision', [OPERATION.CREATE, OPERATION.UPDATE]), async ({ entity }) => {
             if (entity.collection == collection) {
                 for (let entityId in assetsMap) {
                     if (assetsMap[entityId].find(preset => preset == entity.name)) {
                         const entityToRender = await findEntity({
                             id: entityId
                         })
-                        entitiesToRender.push(entityToRender)
+                        if (!entitiesToRender.has(entityToRender.id)) {
+                            entitiesToRender.add(entityToRender.id)
+                            await renderPresets(entityToRender)
+                        }
                     }
                 }
             } else {
-                if (assetsMap[entity.id]) {
-                    entitiesToRender.push(entity)
+                if (assetsMap[entity.id] && !entitiesToRender.has(entity.id)) {
+                    entitiesToRender.add(entity.id)
+                    await renderPresets(entity)
                 }
             }
-        }
-        entitiesToRender = _.uniqBy(entitiesToRender, 'id')
-    
-        logger.info('Processing assets: %d', entitiesToRender.length)
-    
-        if (entitiesToRender) {
-            checksumMap.clear()
-            const checksumFiles = await globby('**/*.md5', { cwd: mikser.options.assetsFolder })
-            for (let checksumFile of checksumFiles) {
-                checksumMap.add(checksumFile)
-            }
-        }
-        
-        const presetRenders = new Set()
-        for(let original of entitiesToRender) {
-            for (let entityPreset of assetsMap[original.id] || []) {
-                const entity = _.cloneDeep(original)
-                entity.preset = presets[entityPreset]
-                let destination = entity.name
-                if (entity.preset.format) {
-                    destination = changeExtension(destination, entity.preset.format)
-                }
-                entity.destination = path.join(mikser.options.assetsFolder, entityPreset, destination)
-                if (!presetRenders.has(entity.destination)) {
-                    presetRenders.add(entity.destination)
-        
-                    await renderEntity(entity, { 
-                        ...entity.preset.options, 
-                        renderer: 'preset',
-                        ignore: await isPresetRendered(entity)
-                    })
-                }
-            }
-        }
-    
-        if (entitiesToRender.length) {
-            logger.info('Processing assets completed: %d', entitiesToRender.length)
-        }
+        }, { concurrency: 100 })
     })
     
     onAfterRender(async () => {
         const logger = useLogger()
-        for(let { success, entity } of useJournal(OPERATION.RENDER)) {
-            if (success && entity.preset) {
+        let renderJobs = []
+        for await (let { entity, options, output } of useJournal('Assets output', [OPERATION.RENDER])) {
+            if (entity.preset && output?.success && !options?.ignore) {
                 await mkdir(path.dirname(entity.destination), { recursive: true })
                 const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`
-                await writeFile(assetChecksum, entity.checksum)
-                logger.info('Render finished: [%s] %s', entity.preset.name, entity.destination.replace(mikser.options.workingFolder, ''))
+                await writeFile(assetChecksum, entity.checksum, 'utf8')
+                renderJobs.push(entity.destination)
+                logger.debug('Render finished: [%s] %s', assetChecksum, entity.destination.replace(mikser.options.workingFolder, ''))
             }
+        }
+        if (renderJobs.length) {
+            logger.info('Processing assets completed: %d', renderJobs.length)
         }
     })
     

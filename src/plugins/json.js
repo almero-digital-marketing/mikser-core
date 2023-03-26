@@ -1,18 +1,18 @@
-import { entries } from "lodash"
-
 export default ({ 
     onProcess, 
     useLogger, 
     useJournal, 
+    updateEntry,
     constants: { OPERATION }
 }) => {
-    onProcess(() => {
+    onProcess(async () => {
         const logger = useLogger()
     
-        for (let { entity } of useJournal(OPERATION.CREATE, OPERATION.UPDATE)) {
+        for await (let { id, entity } of useJournal('Json', [OPERATION.CREATE, OPERATION.UPDATE])) {
             if (entity.content && entity.format == 'json') {
                 entity.meta = Object.assign(entity.meta || {}, JSON.parse(entity.content))
                 delete entity.content
+                await updateEntry({ id, entity })
                 logger.trace('Json %s: %s', entity.collection, entity.id)
             }
         }

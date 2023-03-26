@@ -14,6 +14,8 @@ export default ({
     onSync, 
     findEntity, 
     checksum, 
+    trackProgress,
+    updateProgress,
     constants: { ACTION }, 
 }) => {
     const collection = 'files'
@@ -119,13 +121,11 @@ export default ({
     })
     
     onImport(async () => {
-        const logger = useLogger()
         await mkdir(mikser.options.outputFolder, { recursive: true }) 
         if (mikser.config.files?.outputFolder) await mkdir(path.join(mikser.options.outputFolder, mikser.config.files.outputFolder), { recursive: true })
 
         const paths = await globby('**/*', { cwd: mikser.options.filesFolder })
-        logger.info('Importing files: %d', paths.length)
-    
+        trackProgress('Files import', paths.length)   
         return Promise.all(paths.map(async relativePath => {
             const { uri, source } = await ensureLink(relativePath)
             let name = relativePath
@@ -143,6 +143,7 @@ export default ({
                 checksum: await checksum(source),
                 link: await link(source)
             })
+            updateProgress()
         }))
     })
 

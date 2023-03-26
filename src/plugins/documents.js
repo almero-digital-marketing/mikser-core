@@ -13,6 +13,8 @@ export default ({
     deleteEntity, 
     watch, 
     onSync, 
+    trackProgress,
+    updateProgress,
     constants: { ACTION }
 }) => {
     const collection = 'documents'
@@ -69,10 +71,9 @@ export default ({
     })
     
     onImport(async () => {
-        const logger = useLogger()
         const paths = await globby('**/*', { cwd: mikser.options.documentsFolder })
-        logger.info('Importing documents: %d', paths.length)
-    
+
+        trackProgress('Documents import', paths.length)
         return Promise.all(paths.map(async relativePath => {
             const uri = path.join(mikser.options.documentsFolder, relativePath)
             await createEntity({
@@ -84,6 +85,7 @@ export default ({
                 format: path.extname(relativePath).substring(1).toLowerCase(),
                 content: await readFile(uri, 'utf8') 
             })
+            updateProgress()
         }))
     })
 

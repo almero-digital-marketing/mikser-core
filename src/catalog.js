@@ -1,36 +1,36 @@
 import mikser from './mikser.js'
 import { useLogger } from './runtime.js'
-import { onLoaded, onPersist, onFinalized, onAfterRender, useJournal } from './lifecycle.js'
+import { onLoaded, onPersist, onFinalized } from './lifecycle.js'
+import { useJournal } from './journal.js'
 import { OPERATION } from './constants.js'
 import { Low } from 'lowdb'
 import path from 'node:path'
 import { JSONFile } from 'lowdb/node'
 import _ from 'lodash'
 
-let database
+let catalog
 
 onLoaded(async () => {
-    const adapter = new JSONFile(path.join(mikser.options.runtimeFolder, `database.${mikser.config.database || mikser.options.mode}.json`))
-    database = new Low(adapter)
-    database.data = {
+    const adapter = new JSONFile(path.join(mikser.options.runtimeFolder, `catalog.json`))
+    catalog = new Low(adapter)
+    catalog.data = {
         entities: [],
-        results: []
     }
-    database.chain = _.chain(database).get('data')
-    mikser.database = database
+    catalog.chain = _.chain(catalog).get('data')
+    mikser.catalog = catalog
 })
 
 onPersist(async () => {
     const logger = useLogger()
-    for (let { operation, entity } of mikser.journal) {
+    for await (let { operation, entity } of useJournal('Catalog')) {
         switch (operation) {
             case OPERATION.CREATE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
-                database.data.entities.push(entity)
+                catalog.data.entities.push(entity)
             break
             case OPERATION.UPDATE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
-                database
+                catalog
                 .chain
                 .get('entities')
                 .find({ id: entity.id })
@@ -39,7 +39,7 @@ onPersist(async () => {
             break
             case OPERATION.DELETE:
                 logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
-                database
+                catalog
                 .chain
                 .get('entities')
                 .remove({ id: entity.id })
@@ -49,30 +49,13 @@ onPersist(async () => {
     }
 })
 
-onAfterRender(async () => {
-    for(let { success, output, entity } of useJournal(OPERATION.RENDER)) {
-        if (success && output) {
-            const index = database
-            .chain
-            .get('results')
-            .findIndex({ id: entity.id, destinatoin: entity.destinatoin })
-            .value()
-            if (index < 0) {
-                database.data.results.push(entity)
-            } else {
-                Object.assign(database.data.results[index], entity)
-            }
-        }
-    }
-})
-
 onFinalized(async () => {
-    await database.write()
+    await catalog.write()
 })
 
 export async function findEntity(query) {
     if (!query) return
-    return database
+    return catalog
     .chain
     .get('entities')
     .find(query)
@@ -81,9 +64,9 @@ export async function findEntity(query) {
 
 export async function findEntities(query) {
     if (!query) {
-        return database.chain.get('entities').value()
+        return catalog.chain.get('entities').value()
     }
-    return database
+    return catalog
     .chain
     .get('entities')
     .filter(query)

@@ -189,7 +189,7 @@ export default ({
         const logger = useLogger()
         const { layouts } = mikser.state.layouts
         
-        for (let { entity, operation } of useJournal(OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE)) {
+        for await (let { entity, operation } of useJournal('Layouts processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE])) {
             if (entity.collection == collection) continue
 
             switch (operation) {
@@ -314,15 +314,15 @@ export default ({
     onAfterRender(async (signal) => {
         const logger = useLogger()
     
-        for(let { success, output, entity } of useJournal(OPERATION.RENDER)) {
+        for await (let { entity, options, output } of useJournal('Layouts output', [OPERATION.RENDER])) {
             if (signal.aborted) return
-            if (success && entity.layout && entity.destination) {
+            if (entity.layout && output?.success && !options?.ignore) {
                 const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
                 await mkdir(path.dirname(destinationFile), { recursive: true })
                 try {
                     await unlink(destinationFile)
                 } catch {}
-                await writeFile(destinationFile, output)
+                await writeFile(destinationFile, output.result)
                 logger.debug('Render finished: %s', entity.destination.replace(mikser.options.workingFolder, ''))
             }
         }
