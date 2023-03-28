@@ -123,7 +123,7 @@ export async function setup(options) {
                         const mc = new MessageChannel();
                         mc.port2.onmessage = event => {
                             const message = JSON.parse(event.data)
-                            if (message.type == 'logger') {
+                            if (message.command == 'logger') {
                                 mikser.runtime.logger[message.data.log](...message.data.args)
                             }
                         }

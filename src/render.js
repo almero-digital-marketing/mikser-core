@@ -5,13 +5,13 @@ import _ from 'lodash'
 export default async ({ entity, options, config, context, state, logger, port }) => {  
     logger = logger || {
         info(...args) {
-            port.postMessage(JSON.stringify({ type: 'logger', data: { log: 'info', args } }))
+            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'info', args } }))
         },
         warn(...args) {
-            port.postMessage(JSON.stringify({ type: 'logger', data: { log: 'warn', args } }))
+            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'warn', args } }))
         },
         error(...args) {
-            port.postMessage(JSON.stringify({ type: 'logger', data: { log: 'error', args } }))
+            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'error', args } }))
         }
     }
 
