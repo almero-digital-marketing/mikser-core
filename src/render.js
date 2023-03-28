@@ -2,8 +2,19 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import _ from 'lodash'
 
-export default async ({ entity, options, config, context, state }) => {  
-      
+export default async ({ entity, options, config, context, state, logger, port }) => {  
+    logger = logger || {
+        info(...args) {
+            port.postMessage(JSON.stringify({ type: 'logger', data: { log: 'info', args } }))
+        },
+        warn(...args) {
+            port.postMessage(JSON.stringify({ type: 'logger', data: { log: 'warn', args } }))
+        },
+        error(...args) {
+            port.postMessage(JSON.stringify({ type: 'logger', data: { log: 'error', args } }))
+        }
+    }
+
     async function loadPlugin(pluginName) {   
         const resolveLocations = [
             path.join(options.workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
@@ -15,7 +26,7 @@ export default async ({ entity, options, config, context, state }) => {
                 return await import(resolveLocation)
             } catch (err) {
                 if (err.code != 'ERR_MODULE_NOT_FOUND') {
-                    console.error('Redner plugin error:', resolveLocation, err)
+                    logger.error('Redner plugin error:', resolveLocation, err)
                     throw err
                 }
             }
@@ -46,9 +57,9 @@ export default async ({ entity, options, config, context, state }) => {
     for (let pluginName of pluginsToLoad) {
         const plugin = await loadPlugin(pluginName)
         plugins[pluginName] = plugin
-        if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context, runtime, state })
+        if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context, runtime, state, logger })
     }
     
     const rendererPlugin = plugins[`render-${renderer}`]
-    return await rendererPlugin?.render({ entity, options, config, context, plugins, runtime, state })
+    return await rendererPlugin?.render({ entity, options, config, context, plugins, runtime, state, logger })
 }

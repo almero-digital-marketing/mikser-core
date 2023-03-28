@@ -7,10 +7,10 @@ export default ({
     updateEntry,
     constants: { OPERATION },
 }) => {
-    onProcess(async () => {
+    onProcess(async (signal) => {
         const logger = useLogger()
     
-        for await (let { id, entity } of useJournal('Yaml', [OPERATION.CREATE, OPERATION.UPDATE])) {
+        for await (let { id, entity } of useJournal('Yaml', [OPERATION.CREATE, OPERATION.UPDATE], signal)) {
             if (entity.content && (entity.format == 'yml' || entity.format == 'yaml')) {
                 try {
                     entity.meta = Object.assign(entity.meta || {}, YAML.parse(entity.content))

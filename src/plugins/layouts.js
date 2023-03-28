@@ -2,6 +2,7 @@ import path from 'node:path'
 import { mkdir, writeFile, unlink } from 'node:fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
+import { sign } from 'node:crypto'
 
 export default ({ 
     mikser, 
@@ -185,11 +186,11 @@ export default ({
         }
     })
     
-    onProcessed(async () => {
+    onProcessed(async (signal) => {
         const logger = useLogger()
         const { layouts } = mikser.state.layouts
         
-        for await (let { entity, operation } of useJournal('Layouts processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE])) {
+        for await (let { entity, operation } of useJournal('Layouts processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE], signal)) {
             if (entity.collection == collection) continue
 
             switch (operation) {

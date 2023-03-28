@@ -18,9 +18,9 @@ onInitialized(() => {
     const logger = useLogger()
     if (mikser.options.info) {
         logger.info = (...args) => log(() => console.log(...args))
-        logger.warn = (...args) => log(() => console.log('⚠️ ' + args[0], ...args.slice(1)))
-        logger.error = (...args) => log(() => console.log('❌ ' + args[0], ...args.slice(1)))
-        logger.notice = (...args) => log(() => console.log('✅ ' + args[0], ...args.slice(1)))
+        logger.warn = (...args) => log(() => console.log('🟡 ' + args[0], ...args.slice(1)))
+        logger.error = (...args) => log(() => console.log('🔴 ' + args[0], ...args.slice(1)))
+        logger.notice = (...args) => log(() => console.log('🟢 ' + args[0], ...args.slice(1)))
     }
 })
 
@@ -33,13 +33,13 @@ export function trackProgress(name, total) {
         total,
         value: 0,
         stamp: Date.now(),
-        bar: mikser.options.info && new cliProgress.SingleBar({
+        bar: mikser.options.info ? new cliProgress.SingleBar({
             noTTYOutput: true,
             hideCursor: true,
             clearOnComplete: true,
-            barsize: 40,
+            barsize: 30,
             format: '{name}: {bar} {percentage}% | ETA: {eta_formatted}',
-        }, cliProgress.Presets.shades_grey)
+        }, cliProgress.Presets.shades_grey) : null
     }
     progress.bar?.start(total, 0, { name })
 }

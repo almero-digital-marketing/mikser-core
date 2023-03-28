@@ -17,7 +17,7 @@ export default ({
     useJournal, 
     onLoaded, 
     mikser, 
-    onCancel, 
+    stopProgress, 
     createEntity, 
     onProcessed, 
     onFinalize, 
@@ -30,7 +30,6 @@ export default ({
     const type = 'resource'
 
     const _ = deepdash(lodash)
-    let abortController
     
     const finishedDownload = promisify(stream.finished)
     
@@ -51,14 +50,12 @@ export default ({
         }
     })
     
-    onProcessed(async () => {
+    onProcessed(async (signal) => {
         const logger = useLogger()
         const { resourceMap } = mikser.state.resources
-        abortController = new AbortController()
-        const { signal } = abortController
     
         const resources = []
-        for await (let { entity } of useJournal('Resources provision', [OPERATION.CREATE, OPERATION.UPDATE])) {    
+        for await (let { entity } of useJournal('Resources provision', [OPERATION.CREATE, OPERATION.UPDATE], signal)) {    
             if (entity.collection != collection && entity.meta) {
                 _.eachDeep(entity.meta, resource => {
                     if (typeof resource == 'string') {
@@ -78,6 +75,11 @@ export default ({
         const localResources = new Set()
         trackProgress('Resources processing', resources.length)
         for (let { library, resource, entity } of resources) {
+            if (signal?.aborted) {
+                stopProgress()
+                break
+            }
+
             library = resourceMap[library]
             if (isUrl(resource)) {
                 if (!resourceDownloads[resource]) {
@@ -97,7 +99,7 @@ export default ({
                             source: path.join(mikser.options.workingFolder, resource),
                             checksum: await checksum(path.join(mikser.options.workingFolder, resource))
                         })
-                        logger.info('Resource: %s %s', id, resource)
+                        logger.debug('Resource: %s %s', id, resource)
                         localResources.add(id)
                     }
                 } catch (err) {
@@ -184,7 +186,8 @@ export default ({
                     })
                 }
                 updateProgress()
-            }, { concurrency: 10 })
+            }, { concurrency: 10, signal })
+            stopProgress()
             count && logger.info('Downloaded: %d', count)
         }    
     })
@@ -195,10 +198,6 @@ export default ({
             let resourceTemp = path.join(mikser.options.resourcesFolder, relativePath)
             await unlink(resourceTemp)
         }
-    })
-    
-    onCancel(() => {
-        abortController?.abort()
     })
 
     return {

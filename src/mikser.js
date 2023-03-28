@@ -1,3 +1,6 @@
+import { Mutex } from 'await-semaphore'
+import { AbortError } from './utils.js'
+
 export default class {
     static stamp = Date.now()
     static processTime
@@ -8,6 +11,8 @@ export default class {
     static config = {}
     static journal = []
     static validators = []
+    static started = false
+    static mutex = new Mutex()
     static hooks = {
         initialize: [],
         initialized: [],
@@ -29,15 +34,22 @@ export default class {
         finalized: [],
         sync: [],
     }
+    static async callHooks(hooks, signal) {
+        for(let hook of hooks) {
+            if (signal?.aborted) throw new AbortError()
+            await hook(signal)
+        }
+    }
     static async start() {
-        for(let hook of this.hooks.initialize) await hook()
-        for(let hook of this.hooks.initialized) await hook()
-        for(let hook of this.hooks.load) await hook()
-        for(let hook of this.hooks.loaded) await hook()
+        await this.callHooks(this.hooks.initialize)
+        await this.callHooks(this.hooks.initialized)
+        await this.callHooks(this.hooks.load)
+        await this.callHooks(this.hooks.loaded)
         
-        for(let hook of this.hooks.import) await hook()
-        for(let hook of this.hooks.imported) await hook()
+        await this.callHooks(this.hooks.import)
+        await this.callHooks(this.hooks.imported)
         
+        this.started = true
         await this.process()
     }
     static abortController
@@ -46,49 +58,38 @@ export default class {
         else if (this.abortController) {
             await this.cancel()            
         }
-
-        this.abortController = new AbortController()
-        const { signal } = this.abortController
-
-        for(let hook of this.hooks.process) await hook()
-        for(let hook of this.hooks.processed) await hook()
+        this.mutex.use(async () => {
+            try {
+                this.abortController = new AbortController()
+                const { signal } = this.abortController
         
-        for(let hook of this.hooks.persist) await hook()
-        for(let hook of this.hooks.persisted) await hook()
-        
-        await this.render(signal)
+                await this.callHooks(this.hooks.process, signal)
+                await this.callHooks(this.hooks.processed, signal)
+                await this.callHooks(this.hooks.persist, signal)
+                await this.callHooks(this.hooks.persisted, signal)
+                
+                await this.render(signal)
+            } catch (e) {
+                if (e.name !== "AbortError") throw e
+                for(let hook of this.hooks.cancelled) await hook()
+            }
+        })
     }
     static async render(signal) {
-        for(let hook of this.hooks.beforeRender) {
-            if (signal.aborted) break
-            await hook(signal)
-        } 
-        for(let hook of this.hooks.render) {
-            if (signal.aborted) break
-            await hook(signal)
-        } 
-        for(let hook of this.hooks.afterRender) {
-            if (signal.aborted) break
-            await hook(signal)
-        } 
-        
+        await this.callHooks(this.hooks.beforeRender, signal)
+        await this.callHooks(this.hooks.render, signal)
+        await this.callHooks(this.hooks.afterRender, signal)
+
         await this.finalize(signal)
     }
     static async cancel() {
-        for(let hook of this.hooks.cancel) await hook()
         this.abortController?.abort()
-        for(let hook of this.hooks.cancelled) await hook()
+
+        await this.callHooks(this.hooks.cancel)
     }
     static async finalize(signal) {
-        for(let hook of this.hooks.finalize) {
-            if (signal.aborted) break
-            await hook(signal)
-        } 
-        for(let hook of this.hooks.finalized) {
-            if (signal.aborted) break
-            await hook(signal)
-        } 
-        this.abortController = undefined
+        await this.callHooks(this.hooks.finalize, signal)
+        await this.callHooks(this.hooks.finalized, signal)
     }
     static async sync(operation) {
         let synced

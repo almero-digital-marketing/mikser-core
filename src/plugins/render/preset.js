@@ -6,8 +6,8 @@ export async function load({ entity, runtime }) {
     runtime.preset = preset.default
 }
 
-export async function render({ entity, options, config, context, plugins, runtime, state }) {
+export async function render({ entity, options, config, context, plugins, runtime, state, logger }) {
     await mkdir(path.dirname(entity.destination), { recursive: true })
-    await runtime.preset({ entity, options, config, context, plugins, runtime, state })
+    await runtime.preset({ entity, options, config, context, plugins, runtime, state, logger })
     return entity.destination
 }

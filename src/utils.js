@@ -6,6 +6,14 @@ import _ from 'lodash'
 import minimatch from 'minimatch'
 import path from 'path'
 
+export class AbortError extends Error {
+	constructor(message) {
+		super();
+		this.name = 'AbortError';
+		this.message = message;
+	}
+}
+
 export async function checksum(uri) {
     const maxBytes = 300 * 1024
     const { size } = await stat(uri)

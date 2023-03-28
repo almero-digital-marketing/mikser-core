@@ -6,7 +6,7 @@ import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
 import mikser from './mikser.js'
-import { onInitialize, onInitialized, onRender, onCancelled, onFinalized, onLoaded, onAfterRender } from './lifecycle.js'
+import { onInitialize, onInitialized, onRender, onCancel, onCancelled, onFinalized, onLoaded, onAfterRender } from './lifecycle.js'
 import { useJournal, clearJournal, updateEntry } from './journal.js'
 import { globby } from 'globby'
 import { OPERATION } from './constants.js'
@@ -88,7 +88,7 @@ export async function setup(options) {
     onRender(async (signal) => {
         const logger = useLogger()
         const renderJobs = new Set()
-        await pMap(useJournal('Rendering', [OPERATION.RENDER]), async entry => {
+        await pMap(useJournal('Rendering', [OPERATION.RENDER], signal), async entry => {
             const { id, entity, options, context } = entry
             const jobId = entity.id + ':' + entity.destination
             if (!renderJobs.has(jobId) && !options.ignore) {
@@ -98,11 +98,11 @@ export async function setup(options) {
                     options: { ...mikser.options, ...options },
                     config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
                     context,
-                    state: mikser.state,
-                    niceIncrement: 10
+                    state: mikser.state
                 }
                 try {
                     if (options.immediate) {
+                        renderOptions.logger = logger
                         if (options.abortable) {
                             renderOptions.signal = signal
                             if (!signal.aborted) {
@@ -120,8 +120,20 @@ export async function setup(options) {
                             await updateEntry({ id, output })
                         }
                     } else {
+                        const mc = new MessageChannel();
+                        mc.port2.onmessage = event => {
+                            const message = JSON.parse(event.data)
+                            if (message.type == 'logger') {
+                                mikser.runtime.logger[message.data.log](...message.data.args)
+                            }
+                        }
+                        mc.port2.unref()
+                        renderOptions.port = mc.port1
                         const output = {
-                            result: await mikser.runtime.renderPool.run(renderOptions, options.abortable === false ? {} : { signal }),
+                            result: await mikser.runtime.renderPool.run(
+                                renderOptions, 
+                                options.abortable === false ? { transferList: [mc.port1] } : { signal, transferList: [mc.port1] }
+                            ),
                             success: true
                         }
                         await updateEntry({ id, output })
@@ -137,7 +149,7 @@ export async function setup(options) {
             } else {
                 await updateEntry({ id, output: { success: true } })
             }
-        }, { concurrency: 100 })
+        }, { concurrency: 100, signal })
         renderJobs.size && logger.info('Rendered: %d', renderJobs.size)
     })
 
@@ -153,9 +165,9 @@ export async function setup(options) {
         await writeFile(renderOutput, JSON.stringify(Array.from(results.values())), 'utf8')
     })
 
-    onCancelled(async () => {
+    onCancel(async () => {
         if (mikser.runtime.renderPool.queueSize) {
-            return new Promise(resolve => {
+            await new Promise(resolve => {
                 mikser.runtime.renderPool.once('drain', resolve)
             })
         }
@@ -163,8 +175,6 @@ export async function setup(options) {
 
     onFinalized(async (signal) => {
         const logger = useLogger()
-        
-        clearJournal(signal.aborted)
 
         const paths = await globby('**/*', { cwd: mikser.options.outputFolder })
         for (let relativePath of paths) {
@@ -179,7 +189,12 @@ export async function setup(options) {
         }
         logger.notice('Mikser completed')
     })
-       
+    
+    onCancelled(async () => {
+        const logger = useLogger()
+        logger.notice('Mikser cancelled')
+    })
+
     console.info('Mikser: %s', version)
     return mikser
 }

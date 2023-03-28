@@ -8,6 +8,8 @@ import { ACTION } from './constants.js'
 const tasks = []
 
 export async function createdHook(name, context) {
+    if (!mikser.started) return
+
     const synced = await mikser.sync({
         action: ACTION.CREATE, 
         name,
@@ -21,6 +23,8 @@ export async function createdHook(name, context) {
 }
 
 export async function updatedHook(name, context) {
+    if (!mikser.started) return
+
     const synced = await mikser.sync({
         action: ACTION.UPDATE, 
         name,
@@ -34,6 +38,8 @@ export async function updatedHook(name, context) {
 }
 
 export async function triggeredHook(name, context) {
+    if (!mikser.started) return
+
     const synced = await mikser.sync({
         action: ACTION.TRIGGER, 
         name,
@@ -47,6 +53,8 @@ export async function triggeredHook(name, context) {
 }
 
 export async function deletedHook(name, context) {
+    if (!mikser.started) return
+
     const synced = await mikser.sync({
         action: ACTION.DELETE, 
         name,

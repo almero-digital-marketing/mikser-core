@@ -9,11 +9,11 @@ export default ({
     mikser,
     constants: { OPERATION }, 
 }) => {
-    onProcess(async () => {
+    onProcess(async (signal) => {
         const logger = useLogger()
     
         for (let { match, map, operations = [OPERATION.CREATE, OPERATION.UPDATE] } of mikser.config.mapper?.mappers || []) {               
-            for await (let { id, entity } of useJournal('Mapper', operations)) {
+            for await (let { id, entity } of useJournal('Mapper', operations, signal)) {
                 if (entity.meta && matchEntity(entity, match)) {
                     logger.trace('Mapper: %s', entity.id)
                     try {

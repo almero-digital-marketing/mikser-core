@@ -56,7 +56,7 @@ export default ({
         let revisions = []
         const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`
         if (checksumMap.has(assetChecksum)) {
-            revisions.push(path.join(mikser.options.assetsFolder, assetChecksum))
+            revisions.push(assetChecksum)
         } else {
             revisions = await getRevisions(entity)
         }
@@ -235,11 +235,11 @@ export default ({
         }
     })
     
-    onProcessed(async () => {
+    onProcessed(async (signal) => {
         const logger = useLogger()
         const { assetsMap } = mikser.state.assets
         
-        for await (let { entity, operation } of useJournal('Assets processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE])) {
+        for await (let { entity, operation } of useJournal('Assets processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE], signal)) {
             if (entity.collection != collection) {
                 switch (operation) {
                     case OPERATION.CREATE:
@@ -258,7 +258,7 @@ export default ({
         }
     })
     
-    onBeforeRender(async () => {
+    onBeforeRender(async signal => {
         const { assetsMap } = mikser.state.assets
 
         checksumMap.clear()
@@ -268,7 +268,7 @@ export default ({
         }
 
         const entitiesToRender = new Set()
-        await pMap(useJournal('Assets provision', [OPERATION.CREATE, OPERATION.UPDATE]), async ({ entity }) => {
+        await pMap(useJournal('Assets provision', [OPERATION.CREATE, OPERATION.UPDATE], signal), async ({ entity }) => {
             if (entity.collection == collection) {
                 for (let entityId in assetsMap) {
                     if (assetsMap[entityId].find(preset => preset == entity.name)) {
@@ -287,13 +287,13 @@ export default ({
                     await renderPresets(entity)
                 }
             }
-        }, { concurrency: 100 })
+        }, { concurrency: 100, signal })
     })
     
-    onAfterRender(async () => {
+    onAfterRender(async (signal) => {
         const logger = useLogger()
         let renderJobs = []
-        for await (let { entity, options, output } of useJournal('Assets output', [OPERATION.RENDER])) {
+        for await (let { entity, options, output } of useJournal('Assets output', [OPERATION.RENDER], signal)) {
             if (entity.preset && output?.success && !options?.ignore) {
                 await mkdir(path.dirname(entity.destination), { recursive: true })
                 const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`
