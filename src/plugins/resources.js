@@ -168,7 +168,7 @@ export default ({
                         response.data.pipe(writer)
                         await finishedDownload(writer)
             
-                        logger.info('Resource: %s %s', entity.id, url)
+                        logger.debug('Resource: %s %s', entity.id, url)
                         await rename(resourceTemp, resource)
                     }
                 }
@@ -187,7 +187,6 @@ export default ({
                 }
                 updateProgress()
             }, { concurrency: 10, signal })
-            stopProgress()
             count && logger.info('Downloaded: %d', count)
         }    
     })
