@@ -9,14 +9,14 @@ import { AbortError } from './utils.js'
 let journal
 
 export async function addEntry({ entity, operation, context, options }) {
-    return journal('operations').insert([{ entity, operation, context, options }])
+    return await journal('operations').insert([{ entity, operation, context, options }])
 }
 
 export async function updateEntry({ id, entity, output }) {
     const data = {}
     if ( entity ) data.entity = JSON.stringify(entity)
     if ( output ) data.output = JSON.stringify(output)
-    return journal('operations').where({ id }).update(data)
+    return await journal('operations').where({ id }).update(data)
 }
 
 export async function* useJournal(name, operations, signal) {
@@ -93,7 +93,7 @@ onLoaded(async () => {
 })
 
 onFinalized(async (signal) => {
-    clearJournal(signal.aborted)
+    await clearJournal(signal.aborted)
 })
 
 onCancelled(async () => {

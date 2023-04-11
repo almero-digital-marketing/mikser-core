@@ -149,19 +149,22 @@ export async function setup(options) {
             } else {
                 await updateEntry({ id, output: { success: true } })
             }
-        }, { concurrency: 100, signal })
+        }, { 
+            concurrency: options?.threads !== undefined ? options.threads : 4, 
+            signal 
+        })
         renderJobs.size && logger.info('Rendered: %d', renderJobs.size)
     })
 
     onAfterRender(async () => {
         const results = new Map()
-        for await (let { success, output, entity } of useJournal('Output', [OPERATION.RENDER])) {
-            if (success && output) {
+        for await (let { output, entity } of useJournal('Output', [OPERATION.RENDER])) {
+            if (output?.success) {
                 const jobId = entity.id + ':' + entity.destination
                 results.set(jobId, entity)
             }
         }
-        const renderOutput = path.join(mikser.options.runtimeFolder, `output.${mikser.options.mode}.json`)
+        const renderOutput = path.join(mikser.options.runtimeFolder, `render-details.json`)
         await writeFile(renderOutput, JSON.stringify(Array.from(results.values())), 'utf8')
     })
 
@@ -173,7 +176,7 @@ export async function setup(options) {
         }
     })
 
-    onFinalized(async (signal) => {
+    onFinalized(async () => {
         const logger = useLogger()
 
         const paths = await globby('**/*', { cwd: mikser.options.outputFolder })

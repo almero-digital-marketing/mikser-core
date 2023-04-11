@@ -102,7 +102,8 @@ export default ({
         
         mikser.state.assets = {
             presets: {},
-            assetsMap: {}
+            assetsMap: {},
+            assetsFolder: mikser.config.assets?.assetsFolder || 'assets',
         }
     
         mikser.options.presets = mikser.config.presets?.presetsFolder || collection

@@ -37,7 +37,8 @@ export default ({
         const logger = useLogger()
         
         mikser.state.resources = {
-            resourceMap: {}
+            resourceMap: {},
+            resourcesFolder: mikser.config.resources?.resourcesFolder || collection,
         }
     
         mikser.options.resources = mikser.config.resources?.resourcesFolder || collection

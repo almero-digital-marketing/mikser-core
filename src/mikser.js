@@ -36,7 +36,7 @@ export default class {
     }
     static async callHooks(hooks, signal) {
         for(let hook of hooks) {
-            if (signal?.aborted) throw new AbortError()
+            if (signal?.aborted) throw new AbortError() 
             await hook(signal)
         }
     }
