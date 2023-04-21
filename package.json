@@ -1,6 +1,6 @@
 {
   "name": "mikser-core",
-  "version": "3.6.9",
+  "version": "3.7.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -38,6 +38,7 @@
     "minimatch": "^7.4.3",
     "node-cron": "^3.0.2",
     "p-map": "^5.5.0",
+    "p-queue": "^7.3.4",
     "pino": "^8.11.0",
     "pino-pretty": "^10.0.0",
     "piscina": "^3.2.0",

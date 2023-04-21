@@ -33,6 +33,7 @@ export default class {
         finalize: [],
         finalized: [],
         sync: [],
+        completed: [],
     }
     static async callHooks(hooks, signal) {
         for(let hook of hooks) {
@@ -104,9 +105,16 @@ export default class {
         return synced === undefined || synced
     }
     static async validate(entry) {
-        for(let validator of this.validators) {
-            if (!await validator(entry)) return false
+        for(let hook of this.validators) {
+            if (!await hook(entry)) return false
         }
         return true
+    }
+    static async complete(entry) {
+        let success = true
+        for(let hook of this.hooks.completed) {
+            if (await hook(entry) === false) success = false
+        }
+        return success
     }
 }

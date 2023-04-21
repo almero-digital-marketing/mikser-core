@@ -11,3 +11,9 @@ export const ACTION = {
     DELETE: 'delete',
     TRIGGER: 'trigger',
 }
+
+export const TASKS = {
+    QUEUE: 'queue',
+    WORKER: 'worker',
+    POOL: 'pool',
+}

@@ -58,10 +58,8 @@ export async function* useJournal(name, operations, signal) {
 }
 
 export async function clearJournal(aborted) {
-    if (aborted) {
-        await journal('operations').whereJsonPath('options', '$.abortable', '=', true).del()
-    } else {
-        await journal('operations').del()
+    await journal('operations').del()
+    if (!aborted) {
         if (mikser.options.watch !== true) {
             journal.destroy()
         }

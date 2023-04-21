@@ -9,12 +9,14 @@ import mikser from './mikser.js'
 import { onInitialize, onInitialized, onRender, onCancel, onCancelled, onFinalized, onLoaded, onAfterRender } from './lifecycle.js'
 import { useJournal, updateEntry } from './journal.js'
 import { globby } from 'globby'
-import { OPERATION } from './constants.js'
+import { OPERATION, TASKS } from './constants.js'
 import render from './render.js'
-import pMap from 'p-map'
+import map from 'p-map'
+import Queue from 'p-queue'
 
 export async function setup(options) {
     const { default: { version } } = await import('../package.json', { assert: { type: 'json' } })
+    mikser.options.threads = options?.threads !== undefined ? options.threads : 4
     mikser.runtime = {
         logger: pino(options?.logger || {
             transport: {
@@ -22,10 +24,11 @@ export async function setup(options) {
             },
         }),
         commander: new Command(),
-        renderPool: new Piscina({
+        workers: new Piscina({
             filename: new URL('./render.js', import.meta.url).href,
-            maxThreads: options?.threads !== undefined ? options.threads : 4
-        })
+            maxThreads: mikser.options.threads
+        }),
+        queue: new Queue({ concurrency: 1 }) 
     }
 	mikser.state = {}
     
@@ -88,56 +91,67 @@ export async function setup(options) {
     onRender(async (signal) => {
         const logger = useLogger()
         const renderJobs = new Set()
-        await pMap(useJournal('Rendering', [OPERATION.RENDER], signal), async entry => {
+        await map(useJournal('Rendering', [OPERATION.RENDER], signal), async entry => {
             const { id, entity, options, context } = entry
             const jobId = entity.id + ':' + entity.destination
             if (!renderJobs.has(jobId) && !options.ignore) {
                 renderJobs.add(jobId)
                 const renderOptions = { 
                     entity,
-                    options: { ...mikser.options, ...options },
+                    options: { 
+                        job: TASKS.POOL, 
+                        ...mikser.options, 
+                        ...options 
+                    },
                     config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
                     context,
                     state: mikser.state
                 }
                 try {
-                    if (options.immediate) {
-                        renderOptions.logger = logger
-                        if (options.abortable) {
+                    switch (renderOptions.options.tasks) {
+                        case TASKS.POOL:
+                            renderOptions.logger = logger
                             renderOptions.signal = signal
                             if (!signal.aborted) {
-                                const output = {
+                                entry.output = {
                                     result: await render(renderOptions),
-                                    success: true
+                                    success: await mikser.complete(entry)
                                 }
-                                await updateEntry({ id, output })
                             }
-                        } else {
-                            const output = {
-                                result: await render(renderOptions),
-                                success: true
+                        break
+                        case TASKS.WORKER:
+                            const mc = new MessageChannel();
+                            mc.port2.onmessage = event => {
+                                const message = JSON.parse(event.data)
+                                if (message.command == 'logger') {
+                                    mikser.runtime.logger[message.data.log](...message.data.args)
+                                }
                             }
-                            await updateEntry({ id, output })
-                        }
-                    } else {
-                        const mc = new MessageChannel();
-                        mc.port2.onmessage = event => {
-                            const message = JSON.parse(event.data)
-                            if (message.command == 'logger') {
-                                mikser.runtime.logger[message.data.log](...message.data.args)
+                            mc.port2.unref()
+                            renderOptions.port = mc.port1
+                            entry.output = {
+                                result: await mikser.runtime.workers.run(
+                                    renderOptions, 
+                                    { signal, transferList: [mc.port1] }
+                                ),
                             }
-                        }
-                        mc.port2.unref()
-                        renderOptions.port = mc.port1
-                        const output = {
-                            result: await mikser.runtime.renderPool.run(
-                                renderOptions, 
-                                options.abortable === false ? { transferList: [mc.port1] } : { signal, transferList: [mc.port1] }
-                            ),
-                            success: true
-                        }
-                        await updateEntry({ id, output })
+                        break
+                        case TASKS.QUEUE:
+                            renderOptions.logger = logger
+                            renderOptions.signal = signal
+                            if (!signal.aborted) {
+                                entry.output = {
+                                    result: await mikser.runtime.queue.add(() => render(renderOptions), { signal }),
+                                    success: await mikser.complete(entry)
+                                }
+                            }
+                        break
                     }
+                    if (!signal.aborted) {
+                        entry.output.success = await mikser.complete(entry)
+                        await updateEntry({ id, output: entry.output })
+                    }
+
                     logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
                 } catch (err) {
                     if (err.name != 'AbortError') {
@@ -150,7 +164,7 @@ export async function setup(options) {
                 await updateEntry({ id, output: { success: true } })
             }
         }, { 
-            concurrency: options?.threads !== undefined ? options.threads : 4, 
+            concurrency: mikser.options.threads, 
             signal 
         })
         renderJobs.size && logger.info('Rendered: %d', renderJobs.size)
@@ -169,9 +183,9 @@ export async function setup(options) {
     })
 
     onCancel(async () => {
-        if (mikser.runtime.renderPool.queueSize) {
+        if (mikser.runtime.workers.queueSize) {
             await new Promise(resolve => {
-                mikser.runtime.renderPool.once('drain', resolve)
+                mikser.runtime.workers.once('drain', resolve)
             })
         }
     })

@@ -21,7 +21,7 @@ export default ({
     onSync,
     matchEntity,
     changeExtension,
-    constants: { ACTION, OPERATION }, 
+    constants: { ACTION, OPERATION, TASKS }, 
 }) => {   
     const collection = 'layouts'
     const type = 'layout'
@@ -292,7 +292,7 @@ export default ({
                             }
                         }
                         addToSitemap(pageEntity)
-                        await renderEntity(pageEntity, { renderer: entity.layout.template }, { data, plugins })
+                        await renderEntity(pageEntity, { renderer: entity.layout.template, tasks: TASKS.WORKER }, { data, plugins })
                     }
                 }
             } else {
@@ -306,7 +306,7 @@ export default ({
                 }
                 addToSitemap(entity)
                 if (entity.destination) {
-                    await renderEntity(entity, { renderer: entity.layout.template }, { data, plugins })
+                    await renderEntity(entity, { renderer: entity.layout.template, tasks: TASKS.WORKER }, { data, plugins })
                 }
             }
         }
@@ -317,7 +317,7 @@ export default ({
     
         for await (let { entity, options, output } of useJournal('Layouts output', [OPERATION.RENDER])) {
             if (signal.aborted) return
-            if (entity.layout && output?.success && !options?.ignore) {
+            if (entity.layout && output?.success && !options?.ignore && entity.destination) {
                 const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
                 await mkdir(path.dirname(destinationFile), { recursive: true })
                 try {

@@ -2,7 +2,7 @@ import path from 'node:path'
 import { mkdir, writeFile, unlink, rm, readFile, symlink, } from 'fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
-import pMap from 'p-map'
+import map from 'p-map'
 
 export default ({ 
     mikser, 
@@ -269,7 +269,7 @@ export default ({
         }
 
         const entitiesToRender = new Set()
-        await pMap(useJournal('Assets provision', [OPERATION.CREATE, OPERATION.UPDATE], signal), async ({ entity }) => {
+        await map(useJournal('Assets provision', [OPERATION.CREATE, OPERATION.UPDATE], signal), async ({ entity }) => {
             if (entity.collection == collection) {
                 for (let entityId in assetsMap) {
                     if (assetsMap[entityId].find(preset => preset == entity.name)) {

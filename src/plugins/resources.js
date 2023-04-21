@@ -10,7 +10,7 @@ import escapeStringRegexp from 'escape-string-regexp'
 import * as stream from 'stream'
 import { promisify } from 'util'
 import isUrl from 'is-url'
-import pMap from 'p-map'
+import map from 'p-map'
 
 export default ({ 
     useLogger, 
@@ -130,7 +130,7 @@ export default ({
                 throw err
             }
             let count = 0
-            await pMap(downloads, async url => {
+            await map(downloads, async url => {
                 const { library, entity } = resourceDownloads[url]
                 let { pathname } = new URL(url)
                 pathname = decodeURI(pathname)
