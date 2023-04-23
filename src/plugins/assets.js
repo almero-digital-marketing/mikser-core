@@ -17,7 +17,7 @@ export default ({
     updateEntity, 
     deleteEntity, 
     renderEntity, 
-    onAfterRender, 
+    onComplete, 
     onSync, 
     onFinalize, 
     findEntity,
@@ -291,20 +291,13 @@ export default ({
         }, { concurrency: 100, signal })
     })
     
-    onAfterRender(async (signal) => {
+    onComplete(async ({ entity, options }) => {
         const logger = useLogger()
-        let renderJobs = []
-        for await (let { entity, options, output } of useJournal('Assets output', [OPERATION.RENDER], signal)) {
-            if (entity.preset && output?.success && !options?.ignore) {
-                await mkdir(path.dirname(entity.destination), { recursive: true })
-                const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`
-                await writeFile(assetChecksum, entity.checksum, 'utf8')
-                renderJobs.push(entity.destination)
-                logger.debug('Render finished: [%s] %s', assetChecksum, entity.destination.replace(mikser.options.workingFolder, ''))
-            }
-        }
-        if (renderJobs.length) {
-            logger.info('Processing assets completed: %d', renderJobs.length)
+        if (entity.preset && !options?.ignore) {
+            await mkdir(path.dirname(entity.destination), { recursive: true })
+            const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`
+            await writeFile(assetChecksum, entity.checksum, 'utf8')
+            logger.debug('Render finished: [%s] %s', assetChecksum, entity.destination.replace(mikser.options.workingFolder, ''))
         }
     })
     

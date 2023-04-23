@@ -3,6 +3,7 @@ import mikser from './mikser.js'
 import { useLogger } from './runtime.js'
 import formatTime from 'cli-progress/lib/format-time.js'
 import { onInitialized } from './lifecycle.js'
+import util from 'util'
 
 let progress = {}
 
@@ -11,7 +12,7 @@ function log(log) {
     const isActive = bar?.isActive
     isActive && bar?.stop()
     log()
-    isActive && bar?.start(total, value, { name })
+    isActive && bar?.start(total, value, { name, details: '' })
 }
 
 onInitialized(() => {
@@ -21,6 +22,7 @@ onInitialized(() => {
         logger.warn = (...args) => log(() => console.log('🟡 ' + args[0], ...args.slice(1)))
         logger.error = (...args) => log(() => console.log('🔴 ' + args[0], ...args.slice(1)))
         logger.notice = (...args) => log(() => console.log('🟢 ' + args[0], ...args.slice(1)))
+        logger.trace = (...args) => updateProgressDetails(util.format(...args))
     }
 })
 
@@ -38,10 +40,10 @@ export function trackProgress(name, total) {
             hideCursor: true,
             clearOnComplete: true,
             barsize: 30,
-            format: '{name}: {bar} {percentage}% | ETA: {eta_formatted}',
+            format: '{name}: {bar} {percentage}% | ETA: {eta_formatted} {details}',
         }, cliProgress.Presets.shades_grey) : null
     }
-    progress.bar?.start(total, 0, { name })
+    progress.bar?.start(total, 0, { name, details: '' })
 }
 
 export function stopProgress() {
@@ -63,4 +65,10 @@ export function updateProgress() {
     if (progress?.value == progress?.total) {
         stopProgress()
     }
+}
+
+export function updateProgressDetails(details) {
+    const logger = useLogger()
+    logger.debug(details)
+    progress.bar?.update({ details: `| ${details}` })
 }

@@ -115,6 +115,6 @@ export default class {
         for(let hook of this.hooks.completed) {
             if (await hook(entry) === false) success = false
         }
-        return success
+        entry.success = success
     }
 }

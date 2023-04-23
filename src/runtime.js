@@ -99,24 +99,29 @@ export async function setup(options) {
                 const renderOptions = { 
                     entity,
                     options: { 
-                        job: TASKS.POOL, 
+                        tasks: TASKS.POOL, 
                         ...mikser.options, 
-                        ...options 
+                        ...options, 
                     },
                     config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
                     context,
                     state: mikser.state
                 }
                 try {
+                    let result
                     switch (renderOptions.options.tasks) {
                         case TASKS.POOL:
                             renderOptions.logger = logger
                             renderOptions.signal = signal
                             if (!signal.aborted) {
-                                entry.output = {
-                                    result: await render(renderOptions),
-                                    success: await mikser.complete(entry)
-                                }
+                                result = await render(renderOptions)
+                            }
+                        break
+                        case TASKS.QUEUE:
+                            renderOptions.logger = logger
+                            renderOptions.signal = signal
+                            if (!signal.aborted) {
+                                result = await mikser.runtime.queue.add(() => render(renderOptions), { signal })
                             }
                         break
                         case TASKS.WORKER:
@@ -129,26 +134,17 @@ export async function setup(options) {
                             }
                             mc.port2.unref()
                             renderOptions.port = mc.port1
-                            entry.output = {
-                                result: await mikser.runtime.workers.run(
-                                    renderOptions, 
-                                    { signal, transferList: [mc.port1] }
-                                ),
-                            }
-                        break
-                        case TASKS.QUEUE:
-                            renderOptions.logger = logger
-                            renderOptions.signal = signal
-                            if (!signal.aborted) {
-                                entry.output = {
-                                    result: await mikser.runtime.queue.add(() => render(renderOptions), { signal }),
-                                    success: await mikser.complete(entry)
-                                }
-                            }
+                            result = await mikser.runtime.workers.run(
+                                renderOptions, 
+                                { signal, transferList: [mc.port1] }
+                            )
                         break
                     }
                     if (!signal.aborted) {
-                        entry.output.success = await mikser.complete(entry)
+                        entry.output = {
+                            result,
+                        }
+                        await mikser.complete(entry)
                         await updateEntry({ id, output: entry.output })
                     }
 
@@ -164,7 +160,7 @@ export async function setup(options) {
                 await updateEntry({ id, output: { success: true } })
             }
         }, { 
-            concurrency: mikser.options.threads, 
+            concurrency: mikser.options.threads * 2, 
             signal 
         })
         renderJobs.size && logger.info('Rendered: %d', renderJobs.size)

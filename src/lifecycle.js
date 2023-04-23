@@ -221,5 +221,5 @@ export function onValidate(operations, callback) {
 }
 
 export function onComplete(callback) {
-    mikser.completed.push(callback)
+    mikser.hooks.completed.push(callback)
 }
