@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises'
 import TruncateStream from 'truncate-stream'
 import { createReadStream } from 'node:fs'
 import _ from 'lodash'
-import minimatch from 'minimatch'
+import { minimatch } from 'minimatch'
 import path from 'path'
 
 export class AbortError extends Error {

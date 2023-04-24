@@ -12,6 +12,12 @@ export default async ({ entity, options, config, context, state, logger, port })
         },
         error(...args) {
             port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'error', args } }))
+        },
+        trace(...args) {
+            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'trace', args } }))
+        },
+        notice(...args) {
+            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'notice', args } }))
         }
     }
 

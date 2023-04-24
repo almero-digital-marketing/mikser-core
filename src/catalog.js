@@ -12,10 +12,9 @@ let catalog
 
 onLoaded(async () => {
     const adapter = new JSONFile(path.join(mikser.options.runtimeFolder, `catalog.json`))
-    catalog = new Low(adapter)
-    catalog.data = {
+    catalog = new Low(adapter, {
         entities: [],
-    }
+    })
     catalog.chain = _.chain(catalog).get('data')
     mikser.catalog = catalog
 })
