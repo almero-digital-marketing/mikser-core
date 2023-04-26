@@ -17,7 +17,7 @@ export default ({
     onBeforeRender, 
     useJournal, 
     renderEntity, 
-    onAfterRender, 
+    onComplete, 
     onSync,
     matchEntity,
     changeExtension,
@@ -312,23 +312,19 @@ export default ({
         }
     })
     
-    onAfterRender(async (signal) => {
+    onComplete(async ({ entity, options, output }) => {
         const logger = useLogger()
-    
-        for await (let { entity, options, output } of useJournal('Layouts output', [OPERATION.RENDER])) {
-            if (signal.aborted) return
-            if (entity.layout && output?.success && !options?.ignore && entity.destination) {
-                const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
-                await mkdir(path.dirname(destinationFile), { recursive: true })
-                try {
-                    await unlink(destinationFile)
-                } catch {}
-                await writeFile(destinationFile, output.result)
-                logger.debug('Render finished: %s', entity.destination.replace(mikser.options.workingFolder, ''))
-            }
+        if (entity.layout && !options?.ignore) {
+            const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
+            await mkdir(path.dirname(destinationFile), { recursive: true })
+            try {
+                await unlink(destinationFile)
+            } catch {}
+            await writeFile(destinationFile, output.result)
+            logger.debug('Layout render finished: %s', entity.destination.replace(mikser.options.workingFolder, ''))
         }
     })
-
+    
     return {
         collection,
         type

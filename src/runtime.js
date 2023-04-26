@@ -142,6 +142,7 @@ export async function setup(options) {
                     }
                     if (!signal.aborted) {
                         entry.output = {
+                            success: true,
                             result,
                         }
                         await mikser.complete(entry)

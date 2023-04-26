@@ -297,7 +297,7 @@ export default ({
             await mkdir(path.dirname(entity.destination), { recursive: true })
             const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`
             await writeFile(assetChecksum, entity.checksum, 'utf8')
-            logger.debug('Render finished: [%s] %s', assetChecksum, entity.destination.replace(mikser.options.workingFolder, ''))
+            logger.debug('Asset render finished: [%s] %s', assetChecksum, entity.destination.replace(mikser.options.workingFolder, ''))
         }
     })
     
