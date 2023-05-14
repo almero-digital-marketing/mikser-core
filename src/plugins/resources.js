@@ -37,6 +37,7 @@ export default ({
         const logger = useLogger()
         
         mikser.state.resources = {
+            resourceLib: {},
             resourceMap: {},
             resourcesFolder: mikser.config.resources?.resourcesFolder || collection,
         }
@@ -47,29 +48,30 @@ export default ({
 
         for (let library in (mikser.config.resources?.libraries || [])) {
             let resource = mikser.config.resources.libraries[library]
-            mikser.state.resources.resourceMap[resource.match || escapeStringRegexp(resource.url)] = library
+            mikser.state.resources.resourceLib[resource.match || escapeStringRegexp(resource.url)] = library
         }
     })
     
     onProcessed(async (signal) => {
         const logger = useLogger()
-        const { resourceMap } = mikser.state.resources
+        const { resourceLib, resourceMap } = mikser.state.resources
     
-        const resources = []
         for await (let { entity } of useJournal('Resources provision', [OPERATION.CREATE, OPERATION.UPDATE], signal)) {    
             if (entity.collection != collection && entity.meta) {
+                resourceMap[entity.id] = []
                 _.eachDeep(entity.meta, resource => {
                     if (typeof resource == 'string') {
-                        for (let library in resourceMap) {
+                        for (let library in resourceLib) {
                             const match = new RegExp(library)
                             if (resource.match(match)) {
-                                resources.push({ library, resource, entity })
+                                resourceMap[entity.id].push({ library, resource, entity })
                             }
                         }
                     }
                 })
             }
         }
+        const resources = [].concat(...Object.values(resourceMap))
         resources.length && logger.info('Resources: %d', resources.length)
         
         const resourceDownloads = {}
@@ -81,7 +83,7 @@ export default ({
                 break
             }
 
-            library = resourceMap[library]
+            library = resourceLib[library]
             if (isUrl(resource)) {
                 if (!resourceDownloads[resource]) {
                     resourceDownloads[resource] = { library, entity }
@@ -193,6 +195,8 @@ export default ({
     })
     
     onFinalize(async () => {
+        mikser.state.resources.resourceMap = {}
+
         const paths = await globby('**/*.temp', { cwd: mikser.options.resourcesFolder })
         for (let relativePath of paths) {
             let resourceTemp = path.join(mikser.options.resourcesFolder, relativePath)

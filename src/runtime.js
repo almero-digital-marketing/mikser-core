@@ -28,22 +28,22 @@ export async function setup(options) {
             filename: new URL('./render.js', import.meta.url).href,
             maxThreads: mikser.options.threads
         }),
-        queue: new Queue({ concurrency: 1 }) 
+        queue: new Queue({ concurrency: 1 })
     }
-	mikser.state = {}
-    
+    mikser.state = {}
+
     onInitialize(async () => {
         mikser.runtime.commander?.version(version)
-        .option('-i --working-folder <folder>', 'set mikser working folder', './')
-        .option('-p --plugins [plugins...]', 'list of mikser plugins to load', [])
-        .option('-c --config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
-        .option('-m --mode <mode>', 'set mikser runtime mode', 'development')
-        .option('-r --clear', 'clear current state before execution', false)
-        .option('-o --output-folder <folder>', 'set mikser output folder realtive to working folder ot absolute', 'out')
-        .option('-w --watch', 'watch entities for changes', false)
-        .option('-d --debug', 'display debug statements')
-        .option('-t --trace', 'display trace statements')
-        
+            .option('-i --working-folder <folder>', 'set mikser working folder', './')
+            .option('-p --plugins [plugins...]', 'list of mikser plugins to load', [])
+            .option('-c --config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
+            .option('-m --mode <mode>', 'set mikser runtime mode', 'development')
+            .option('-r --clear', 'clear current state before execution', false)
+            .option('-o --output-folder <folder>', 'set mikser output folder realtive to working folder ot absolute', 'out')
+            .option('-w --watch', 'watch entities for changes', false)
+            .option('-d --debug', 'display debug statements')
+            .option('-t --trace', 'display trace statements')
+
         Object.assign(mikser.options, options || mikser.runtime.commander.parse(process.argv).opts())
         mikser.options.info = true
         if (mikser.options.debug) {
@@ -57,19 +57,19 @@ export async function setup(options) {
         }
         mikser.runtime.logger.notice = mikser.runtime.logger.info
     })
-    
+
     onInitialized(async () => {
         const logger = useLogger()
-        
+
         mikser.options.workingFolder = path.resolve(mikser.options.workingFolder)
         process.chdir(mikser.options.workingFolder)
 
         mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || 'runtime')
         mikser.options.outputFolder = path.join(mikser.options.workingFolder, mikser.options.outputFolder || 'out')
-        
+
         logger.info('Working folder: %s', mikser.options.workingFolder)
         logger.info('Output folder: %s', mikser.options.outputFolder)
-        
+
         if (mikser.options.clear) {
             try {
                 logger.info('Clearing folders')
@@ -77,17 +77,17 @@ export async function setup(options) {
                 await rm(mikser.options.runtimeFolder, { recursive: true })
             } catch (err) {
                 if (err.code != 'ENOENT')
-                throw err
+                    throw err
             }
         }
-        await mkdir(mikser.options.runtimeFolder , { recursive: true })
+        await mkdir(mikser.options.runtimeFolder, { recursive: true })
     })
 
     onLoaded(async () => {
         const logger = useLogger()
         logger.debug(mikser.options, 'Mikser options')
     })
-    
+
     onRender(async (signal) => {
         const logger = useLogger()
         const renderJobs = new Set()
@@ -96,12 +96,12 @@ export async function setup(options) {
             const jobId = entity.id + ':' + entity.destination
             if (!renderJobs.has(jobId) && !options.ignore) {
                 renderJobs.add(jobId)
-                const renderOptions = { 
+                const renderOptions = {
                     entity,
-                    options: { 
-                        tasks: TASKS.POOL, 
-                        ...mikser.options, 
-                        ...options, 
+                    options: {
+                        tasks: TASKS.POOL,
+                        ...mikser.options,
+                        ...options,
                     },
                     config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
                     context,
@@ -116,14 +116,14 @@ export async function setup(options) {
                             if (!signal.aborted) {
                                 result = await render(renderOptions)
                             }
-                        break
+                            break
                         case TASKS.QUEUE:
                             renderOptions.logger = logger
                             renderOptions.signal = signal
                             if (!signal.aborted) {
                                 result = await mikser.runtime.queue.add(() => render(renderOptions), { signal })
                             }
-                        break
+                            break
                         case TASKS.WORKER:
                             const mc = new MessageChannel();
                             mc.port2.onmessage = event => {
@@ -135,10 +135,10 @@ export async function setup(options) {
                             mc.port2.unref()
                             renderOptions.port = mc.port1
                             result = await mikser.runtime.workers.run(
-                                renderOptions, 
+                                renderOptions,
                                 { signal, transferList: [mc.port1] }
                             )
-                        break
+                            break
                     }
                     if (!signal.aborted) {
                         entry.output = {
@@ -151,7 +151,7 @@ export async function setup(options) {
 
                     logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
                 } catch (err) {
-                    if (err.name != 'AbortError') {
+                    if (!signal.aborted) {
                         await updateEntry({ id, output: { success: false } })
                         logger.error('Render error: %s %s', entity.id, err.message)
                     }
@@ -160,9 +160,9 @@ export async function setup(options) {
             } else {
                 await updateEntry({ id, output: { success: true } })
             }
-        }, { 
-            concurrency: mikser.options.threads * 2, 
-            signal 
+        }, {
+            concurrency: mikser.options.threads * 2,
+            signal
         })
         renderJobs.size && logger.info('Rendered: %d', renderJobs.size)
     })
@@ -203,10 +203,10 @@ export async function setup(options) {
         }
         logger.notice('Mikser completed')
     })
-    
+
     onCancelled(async () => {
         const logger = useLogger()
-        logger.notice('Mikser cancelled')
+        logger.notice('Mikser restarted')
     })
 
     console.info('Mikser: %s', version)

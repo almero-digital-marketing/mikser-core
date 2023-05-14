@@ -1,6 +1,6 @@
 {
   "name": "mikser-core",
-  "version": "3.8.3",
+  "version": "3.9.0",
   "description": "",
   "main": "index.js",
   "scripts": {
