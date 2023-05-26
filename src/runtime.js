@@ -190,7 +190,7 @@ export async function setup(options) {
     onFinalized(async () => {
         const logger = useLogger()
 
-        const paths = await globby('**/*', { cwd: mikser.options.outputFolder })
+        const paths = await globby('**/*', { cwd: mikser.options.outputFolder, followSymbolicLinks: false })
         for (let relativePath of paths) {
             let source = path.join(mikser.options.outputFolder, relativePath)
             const linkStat = await lstat(source)
