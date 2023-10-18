@@ -35,12 +35,12 @@ export default ({
                         return
                     }
                     const dump = JSON.stringify(normalize(entity))
-                    const entityFile = path.join(mikser.options.dataFolder, entity.name ,`${entity.name}.json`)
+                    const entityFile = path.join(mikser.options.dataFolder,`${entity.name}.json`)
                     await mkdir(path.dirname(entityFile), { recursive: true })
                     await writeFile(entityFile, dump, 'utf8')
                 },
                 delete : deleteEntity = async entity => {
-                    const entityFile = path.join(mikser.options.dataFolder, entity.name ,`${entity.name}.json`)
+                    const entityFile = path.join(mikser.options.dataFolder,`${entity.name}.json`)
                     await unlink(entityFile)
                 }
             } = mikser.config.data?.entities[entitiesName]
@@ -80,7 +80,7 @@ export default ({
 
             for await (let { entity, context } of useJournal('Data context', [OPERATION.RENDER])) {
                 if (query(entity)) {
-                    logger.debug('Data export context: %s', entityName)
+                    logger.debug('Data export context: %s', entity.name)
                     await saveConext(entity, map ? map(context) : context)
                 }
             }
@@ -89,18 +89,17 @@ export default ({
     
     onFinalize(async () => {
         const logger = useLogger()
-        for (let dataName in mikser.config.data?.catalog || {}) {
+        for (let catalogName in mikser.config.data?.catalog || {}) {
             const { 
                 query, 
                 map,
                 save: saveEntities = async entities => {
-                    const entitiesFile = path.join(mikser.options.dataFolder, `${dataName}.json`)
-                    logger.debug('Data export catalog %s %s: %s', dataName, dataEntities.length, entitiesFile)
+                    const entitiesFile = path.join(mikser.options.dataFolder, `${catalogName}.json`)
+                    logger.debug('Data export catalog %s %s: %s', catalogName, entities.length, entitiesFile)
                     await writeFile(entitiesFile, JSON.stringify(entities), 'utf8')
                 }
-            } = mikser.config.data?.catalog[dataName]
-            const entities = await findEntities(query).map(entity => map ? map(entity) : entity)
-            logger.debug('Data export catalog: %s %s', dataName, dataEntities.length)
+            } = mikser.config.data?.catalog[catalogName]
+            const entities = (await findEntities(query)).map(entity => map ? map(entity) : entity)
             await saveEntities(entities)
         }
     })
