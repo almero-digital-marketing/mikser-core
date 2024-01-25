@@ -1,5 +1,5 @@
 import path from 'path'
-import hasha from 'hasha'
+import { hash } from 'hasha'
 import _ from 'lodash'
 
 export default ({ 
@@ -55,7 +55,7 @@ export default ({
                         meta
                     })
     
-                    entity.checksum = await hasha(JSON.stringify(entity.meta), { algorithm: 'md5' })
+                    entity.checksum = await hash(JSON.stringify(entity.meta), { algorithm: 'md5' })
                     const current = await findEntity({ id })
                     if (current) {
                         if (entity.checksum != current.checksum) {
@@ -116,7 +116,7 @@ export default ({
                     format,
                     meta
                 })
-                entity.checksum = await hasha(JSON.stringify(entity.meta), { algorithm: 'md5' })
+                entity.checksum = await hash(JSON.stringify(entity.meta), { algorithm: 'md5' })
                 if (current) {
                     if (entity.checksum != current.checksum) {
                         logger.info('Api update: %s', id)

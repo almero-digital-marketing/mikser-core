@@ -169,7 +169,7 @@ export default ({
     
     onImport(async () => {
         const { layouts } = mikser.state.layouts
-        const paths = await globby('**/*', { cwd: mikser.options.layoutsFolder, ignore: '**/*.js' })
+        const paths = await globby('**/*', { cwd: mikser.options.layoutsFolder, ignore: ['**/*.js'] })
         for (let relativePath of paths) {
             const uri = path.join(mikser.options.layoutsFolder, relativePath)
             const layout = {

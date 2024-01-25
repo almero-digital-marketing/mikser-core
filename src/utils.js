@@ -1,4 +1,4 @@
-import hasha from 'hasha'
+import { hashFile, hashingStream } from 'hasha'
 import { stat } from 'node:fs/promises'
 import TruncateStream from 'truncate-stream'
 import { createReadStream } from 'node:fs'
@@ -18,12 +18,12 @@ export async function checksum(uri) {
     const maxBytes = 300 * 1024
     const { size } = await stat(uri)
     if (size < maxBytes) {
-        return await hasha.fromFile(uri, { algorithm: 'md5' })
+        return await hashFile(uri, { algorithm: 'md5' })
     } else {
         const truncate = new TruncateStream({ maxBytes })
         const fileStream = createReadStream(uri)
         fileStream.pipe(truncate)
-        const checksum = size.toString() + ':' + await hasha.fromStream(truncate, { algorithm: 'md5' })
+        const checksum = size.toString() + ':' + await hashingStream(truncate, { algorithm: 'md5' })
         return checksum
     }
 }
