@@ -27,7 +27,7 @@ export default ({
         if (mikser.config.files?.outputFolder) uri = path.join(mikser.options.outputFolder, mikser.config.files.outputFolder, relativePath)
         try {
             await mkdir(path.dirname(uri), { recursive: true })
-            await symlink(source, uri, 'file')
+            await symlink(path.resolve(source), uri, 'file')
         } catch (err) {
             if (err.code != 'EEXIST')
             throw err
@@ -36,10 +36,9 @@ export default ({
     }
 
     async function removeLink(relativePath) {
-        const source = path.join(mikser.options.filesFolder, relativePath)
         let uri = path.join(mikser.options.outputFolder, relativePath)
         if (mikser.config.files?.outputFolder) uri = path.join(mikser.options.outputFolder, mikser.config.files.outputFolder, relativePath)
-        await unlink(uri)
+        await unlink(path.resolve(uri))
     }
     
     async function link(source) {
