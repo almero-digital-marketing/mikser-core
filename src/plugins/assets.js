@@ -120,7 +120,7 @@ export default ({
         if (mikser.config.assets?.outputFolder) link = path.join(mikser.options.outputFolder, mikser.config.assets?.outputFolder, mikser.options.assets)
         try {
             await mkdir(path.dirname(link), { recursive: true }) 
-            await symlink(mikser.options.assetsFolder, link, 'dir')
+            await symlink(path.resolve(mikser.options.assetsFolder), link, 'dir')
         } catch (err) {
             if (err.code != 'EEXIST')
             throw err
@@ -288,7 +288,7 @@ export default ({
                     await renderPresets(entity)
                 }
             }
-        }, { concurrency: 100, signal })
+        }, { concurrency: 10, signal })
     })
     
     onComplete(async ({ entity, options }) => {

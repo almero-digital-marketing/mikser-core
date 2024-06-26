@@ -1,6 +1,6 @@
 {
   "name": "mikser-core",
-  "version": "4.0.2",
+  "version": "4.0.4",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -39,9 +39,9 @@
     "node-cron": "^3.0.3",
     "p-map": "^7.0.1",
     "p-queue": "^8.0.1",
-    "pino": "^8.18.0",
+    "pino": "^8.19.0",
     "pino-pretty": "^10.3.1",
-    "piscina": "^4.3.1",
+    "piscina": "^4.3.2",
     "sqlite3": "^5.1.7",
     "truncate-stream": "^1.0.2",
     "yaml": "^2.3.4"

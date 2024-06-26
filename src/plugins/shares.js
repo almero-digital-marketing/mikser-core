@@ -27,9 +27,9 @@ export default ({
                 await mkdir(destinationFolder, { recursive: true })
                 logger.info('Sharing: %s → %s', sourceLocation, destinationLocation)
                 if (sourceStat.isDirectory()) {
-                    await symlink(sourceLocation, destinationLocation, 'dir')
+                    await symlink(path.resolve(sourceLocation), destinationLocation, 'dir')
                 } else {
-                    await symlink(sourceLocation, destinationLocation, 'file')
+                    await symlink(path.resolve(sourceLocation), destinationLocation, 'file')
                 }
             } catch (err) {
                 if (err.code != 'EEXIST')

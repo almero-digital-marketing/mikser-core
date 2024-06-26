@@ -128,7 +128,7 @@ export default ({
             if (mikser.config.resources?.outputFolder) link = path.join(mikser.options.outputFolder, mikser.config.resources?.outputFolder, mikser.options.resources)
             try {
                 await mkdir(path.dirname(link), { recursive: true }) 
-                await symlink(mikser.options.resourcesFolder, link, 'dir')
+                await symlink(path.resolve(mikser.options.resourcesFolder), link, 'dir')
             } catch (err) {
                 if (err.code != 'EEXIST')
                 throw err
