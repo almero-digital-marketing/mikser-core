@@ -9,14 +9,23 @@ import { AbortError } from './utils.js'
 let journal
 
 export async function addEntry({ entity, operation, context, options }) {
-    return await journal('operations').insert([{ entity, operation, context, options }])
+    await journal('operations').insert([{ entity, operation, context, options }])
+}
+
+export async function addEntries(entries) {
+    await journal.batchInsert('operations', entries.map(({ entity, operation, context, options }) => ({ 
+        entity: JSON.stringify(entity), 
+        operation, 
+        context: JSON.stringify(context), 
+        options: JSON.stringify(options) 
+    })), 10)
 }
 
 export async function updateEntry({ id, entity, output }) {
     const data = {}
     if ( entity ) data.entity = JSON.stringify(entity)
     if ( output ) data.output = JSON.stringify(output)
-    return await journal('operations').where({ id }).update(data)
+    await journal('operations').where({ id }).update(data)
 }
 
 export async function* useJournal(name, operations, signal) {

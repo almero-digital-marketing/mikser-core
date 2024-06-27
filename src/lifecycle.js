@@ -1,7 +1,7 @@
 import mikser from './mikser.js'
 import { OPERATION } from './constants.js'
 import { useLogger } from './runtime.js'
-import { addEntry } from './journal.js'
+import { addEntry, addEntries } from './journal.js'
 
 export async function createEntity(entity) {
     const logger = useLogger()
@@ -32,6 +32,22 @@ export async function updateEntity(entity) {
         logger.debug('Update %s entity: %s', entity.collection, entity.id)
         await addEntry(entry)
     }
+}
+
+export async function renderEntities(tasks) {
+    const logger = useLogger()
+    if (!tasks.length) return
+    const entries = []
+    for(let { entity, options = {}, context = {} } of tasks) {
+        const entry = { operation: OPERATION.RENDER, entity, options, context, }
+        if (options.ignore) {
+            logger.trace('Render %s entity: [%s] %s → %s %s', entity.collection, options.renderer, entity.id, entity.destination, !options.ignore)
+        } else {
+            logger.debug('Render %s entity: [%s] %s → %s %s', entity.collection, options.renderer, entity.id, entity.destination, !options.ignore)
+        }
+        entries.push(entry)
+    }
+    await addEntries(entries)
 }
 
 export async function renderEntity(entity, options = {}, context = {}) {

@@ -16,7 +16,7 @@ export default ({
     createEntity, 
     updateEntity, 
     deleteEntity, 
-    renderEntity, 
+    renderEntities, 
     onComplete, 
     onSync, 
     onFinalize, 
@@ -77,24 +77,32 @@ export default ({
         return result
     }
 
-    async function renderPresets(entityToRender) {
+    async function renderPresets(entities) {
         const { presets, assetsMap } = mikser.state.assets
 
-        for (let entityPreset of assetsMap[entityToRender.id] || []) {
-            const entity = _.cloneDeep(entityToRender)
-            entity.preset = presets[entityPreset]
-            let destination = entity.name
-            if (entity.preset.format) {
-                destination = changeExtension(destination, entity.preset.format)
+        const tasks = []
+        for (let entityToRender of entities) {
+            for (let entityPreset of assetsMap[entityToRender.id] || []) {
+                const entity = _.cloneDeep(entityToRender)
+                entity.preset = presets[entityPreset]
+                let destination = entity.name
+                if (entity.preset.format) {
+                    destination = changeExtension(destination, entity.preset.format)
+                }
+                entity.destination = path.join(mikser.options.assetsFolder, entityPreset, destination)
+                const ignore = await isPresetRendered(entity)
+                tasks.push({
+                    entity, 
+                    options: { 
+                        ...entity.preset.options, 
+                        renderer: 'preset',
+                        ignore
+                    }
+                })
             }
-            entity.destination = path.join(mikser.options.assetsFolder, entityPreset, destination)
-            const ignore = await isPresetRendered(entity)
-            await renderEntity(entity, { 
-                ...entity.preset.options, 
-                renderer: 'preset',
-                ignore
-            })
         }
+        await renderEntities(tasks)
+
     }
     
     onLoaded(async () => {
@@ -268,7 +276,7 @@ export default ({
             checksumMap.add(path.join(mikser.options.assetsFolder, checksumFile))
         }
 
-        const entitiesToRender = new Set()
+        const entitiesToRender = new Map()
         await map(useJournal('Assets provision', [OPERATION.CREATE, OPERATION.UPDATE], signal), async ({ entity }) => {
             if (entity.collection == collection) {
                 for (let entityId in assetsMap) {
@@ -277,18 +285,18 @@ export default ({
                             id: entityId
                         })
                         if (!entitiesToRender.has(entityToRender.id)) {
-                            entitiesToRender.add(entityToRender.id)
-                            await renderPresets(entityToRender)
+                            entitiesToRender.set(entityToRender.id, entityToRender)
                         }
                     }
                 }
             } else {
                 if (assetsMap[entity.id] && !entitiesToRender.has(entity.id)) {
-                    entitiesToRender.add(entity.id)
-                    await renderPresets(entity)
+                    entitiesToRender.set(entity.id, entity)
                 }
             }
         }, { concurrency: 10, signal })
+        
+        await renderPresets(entitiesToRender.values())
     })
     
     onComplete(async ({ entity, options }) => {

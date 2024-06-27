@@ -15,7 +15,7 @@ export default ({
     onProcessed, 
     onBeforeRender, 
     useJournal, 
-    renderEntity, 
+    renderEntities, 
     onComplete, 
     onSync,
     matchEntity,
@@ -237,6 +237,7 @@ export default ({
     })
     
     onBeforeRender(async (signal) => {
+        const tasks = []
         const entities = Array.from(getSitemapEntities())
         .filter(entity => entity.layout)
         .sort((a, b) => b.time - a.time)
@@ -291,7 +292,11 @@ export default ({
                             }
                         }
                         addToSitemap(pageEntity)
-                        await renderEntity(pageEntity, { renderer: entity.layout.template, tasks: TASKS.WORKER }, { data, plugins })
+                        tasks.push({ 
+                            entity: pageEntity,
+                            options: { renderer: entity.layout.template, tasks: entity.meta?.task || TASKS.POOL }, 
+                            context: { data, plugins }
+                        })
                     }
                 }
             } else {
@@ -305,10 +310,15 @@ export default ({
                 }
                 addToSitemap(entity)
                 if (entity.destination) {
-                    await renderEntity(entity, { renderer: entity.layout.template, tasks: TASKS.WORKER }, { data, plugins })
+                    tasks.push({ 
+                        entity,
+                        options: { renderer: entity.layout.template, tasks: entity.meta?.task || TASKS.POOL }, 
+                        context: { data, plugins }
+                    })
                 }
             }
         }
+        await renderEntities(tasks)
     })
     
     onComplete(async ({ entity, options, output }) => {

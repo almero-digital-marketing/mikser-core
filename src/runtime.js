@@ -161,7 +161,7 @@ export async function setup(options) {
                 await updateEntry({ id, output: { success: true } })
             }
         }, {
-            concurrency: mikser.options.threads * 2,
+            concurrency: mikser.options.threads,
             signal
         })
         renderJobs.size && logger.info('Rendered: %d', renderJobs.size)
