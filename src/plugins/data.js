@@ -1,5 +1,7 @@
 import path from 'path'
 import { mkdir, writeFile, unlink } from 'fs/promises'
+import _ from 'lodash'
+import pMap from 'p-map'
 
 export default ({ 
     onLoaded, 
@@ -25,10 +27,19 @@ export default ({
     onBeforeRender(async () => {
         const logger = useLogger()
     
-        for (let entitiesName in mikser.config.data?.entities || {}) {
+        let entitiesConfig = mikser.config.data?.entities || {}
+        if (entitiesConfig === true) {
+            entitiesConfig = {
+                document: {
+                    query: entity => entity.type == 'document'
+                }
+            }
+        }
+        for (let entitiesName in entitiesConfig) {
             const { 
                 query, 
                 map, 
+                pick,
                 save : saveEntity = async entity => {
                     if (!entity.name) {
                         logger.warn('Entity name is missing: %o', entity)
@@ -43,7 +54,7 @@ export default ({
                     const entityFile = path.join(mikser.options.dataFolder,`${entity.name}.json`)
                     await unlink(entityFile)
                 }
-            } = mikser.config.data?.entities[entitiesName]
+            } = entitiesConfig[entitiesName]
 
             for await (let { operation, entity } of useJournal('Data entities', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE])) {
                 if (query(entity)) {
@@ -51,7 +62,12 @@ export default ({
                         case OPERATION.CREATE:
                         case OPERATION.UPDATE:
                             logger.debug('Data export entity %s %s: %s', entity.collection, operation, entity.id)
-                            await saveEntity(map ? map(entity) : entity)
+                            await saveEntity(map ? await map(entity) : {
+                                refId: ('/' + entity.name.replaceAll('\\','/')).replace(/\/index$/g,'/'),
+                                name: entity.name,
+                                date: new Date(entity.time),
+                                data: _.pick(entity, pick || ['collection', 'format', 'type', 'destination', 'stamp', 'meta', 'id',])
+                            })
                         break
                         case OPERATION.DELETE:
                             await deleteEntity(entity)
@@ -64,24 +80,34 @@ export default ({
     
     onAfterRender(async () => {
         const logger = useLogger()
-    
-        for (let contextName in mikser.config.data?.context || {}) {
+
+        let contextConfig = mikser.config.data?.context || {}
+        if (contextConfig === true) {
+            contextConfig = {
+                document: {
+                    query: entity => entity.type == 'document'
+                }
+            }
+        }
+        for (let contextName in contextConfig) {
             const { 
                 query, 
                 map,
-                save: saveConext = async (entity, context) => {
-                    const entityName = entity.name
-                    const contextFile = path.join(mikser.options.dataFolder, entityName, `${contextName}.json`)
-        
-                    await mkdir(path.dirname(contextFile), { recursive: true })
-                    await writeFile(contextFile, JSON.stringify(context), 'utf8')
+                pick,
+                save: saveConext = async (entity, context) => {                    
+                    if (context?.data) {
+                        const entityName = entity.name
+                        const contextFile = path.join(mikser.options.dataFolder, `${entityName}.context.json`)
+                        await mkdir(path.dirname(contextFile), { recursive: true })
+                        await writeFile(contextFile, JSON.stringify(context), 'utf8')
+                    }
                 }
-            } = mikser.config.data?.context[contextName]
+            } = contextConfig[contextName]
 
             for await (let { entity, context } of useJournal('Data context', [OPERATION.RENDER])) {
                 if (query(entity)) {
                     logger.debug('Data export context: %s', entity.name)
-                    await saveConext(entity, map ? map(context) : context)
+                    await saveConext(entity, map ? await map(entity, context.data) : (pick ? _.pick(context.data, pick) : context.data))
                 }
             }
         }
@@ -91,16 +117,22 @@ export default ({
         const logger = useLogger()
         for (let catalogName in mikser.config.data?.catalog || {}) {
             const { 
-                query, 
+                query: queryEntities = entity => entity.type == 'document', 
                 map,
+                pick,
                 save: saveEntities = async entities => {
                     const entitiesFile = path.join(mikser.options.dataFolder, `${catalogName}.json`)
                     logger.debug('Data export catalog %s %s: %s', catalogName, entities.length, entitiesFile)
                     await writeFile(entitiesFile, JSON.stringify(entities), 'utf8')
                 }
             } = mikser.config.data?.catalog[catalogName]
-            const entities = (await findEntities(query)).map(entity => map ? map(entity) : entity)
-            await saveEntities(entities)
+            const entities = await findEntities(queryEntities)
+            await saveEntities(await pMap(entities, async entity => map ? await map(entity) : {
+                refId: ('/' + entity.name.replaceAll('\\','/')).replace(/\/index$/g,'/'),
+                name: entity.name,
+                date: new Date(entity.time),
+                data: _.pick(entity, pick || ['collection', 'format', 'type', 'destination', 'stamp', 'meta', 'id',])
+            }))
         }
     })
 }
