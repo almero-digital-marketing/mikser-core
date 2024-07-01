@@ -46,7 +46,7 @@ export default ({
                         return
                     }
                     const dump = JSON.stringify(normalize(entity))
-                    const entityFile = path.join(mikser.options.dataFolder,`${entity.name}.json`)
+                    const entityFile = path.join(mikser.options.dataFolder,`${entity.name}.${entitiesName}.json`)
                     await mkdir(path.dirname(entityFile), { recursive: true })
                     await writeFile(entityFile, dump, 'utf8')
                 },
@@ -84,7 +84,7 @@ export default ({
         let contextConfig = mikser.config.data?.context || {}
         if (contextConfig === true) {
             contextConfig = {
-                document: {
+                context: {
                     query: entity => entity.type == 'document'
                 }
             }
@@ -97,7 +97,7 @@ export default ({
                 save: saveConext = async (entity, context) => {                    
                     if (context?.data) {
                         const entityName = entity.name
-                        const contextFile = path.join(mikser.options.dataFolder, `${entityName}.context.json`)
+                        const contextFile = path.join(mikser.options.dataFolder, `${entityName}.${contextName}.json`)
                         await mkdir(path.dirname(contextFile), { recursive: true })
                         await writeFile(contextFile, JSON.stringify(context), 'utf8')
                     }
@@ -107,7 +107,7 @@ export default ({
             for await (let { entity, context } of useJournal('Data context', [OPERATION.RENDER])) {
                 if (query(entity)) {
                     logger.debug('Data export context: %s', entity.name)
-                    await saveConext(entity, map ? await map(entity, context.data) : (pick ? _.pick(context.data, pick) : context.data))
+                    await saveConext(entity, map ? await map(entity, context) : _.pick(context, pick || ['data']))
                 }
             }
         }
