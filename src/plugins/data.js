@@ -27,8 +27,8 @@ export default ({
     onBeforeRender(async () => {
         const logger = useLogger()
     
-        let entitiesConfig = mikser.config.data?.entities || {}
-        if (entitiesConfig === true) {
+        let entitiesConfig = {}
+        if (mikser.config.data?.entities === undefined) {
             entitiesConfig = {
                 document: {
                     query: entity => entity.type == 'document'
@@ -81,8 +81,8 @@ export default ({
     onAfterRender(async () => {
         const logger = useLogger()
 
-        let contextConfig = mikser.config.data?.context || {}
-        if (contextConfig === true) {
+        let contextConfig = {}
+        if (mikser.config.data?.context == undefined) {
             contextConfig = {
                 context: {
                     query: entity => entity.type == 'document'
