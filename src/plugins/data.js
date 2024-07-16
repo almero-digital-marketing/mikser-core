@@ -18,7 +18,7 @@ export default ({
     onLoaded(async () => {
         const logger = useLogger()
         mikser.options.data = mikser.config.data?.dataFolder || 'data'
-        mikser.options.dataFolder = path.join(mikser.options.workingFolder, mikser.options.data)
+        mikser.options.dataFolder = path.join(mikser.options.outputFolder, mikser.options.data)
     
         logger.info('Data folder: %s', mikser.options.dataFolder)
         await mkdir(mikser.options.dataFolder, { recursive: true })
