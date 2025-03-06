@@ -39,10 +39,11 @@ export async function setup(options) {
             .option('-c --config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
             .option('-m --mode <mode>', 'set mikser runtime mode', 'development')
             .option('-r --clear', 'clear current state before execution', false)
-            .option('-o --output-folder <folder>', 'set mikser output folder realtive to working folder ot absolute', 'out')
+            .option('-o --output-folder <folder>', 'set mikser output folder realtive to working folder', 'out')
             .option('-w --watch', 'watch entities for changes', false)
             .option('-d --debug', 'display debug statements')
             .option('-t --trace', 'display trace statements')
+            .option('-e --runtime-folder <folder>', 'set mikser runtime folder realtive to working folder', 'runtime')
 
         Object.assign(mikser.options, options || mikser.runtime.commander.parse(process.argv).opts())
         mikser.options.info = true
