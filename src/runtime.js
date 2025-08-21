@@ -13,9 +13,9 @@ import { OPERATION, TASKS } from './constants.js'
 import render from './render.js'
 import map from 'p-map'
 import Queue from 'p-queue'
+import packageInfo from '../package.json' with { type: 'json' }
 
 export async function setup(options) {
-    const { default: { version } } = await import('../package.json', { assert: { type: 'json' } })
     mikser.options.threads = options?.threads !== undefined ? options.threads : 4
     mikser.runtime = {
         logger: pino(options?.logger || {
@@ -33,7 +33,7 @@ export async function setup(options) {
     mikser.state = {}
 
     onInitialize(async () => {
-        mikser.runtime.commander?.version(version)
+        mikser.runtime.commander?.version(packageInfo.version)
             .option('-i --working-folder <folder>', 'set mikser working folder', './')
             .option('-p --plugins [plugins...]', 'list of mikser plugins to load', [])
             .option('-c --config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
@@ -210,7 +210,7 @@ export async function setup(options) {
         logger.notice('Mikser restarted')
     })
 
-    console.info('Mikser: %s', version)
+    console.info('Mikser: %s', packageInfo.version)
     return mikser
 }
 

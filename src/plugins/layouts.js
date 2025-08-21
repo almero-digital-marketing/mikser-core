@@ -220,6 +220,10 @@ export default ({
                         entity.layout = layouts[entity.meta.layout]
                     }
             
+                    if (entity.meta?.layout && !entity.layout) {
+                        logger.warning('Layout not found for %s: %s', entity.collection, entity.id)
+                    }
+
                     if (entity.layout) {
                         logger.debug('Layout matched for %s: %s', entity.collection, entity.id)
                         addToSitemap(entity)
