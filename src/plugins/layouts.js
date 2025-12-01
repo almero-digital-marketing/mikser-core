@@ -191,7 +191,6 @@ export default ({
         
         for await (let { entity, operation } of useJournal('Layouts processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE], signal)) {
             if (entity.collection == collection) continue
-
             switch (operation) {
                 case OPERATION.CREATE:
                 case OPERATION.UPDATE:
@@ -205,14 +204,18 @@ export default ({
                             }
                         }
                         if (!entity.layout && mikser.config.layouts?.autoLayouts && entity.name) {
-                            const nameChunks = path.basename(entity.name).split('.')
+                            const nameChunks = entity.name.split('.')
                             if (nameChunks?.length) {
-                                for (let index = 0; index < nameChunks.length - 1; index++) {
-                                    const autoLayout = path.basename(entity.name).split('.').slice(index).join('.')
-                                    if (layouts[autoLayout]) {
+                                for (let index = 0; index < nameChunks.length; index++) {
+                                    const autoLayout = [
+                                        path.basename(entity.name).split('.').slice(index).join('.'),
+                                        path.basename(entity.id)
+                                    ]
+                                    .find(layout => layouts[layout])
+                                    if (autoLayout) {
                                         entity.layout = layouts[autoLayout]
                                         break
-                                    }
+                                    }                                
                                 }
                             }
                         }
@@ -221,7 +224,7 @@ export default ({
                     }
             
                     if (entity.meta?.layout && !entity.layout) {
-                        logger.warning('Layout not found for %s: %s', entity.collection, entity.id)
+                        logger.warn('Layout not found for %s: %s', entity.collection, entity.id)
                     }
 
                     if (entity.layout) {

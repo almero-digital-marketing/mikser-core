@@ -225,7 +225,7 @@ export function onValidate(operations, callback) {
             try {
                 const message = await callback(entry)
                 if (message) {
-                    logger.warning('Validation problem: [%s] %s %s', entry.operation, entry.entity.name, message)
+                    logger.warn('Validation problem: [%s] %s %s', entry.operation, entry.entity.name, message)
                 }
                 return true
             } catch (err) {
