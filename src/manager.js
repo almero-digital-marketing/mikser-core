@@ -11,7 +11,7 @@ export async function createdHook(name, context) {
     if (!runtime.started) return
 
     const synced = await runtime.sync({
-        action: ACTION.CREATE, 
+        action: ACTION.CREATE,
         name,
         context
     })
@@ -26,7 +26,7 @@ export async function updatedHook(name, context) {
     if (!runtime.started) return
 
     const synced = await runtime.sync({
-        action: ACTION.UPDATE, 
+        action: ACTION.UPDATE,
         name,
         context
     })
@@ -41,7 +41,7 @@ export async function triggeredHook(name, context) {
     if (!runtime.started) return
 
     const synced = await runtime.sync({
-        action: ACTION.TRIGGER, 
+        action: ACTION.TRIGGER,
         name,
         context
     })
@@ -56,7 +56,7 @@ export async function deletedHook(name, context) {
     if (!runtime.started) return
 
     const synced = await runtime.sync({
-        action: ACTION.DELETE, 
+        action: ACTION.DELETE,
         name,
         context
     })
@@ -69,23 +69,23 @@ export async function deletedHook(name, context) {
 
 export function watch(name, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true }) {
     if (runtime.options.watch !== true) return
-    
+
     chokidar.watch(folder, options)
-    .on('all', () => {
-        clearTimeout(runtime.runtime.processTimeout)
-    })
-    .on('add', async fullPath => {
-        const relativePath = fullPath.replace(`${folder}/`, '')
-        createdHook(name, { relativePath })
-    })
-    .on('change', async fullPath => {
-        const relativePath = fullPath.replace(`${folder}/`, '')
-        updatedHook(name, { relativePath })
-    })
-    .on('unlink', async fullPath => {
-        const relativePath = fullPath.replace(`${folder}/`, '')
-        deletedHook(name, { relativePath })
-    })
+        .on('all', () => {
+            clearTimeout(runtime.runtime.processTimeout)
+        })
+        .on('add', async fullPath => {
+            const relativePath = fullPath.replace(`${folder}/`, '')
+            createdHook(name, { relativePath })
+        })
+        .on('change', async fullPath => {
+            const relativePath = fullPath.replace(`${folder}/`, '')
+            updatedHook(name, { relativePath })
+        })
+        .on('unlink', async fullPath => {
+            const relativePath = fullPath.replace(`${folder}/`, '')
+            deletedHook(name, { relativePath })
+        })
 }
 
 export function schedule(name, expression, context) {
@@ -104,7 +104,7 @@ onProcess(() => {
     if (!tasks.length) return
     const logger = useLogger()
     logger.debug('Stopping scheduled tasks: %d', tasks.length)
-    for(let task of tasks) {
+    for (let task of tasks) {
         task.stop()
     }
 })
@@ -113,7 +113,7 @@ onFinalized(() => {
     if (!tasks.length) return
     const logger = useLogger()
     logger.debug('Starting scheduled tasks: %d', tasks.length)
-    for(let task of tasks) {
+    for (let task of tasks) {
         task.start()
     }
 })

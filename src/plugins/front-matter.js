@@ -1,14 +1,14 @@
 import fm from 'front-matter'
 
-export default ({ 
-    onProcess, 
-    useLogger, 
-    useJournal, 
+export default ({
+    onProcess,
+    useLogger,
+    useJournal,
     updateEntry,
     constants: { OPERATION }
 }) => {
     onProcess(async () => {
-        const logger = useLogger()   
+        const logger = useLogger()
         for await (let { id, entity } of useJournal('Fron matter', [OPERATION.CREATE, OPERATION.UPDATE])) {
             if (entity.content && fm.test(entity.content)) {
                 const info = fm(entity.content)

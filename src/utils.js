@@ -7,11 +7,11 @@ import { minimatch } from 'minimatch'
 import path from 'path'
 
 export class AbortError extends Error {
-	constructor(message) {
-		super();
-		this.name = 'AbortError';
-		this.message = message;
-	}
+    constructor(message) {
+        super();
+        this.name = 'AbortError';
+        this.message = message;
+    }
 }
 
 export async function checksum(uri) {
@@ -33,12 +33,12 @@ export function normalize(object) {
         object,
         (value, key) => {
             let pick = value !== undefined &&
-            value !== '' &&
-            value !== null &&
-            key !== 'undefined' &&
-            key !== '' &&
-            key !== 'null' &&
-            (typeof(value) != 'number' || !isNaN(value))
+                value !== '' &&
+                value !== null &&
+                key !== 'undefined' &&
+                key !== '' &&
+                key !== 'null' &&
+                (typeof (value) != 'number' || !isNaN(value))
             return pick
         }
     )
@@ -48,7 +48,7 @@ export function matchEntity(entity, match) {
     if (!match) return false
     if (typeof match == 'function') return match(entity)
     else if (typeof match == 'string') {
-        if (match.substring(0,1) == '@/') {
+        if (match.substring(0, 1) == '@/') {
             return minimatch(entity.name, match.substring(2))
         } else {
             return minimatch(entity.id, match)
@@ -60,6 +60,6 @@ export function matchEntity(entity, match) {
 
 export function changeExtension(file, format) {
     let extension = path.extname(file)
-    let result = file.substring(0, file.length - extension.length) +  '.' + format
+    let result = file.substring(0, file.length - extension.length) + '.' + format
     return result
 }

@@ -4,34 +4,34 @@ import { globby } from 'globby'
 import _ from 'lodash'
 import map from 'p-map'
 
-export default ({ 
-    runtime, 
-    onLoaded, 
-    useLogger, 
-    onImport, 
-    watch, 
-    onProcessed, 
-    onBeforeRender, 
-    useJournal, 
-    createEntity, 
-    updateEntity, 
-    deleteEntity, 
-    renderEntities, 
-    onComplete, 
-    onSync, 
-    onFinalize, 
+export default ({
+    runtime,
+    onLoaded,
+    useLogger,
+    onImport,
+    watch,
+    onProcessed,
+    onBeforeRender,
+    useJournal,
+    createEntity,
+    updateEntity,
+    deleteEntity,
+    renderEntities,
+    onComplete,
+    onSync,
+    onFinalize,
     findEntity,
     matchEntity,
     changeExtension,
-    constants: { ACTION, OPERATION }, 
+    constants: { ACTION, OPERATION },
 }) => {
     const collection = 'presets'
     const type = 'preset'
     const checksumMap = new Set()
-    
+
     async function getEntityPresets(entity) {
         const entityPresets = []
-        for(let preset in (runtime.config.assets?.presets || {})) {
+        for (let preset in (runtime.config.assets?.presets || {})) {
             const matches = Array.isArray(runtime.config.assets.presets[preset]) ? runtime.config.assets.presets[preset] : [runtime.config.assets.presets[preset]]
             for (let match of matches) {
                 if (matchEntity(entity, match)) {
@@ -41,16 +41,16 @@ export default ({
         }
         return entityPresets
     }
-    
+
     async function getRevisions(entity) {
-        let revisions = await globby(`${entity.destination.replaceAll('(','\\(').replaceAll(')','\\)')}.*.md5`, { 
-            cwd: path.join(runtime.options.assetsFolder, entity.preset.name), 
-            expandDirectories: false, 
-            onlyFiles: true 
+        let revisions = await globby(`${entity.destination.replaceAll('(', '\\(').replaceAll(')', '\\)')}.*.md5`, {
+            cwd: path.join(runtime.options.assetsFolder, entity.preset.name),
+            expandDirectories: false,
+            onlyFiles: true
         })
         return revisions
     }
-    
+
     async function isPresetRendered(entity) {
         let result = false
         let revisions = []
@@ -60,15 +60,15 @@ export default ({
         } else {
             revisions = await getRevisions(entity)
         }
-        
+
         for (let revision of revisions) {
-            const [assetsRevision] = revision.split('.').slice(-2,-1)
+            const [assetsRevision] = revision.split('.').slice(-2, -1)
             if (entity.preset.checksum <= Number.parseInt(assetsRevision)) {
                 if (entity.preset.options?.checksum === false) {
                     result = true
                     break
                 }
-    
+
                 let checksum = await readFile(revision, 'utf8')
                 result ||= checksum == entity.checksum
                 if (result) break
@@ -92,9 +92,9 @@ export default ({
                 entity.destination = path.join(runtime.options.assetsFolder, entityPreset, destination)
                 const ignore = await isPresetRendered(entity)
                 tasks.push({
-                    entity, 
-                    options: { 
-                        ...entity.preset.options, 
+                    entity,
+                    options: {
+                        ...entity.preset.options,
                         renderer: 'preset',
                         ignore
                     }
@@ -104,50 +104,50 @@ export default ({
         await renderEntities(tasks)
 
     }
-    
+
     onLoaded(async () => {
         const logger = useLogger()
-        
+
         runtime.state.assets = {
             presets: {},
             assetsMap: {},
             assetsFolder: runtime.config.assets?.assetsFolder || 'assets',
         }
-    
+
         runtime.options.presets = runtime.config.presets?.presetsFolder || collection
         runtime.options.presetsFolder = path.join(runtime.options.workingFolder, runtime.options.presets)
         logger.info('Presets folder: %s', runtime.options.presetsFolder)
         await mkdir(runtime.options.presetsFolder, { recursive: true })
-    
+
         runtime.options.assets = runtime.config.assets?.assetsFolder || 'assets'
         runtime.options.assetsFolder = path.join(runtime.options.workingFolder, runtime.options.assets)
         logger.info('Assets folder: %s', runtime.options.assetsFolder)
         await mkdir(runtime.options.assetsFolder, { recursive: true })
-    
+
         let link = path.join(runtime.options.outputFolder, runtime.options.assets)
         if (runtime.config.assets?.outputFolder) link = path.join(runtime.options.outputFolder, runtime.config.assets?.outputFolder, runtime.options.assets)
         try {
-            await mkdir(path.dirname(link), { recursive: true }) 
+            await mkdir(path.dirname(link), { recursive: true })
             await symlink(path.resolve(runtime.options.assetsFolder), link, 'dir')
         } catch (err) {
             if (err.code != 'EEXIST')
-            throw err
+                throw err
         }
-    
+
         watch(collection, runtime.options.presetsFolder)
     })
-    
+
     onSync(collection, async ({ action, context }) => {
         if (!context.relativePath) return false
         const { relativePath } = context
-    
+
         const logger = useLogger()
         const { presets } = runtime.state.assets
-        
+
         const name = relativePath.replace(path.extname(relativePath), '')
         const uri = path.join(runtime.options.presetsFolder, relativePath)
         const source = uri
-    
+
         let synced = true
         switch (action) {
             case ACTION.CREATE:
@@ -160,7 +160,7 @@ export default ({
                         uri,
                         name: relativePath.replace(path.extname(relativePath), ''),
                         source,
-                        format, 
+                        format,
                         checksum: revision,
                         options
                     }
@@ -170,7 +170,7 @@ export default ({
                     synced = false
                     logger.error('Preset loading error: %s %s', uri, err.message)
                 }
-            break
+                break
             case ACTION.UPDATE:
                 try {
                     const { revision = 1, format, options } = await import(`${uri}?stamp=${Date.now()}`)
@@ -198,7 +198,7 @@ export default ({
                     synced = false
                     logger.error('Preset loading error: %s %s', uri, err.message)
                 }
-            break
+                break
             case ACTION.DELETE:
                 delete presets[name]
                 await deleteEntity({
@@ -206,15 +206,15 @@ export default ({
                     collection,
                     type,
                 })
-            break
+                break
         }
         return synced
     })
-    
+
     onImport(async () => {
         const logger = useLogger()
         const { presets } = runtime.state.assets
-        
+
         const paths = await globby('*.js', { cwd: runtime.options.presetsFolder })
         for (let relativePath of paths) {
             const uri = path.join(runtime.options.presetsFolder, relativePath)
@@ -222,7 +222,7 @@ export default ({
             try {
                 const { revision = 1, format, options } = await import(`${uri}?stamp=${Date.now()}`)
                 const name = relativePath.replace(path.extname(relativePath), '')
-                
+
                 const preset = {
                     id: path.join('/presets', relativePath),
                     collection,
@@ -230,12 +230,12 @@ export default ({
                     uri,
                     name: relativePath.replace(path.extname(relativePath), ''),
                     source,
-                    format, 
+                    format,
                     checksum: revision,
                     options,
                     options
                 }
-    
+
                 await createEntity(preset)
                 presets[name] = preset
             } catch (err) {
@@ -243,11 +243,11 @@ export default ({
             }
         }
     })
-    
+
     onProcessed(async (signal) => {
         const logger = useLogger()
         const { assetsMap } = runtime.state.assets
-        
+
         for await (let { entity, operation } of useJournal('Assets processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE], signal)) {
             if (entity.collection != collection) {
                 switch (operation) {
@@ -258,15 +258,15 @@ export default ({
                             logger.debug('Presets matched for: %s %s', entity.collection, entity.id, entityPresets.length)
                             assetsMap[entity.id] = entityPresets
                         }
-                    break
+                        break
                     case OPERATION.DELETE:
                         delete assetsMap[entity.id]
-                    break
+                        break
                 }
             }
         }
     })
-    
+
     onBeforeRender(async signal => {
         const { assetsMap } = runtime.state.assets
 
@@ -295,10 +295,10 @@ export default ({
                 }
             }
         }, { concurrency: 10, signal })
-        
+
         await renderPresets(entitiesToRender.values())
     })
-    
+
     onComplete(async ({ entity, options }) => {
         const logger = useLogger()
         if (entity.preset && !options?.ignore) {
@@ -308,23 +308,23 @@ export default ({
             logger.debug('Asset render finished: [%s] %s', assetChecksum, entity.destination.replace(runtime.options.workingFolder, ''))
         }
     })
-    
+
     onFinalize(async () => {
         const logger = useLogger()
         const { presets } = runtime.state.assets
-        
+
         let revisions = await globby('**/*.md5', { cwd: runtime.options.assetsFolder })
         for (let revision of revisions) {
             const [preset] = revision.split(path.sep)
-            const [assetsRevision] = revision.split('.').slice(-2,-1)
-    
+            const [assetsRevision] = revision.split('.').slice(-2, -1)
+
             if (!presets[preset]) {
                 const assetsPresetFolder = path.join(runtime.options.assetsFolder, preset)
                 const assetsPresetRemoved = false
                 try {
                     await rm(assetsPresetFolder, { recursive: true, force: true })
                     assetsPresetRemoved = true
-                } catch {}
+                } catch { }
                 if (assetsPresetRemoved) {
                     logger.debug('Assets preset removed: %s', assetsPresetFolder)
                 }

@@ -3,34 +3,34 @@ import { mkdir, writeFile, unlink } from 'node:fs/promises'
 import { globby } from 'globby'
 import _ from 'lodash'
 
-export default ({ 
-    runtime, 
-    onLoaded, 
-    useLogger, 
-    onImport, 
-    createEntity, 
-    updateEntity, 
-    deleteEntity, 
-    watch, 
-    onProcessed, 
-    onBeforeRender, 
-    useJournal, 
-    renderEntities, 
-    onComplete, 
+export default ({
+    runtime,
+    onLoaded,
+    useLogger,
+    onImport,
+    createEntity,
+    updateEntity,
+    deleteEntity,
+    watch,
+    onProcessed,
+    onBeforeRender,
+    useJournal,
+    renderEntities,
+    onComplete,
     onSync,
     matchEntity,
     changeExtension,
-    constants: { ACTION, OPERATION, TASKS }, 
-}) => {   
+    constants: { ACTION, OPERATION, TASKS },
+}) => {
     const collection = 'layouts'
     const type = 'layout'
 
     function getFormatInfo(relativePath) {
         const template = path.extname(relativePath).substring(1).toLowerCase()
-        const format = path.extname(relativePath.replace(path.extname(relativePath),'')).substring(1).toLowerCase() || 'html'
+        const format = path.extname(relativePath.replace(path.extname(relativePath), '')).substring(1).toLowerCase() || 'html'
         return { format, template }
     }
-    
+
     function addToSitemap(entity) {
         const logger = useLogger()
         const { sitemap } = runtime.state.layouts
@@ -51,7 +51,7 @@ export default ({
             sitemap[href] = entity
         }
     }
-    
+
     function removeFromSitemap(entity) {
         const { sitemap } = runtime.state.layouts
         for (let href in sitemap) {
@@ -60,7 +60,7 @@ export default ({
                 if (entry.id == entity.id) {
                     delete sitemap[href]
                     return
-                } 
+                }
             } else {
                 for (let lang in entry) {
                     if (entry[lang].id == entity.id) {
@@ -71,16 +71,16 @@ export default ({
             }
         }
     }
-    
+
     function removePagesFromSitemap(entity) {
         const entities = Array.from(getSitemapEntities())
-        for(let current of entities) {
+        for (let current of entities) {
             if (entity.uri == current.uri) {
                 removeFromSitemap(current)
             }
         }
     }
-    
+
     function* getSitemapEntities() {
         const { sitemap } = runtime.state.layouts
         for (let href in sitemap) {
@@ -98,19 +98,19 @@ export default ({
             }
         }
     }
-    
+
     onSync(collection, async ({ action, context }) => {
         if (!context.relativePath) return false
         const { relativePath } = context
         let id = path.join(`/${collection}`, relativePath)
         if (_.endsWith(id, '.js')) id = id.replace(new RegExp('.js$'), '')
-    
+
         const uri = path.join(runtime.options.layoutsFolder, relativePath)
         const { layouts } = runtime.state.layouts
         switch (action) {
             case ACTION.CREATE:
                 var layout = {
-                    id, 
+                    id,
                     uri,
                     collection,
                     type,
@@ -119,7 +119,7 @@ export default ({
                 }
                 layouts[layout.name] = layout
                 await createEntity(layout)
-            break
+                break
             case ACTION.UPDATE:
                 var layout = {
                     id,
@@ -131,7 +131,7 @@ export default ({
                 }
                 layouts[layout.name] = layout
                 await updateEntity(layout)
-            break
+                break
             case ACTION.DELETE:
                 var layout = {
                     id,
@@ -145,28 +145,28 @@ export default ({
                     }
                 }
                 await deleteEntity(layout)
-            break
+                break
         }
     })
-    
+
     onLoaded(async () => {
         const logger = useLogger()
-        
+
         runtime.state.layouts = {
             layouts: {},
             sitemap: {}
         }
-        
+
         runtime.options.layouts = runtime.config.layouts?.layoutsFolder || collection
         runtime.options.layoutsFolder = path.join(runtime.options.workingFolder, runtime.options.layouts)
         runtime.options.layoutsStateFolder = path.join(runtime.options.outputFolder, 'state')
-    
+
         logger.info('Layouts folder: %s', runtime.options.layoutsFolder)
         await mkdir(runtime.options.layoutsFolder, { recursive: true })
-        
+
         watch(collection, runtime.options.layoutsFolder)
     })
-    
+
     onImport(async () => {
         const { layouts } = runtime.state.layouts
         const paths = await globby('**/*', { cwd: runtime.options.layoutsFolder, ignore: ['**/*.js'] })
@@ -184,11 +184,11 @@ export default ({
             await createEntity(layout)
         }
     })
-    
+
     onProcessed(async (signal) => {
         const logger = useLogger()
         const { layouts } = runtime.state.layouts
-        
+
         for await (let { entity, operation } of useJournal('Layouts processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE], signal)) {
             if (entity.collection == collection) continue
             switch (operation) {
@@ -197,7 +197,7 @@ export default ({
                     removePagesFromSitemap(entity)
                     if (!entity.meta?.layout) {
                         for (let pattern in runtime.config.layouts?.match || []) {
-                            if (matchEntity( entity, pattern)) {
+                            if (matchEntity(entity, pattern)) {
                                 const layoutName = runtime.config.layouts?.match[pattern]
                                 entity.layout = layouts[layoutName]
                                 break
@@ -211,18 +211,18 @@ export default ({
                                         path.basename(entity.name).split('.').slice(index).join('.'),
                                         path.basename(entity.id)
                                     ]
-                                    .find(layout => layouts[layout])
+                                        .find(layout => layouts[layout])
                                     if (autoLayout) {
                                         entity.layout = layouts[autoLayout]
                                         break
-                                    }                                
+                                    }
                                 }
                             }
                         }
                     } else {
                         entity.layout = layouts[entity.meta.layout]
                     }
-            
+
                     if (entity.meta?.layout && !entity.layout) {
                         logger.warn('Layout not found for %s: %s', entity.collection, entity.id)
                     }
@@ -234,28 +234,28 @@ export default ({
                         logger.trace('Layout missing for %s: %s', entity.collection, entity.id)
                         addToSitemap(entity)
                     }
-                break
+                    break
                 case OPERATION.DELETE:
                     removePagesFromSitemap(entity)
-                break
+                    break
             }
 
         }
     })
-    
+
     onBeforeRender(async (signal) => {
         const tasks = []
         const entities = Array.from(getSitemapEntities())
-        .filter(entity => entity.layout)
-        .sort((a, b) => b.time - a.time)
-    
+            .filter(entity => entity.layout)
+            .sort((a, b) => b.time - a.time)
+
         for (let original of entities) {
             if (signal.aborted) return
-    
+
             delete original.page
             delete original.pages
             delete original.destination
-    
+
             const entity = _.cloneDeep(original)
             entity.destination = '/' + entity.name
             let data
@@ -266,8 +266,8 @@ export default ({
                 }
             } catch (err) {
                 if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
-            }  
-    
+            }
+
             if (data?.pages) {
                 if (!_.endsWith(entity.name, entity.format)) {
                     for (let page = 0; page < data.pages - 1; page++) {
@@ -283,7 +283,7 @@ export default ({
                                     pageEntity.meta.href = `/${entity.name}.${pageEntity.page}`
                                 }
                             }
-    
+
                             if (runtime.config.layouts?.cleanUrls && entity.layout.format == 'html') {
                                 pageEntity.destination = path.join(entity.destination.replace('index', ''), pageEntity.page.toString(), `index.${entity.layout.format}`)
                             } else {
@@ -299,9 +299,9 @@ export default ({
                             }
                         }
                         addToSitemap(pageEntity)
-                        tasks.push({ 
+                        tasks.push({
                             entity: pageEntity,
-                            options: { renderer: entity.layout.template, tasks: entity.meta?.task || TASKS.POOL }, 
+                            options: { renderer: entity.layout.template, tasks: entity.meta?.task || TASKS.POOL },
                             context: { data, plugins }
                         })
                     }
@@ -317,9 +317,9 @@ export default ({
                 }
                 addToSitemap(entity)
                 if (entity.destination) {
-                    tasks.push({ 
+                    tasks.push({
                         entity,
-                        options: { renderer: entity.layout.template, tasks: entity.meta?.task || TASKS.POOL }, 
+                        options: { renderer: entity.layout.template, tasks: entity.meta?.task || TASKS.POOL },
                         context: { data, plugins }
                     })
                 }
@@ -327,7 +327,7 @@ export default ({
         }
         await renderEntities(tasks)
     })
-    
+
     onComplete(async ({ entity, options, output }) => {
         const logger = useLogger()
         if (entity.layout && !options?.ignore) {
@@ -335,12 +335,12 @@ export default ({
             await mkdir(path.dirname(destinationFile), { recursive: true })
             try {
                 await unlink(destinationFile)
-            } catch {}
+            } catch { }
             await writeFile(destinationFile, output.result)
             logger.debug('Layout render finished: %s', entity.destination.replace(runtime.options.workingFolder, ''))
         }
     })
-    
+
     return {
         collection,
         type

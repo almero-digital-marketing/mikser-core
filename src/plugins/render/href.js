@@ -11,7 +11,7 @@ export function load({ entity, runtime, state }) {
             page = undefined
         }
         lang ||= entity.meta?.lang
-        
+
         if (!href) return
         if (typeof href == 'object') return href
         if (href.indexOf('http') == 0) return href

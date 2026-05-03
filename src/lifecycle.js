@@ -38,7 +38,7 @@ export async function renderEntities(tasks) {
     const logger = useLogger()
     if (!tasks.length) return
     const entries = []
-    for(let { entity, options = {}, context = {} } of tasks) {
+    for (let { entity, options = {}, context = {} } of tasks) {
         const entry = { operation: OPERATION.RENDER, entity, options, context, }
         if (options.ignore) {
             logger.trace('Render %s entity: [%s] %s → %s %s', entity.collection, options.renderer, entity.id, entity.destination, !options.ignore)
@@ -93,7 +93,7 @@ export async function onProcess(callback, once) {
             if (!called) {
                 called = true
                 callback(signal)
-            } 
+            }
         })
     }
 }
@@ -106,7 +106,7 @@ export async function onProcessed(callback, once) {
             if (!called) {
                 called = true
                 callback(signal)
-            } 
+            }
         })
     }
 }
@@ -119,7 +119,7 @@ export async function onPersist(callback, once) {
             if (!called) {
                 called = true
                 callback(signal)
-            } 
+            }
         })
     }
 }
@@ -132,7 +132,7 @@ export async function onPersisted(callback, once) {
             if (!called) {
                 called = true
                 callback(signal)
-            } 
+            }
         })
     }
 }
@@ -153,7 +153,7 @@ export async function onBeforeRender(callback, once) {
             if (!called) {
                 called = true
                 callback(signal)
-            } 
+            }
         })
     }
 }
@@ -166,7 +166,7 @@ export async function onRender(callback, once) {
             if (!called) {
                 called = true
                 callback(signal)
-            } 
+            }
         })
     }
 }
@@ -179,7 +179,7 @@ export async function onAfterRender(callback, once) {
             if (!called) {
                 called = true
                 callback(signal)
-            } 
+            }
         })
     }
 }
@@ -192,7 +192,7 @@ export async function onFinalize(callback, once) {
             if (!called) {
                 called = true
                 callback(signal)
-            } 
+            }
         })
     }
 }
@@ -205,7 +205,7 @@ export async function onFinalized(callback, once) {
             if (!called) {
                 called = true
                 callback(signal)
-            } 
+            }
         })
     }
 }

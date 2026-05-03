@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import _ from 'lodash'
 
-export default async ({ entity, options, config, context, state, logger, port }) => {  
+export default async ({ entity, options, config, context, state, logger, port }) => {
     logger = logger || {
         info(...args) {
             port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'info', args } }))
@@ -21,11 +21,11 @@ export default async ({ entity, options, config, context, state, logger, port })
         }
     }
 
-    async function loadPlugin(pluginName) {   
+    async function loadPlugin(pluginName) {
         const resolveLocations = [
             path.join(options.workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
             path.join(options.workingFolder, 'plugins', `${pluginName}.js`),
-            path.join(path.dirname(import.meta.url), 'plugins', 'render', `${pluginName.replace('render-','')}.js`)
+            path.join(path.dirname(import.meta.url), 'plugins', 'render', `${pluginName.replace('render-', '')}.js`)
         ]
         for (let resolveLocation of resolveLocations) {
             try {
@@ -48,7 +48,7 @@ export default async ({ entity, options, config, context, state, logger, port })
     }
     pluginsToLoad.push(...options.plugins)
     pluginsToLoad = _.uniq(pluginsToLoad.filter(pluginName => pluginName && pluginName.indexOf('render-') == 0))
-    
+
     const runtime = {
         [entity.type]: entity,
         entity,
@@ -59,13 +59,13 @@ export default async ({ entity, options, config, context, state, logger, port })
             return readFileSync(entity.source, { encoding: 'utf8' })
         }
     }
-    
+
     for (let pluginName of pluginsToLoad) {
         const plugin = await loadPlugin(pluginName)
         plugins[pluginName] = plugin
         if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context, runtime, state, logger })
     }
-    
+
     const rendererPlugin = plugins[`render-${renderer}`]
     return await rendererPlugin?.render({ entity, options, config, context, plugins, runtime, state, logger })
 }

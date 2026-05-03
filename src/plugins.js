@@ -12,11 +12,11 @@ export async function loadPlugin(pluginName) {
     const resolveLocations = [
         path.join(path.dirname(import.meta.url), 'plugins', `${pluginName}.js`),
         path.join(runtime.options.workingFolder, 'plugins', `${pluginName}.js`),
-        path.join(runtime.options.workingFolder, 'node_modules', `mikser-core-${pluginName}`,'index.js'),
+        path.join(runtime.options.workingFolder, 'node_modules', `mikser-core-${pluginName}`, 'index.js'),
     ]
     for (let index = 0; index < resolveLocations.length; index++) {
         const resolveLocation = resolveLocations[index]
-        if (fs.existsSync(resolveLocation.replace('file:',''))) {
+        if (fs.existsSync(resolveLocation.replace('file:', ''))) {
             try {
                 const plugin = await import(resolveLocation)
                 const pluginRuntime = plugin.default(core)
@@ -41,7 +41,7 @@ onLoad(async () => {
 
     runtime.options.plugins = runtime.options.plugins.concat(runtime.config.plugins).filter(plugin => plugin)
 
-    const userPlugins =  runtime.options.plugins.filter(plugin => plugin.indexOf('render-') != 0)
+    const userPlugins = runtime.options.plugins.filter(plugin => plugin.indexOf('render-') != 0)
     if (!userPlugins.length) {
         logger.info('No plugins loaded')
     } else {

@@ -1,15 +1,15 @@
 import YAML from 'yaml'
 
-export default ({ 
-    onProcess, 
-    useLogger, 
-    useJournal, 
+export default ({
+    onProcess,
+    useLogger,
+    useJournal,
     updateEntry,
     constants: { OPERATION },
 }) => {
     onProcess(async (signal) => {
         const logger = useLogger()
-    
+
         for await (let { id, entity } of useJournal('Yaml', [OPERATION.CREATE, OPERATION.UPDATE], signal)) {
             if (entity.content && (entity.format == 'yml' || entity.format == 'yaml')) {
                 try {

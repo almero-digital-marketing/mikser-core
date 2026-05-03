@@ -2,34 +2,34 @@ import path from 'path'
 import { hash } from 'hasha'
 import _ from 'lodash'
 
-export default ({ 
-    runtime, 
-    useLogger, 
-    onImport, 
-    onLoaded, 
-    onSync, 
-    createEntity, 
-    updateEntity, 
-    deleteEntity, 
-    findEntity, 
-    findEntities, 
-    schedule, 
+export default ({
+    runtime,
+    useLogger,
+    onImport,
+    onLoaded,
+    onSync,
+    createEntity,
+    updateEntity,
+    deleteEntity,
+    findEntity,
+    findEntities,
+    schedule,
     normalize,
     trackProgress,
     updateProgress,
-}) => {  
+}) => {
     const format = 'api'
 
     async function syncEntities(apiName) {
         const logger = useLogger()
         const syncTime = Date.now()
-        const { 
-            collection = apiName, 
-            type = 'document', 
-            readMany, 
-            uri = '' 
+        const {
+            collection = apiName,
+            type = 'document',
+            readMany,
+            uri = ''
         } = runtime.config.api[apiName]
-        
+
         let synced = 0
         let removed = 0
         try {
@@ -54,7 +54,7 @@ export default ({
                         format,
                         meta
                     })
-    
+
                     entity.checksum = await hash(JSON.stringify(entity.meta), { algorithm: 'md5' })
                     const current = await findEntity({ id })
                     if (current) {
@@ -69,12 +69,12 @@ export default ({
                 }
                 updateProgress()
             }
-        
-            const entitiesToRemove = await findEntities(entity => 
-                entity.type == type && 
-                entity.format == format && 
-                entity.collection == collection && 
-                entity.time < syncTime && 
+
+            const entitiesToRemove = await findEntities(entity =>
+                entity.type == type &&
+                entity.format == format &&
+                entity.collection == collection &&
+                entity.time < syncTime &&
                 !recent.has(entity.id)
             )
             if (entitiesToRemove.length) trackProgress(`Api remove ${apiName}`, entitiesToRemove.length)
@@ -91,16 +91,16 @@ export default ({
         }
         return synced > 0 || removed > 0
     }
-    
+
     async function syncEntity(apiName, apiId) {
         const logger = useLogger()
-        const { 
-            collection = apiName, 
-            type = 'document', 
-            readOne, 
-            uri = '' 
+        const {
+            collection = apiName,
+            type = 'document',
+            readOne,
+            uri = ''
         } = runtime.config.api[apiName]
-    
+
         try {
             const id = path.join('/api', collection, apiId.toString())
             const current = await findEntity({ id })
@@ -136,7 +136,7 @@ export default ({
             logger.error('Api sync entity [%s] error: %s', collection, err.message)
         }
     }
-    
+
     onLoaded(async () => {
         const logger = useLogger()
         for (let apiName in runtime.config.api || {}) {
@@ -145,7 +145,7 @@ export default ({
                 logger.info('Schedule api: [%s] %s', apiName, cron)
                 schedule(apiName, cron)
             }
-    
+
             onSync(apiName, async ({ context }) => {
                 if (context?.id) {
                     return syncEntity(apiName, context.id)
@@ -153,17 +153,17 @@ export default ({
                     return syncEntities(apiName)
                 }
             })
-            
+
             const { origin } = new URL(runtime.config.api[apiName].uri)
             onSync(origin, async ({ context }) => {
-                if (context.uri) {                
+                if (context.uri) {
                     logger.info('Syncing api: [%s] %s', apiName, context.uri)
                     return syncEntities(apiName)
                 }
             })
         }
     })
-    
+
     onImport(async () => {
         for (let apiName in runtime.config.api || {}) {
             await syncEntities(apiName)

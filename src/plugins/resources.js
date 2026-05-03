@@ -11,37 +11,37 @@ import { promisify } from 'util'
 import isUrl from 'is-url'
 import map from 'p-map'
 
-export default ({ 
-    useLogger, 
-    useJournal, 
-    onLoaded, 
-    runtime, 
-    stopProgress, 
-    createEntity, 
-    onProcessed, 
-    onFinalize, 
+export default ({
+    useLogger,
+    useJournal,
+    onLoaded,
+    runtime,
+    stopProgress,
+    createEntity,
+    onProcessed,
+    onFinalize,
     checksum,
     trackProgress,
     updateProgress,
     updateEntry,
-    constants: { OPERATION }, 
+    constants: { OPERATION },
 }) => {
     const collection = 'resources'
     const type = 'resource'
 
     const _ = deepdash(lodash)
-    
+
     const finishedDownload = promisify(stream.finished)
-    
+
     onLoaded(async () => {
         const logger = useLogger()
-        
+
         runtime.state.resources = {
             resourceLib: {},
             resourceMap: {},
             resourcesFolder: runtime.config.resources?.resourcesFolder || collection,
         }
-    
+
         runtime.options.resources = runtime.config.resources?.resourcesFolder || collection
         runtime.options.resourcesFolder = path.join(runtime.options.workingFolder, runtime.options.resources)
         logger.info('Resources folder: %s', runtime.options.resourcesFolder)
@@ -51,12 +51,12 @@ export default ({
             runtime.state.resources.resourceLib[resource.match || escapeStringRegexp(resource.url)] = library
         }
     })
-    
+
     onProcessed(async (signal) => {
         const logger = useLogger()
         const { resourceLib, resourceMap } = runtime.state.resources
-    
-        for await (let { id, entity } of useJournal('Resources provision', [OPERATION.CREATE, OPERATION.UPDATE], signal)) {    
+
+        for await (let { id, entity } of useJournal('Resources provision', [OPERATION.CREATE, OPERATION.UPDATE], signal)) {
             if (entity.collection != collection && entity.meta) {
                 resourceMap[entity.id] = []
                 _.eachDeep(entity.meta, resource => {
@@ -75,7 +75,7 @@ export default ({
         }
         const resources = [].concat(...Object.values(resourceMap))
         resources.length && logger.info('Resources: %d', resources.length)
-        
+
         const resourceDownloads = {}
         const localResources = new Set()
         trackProgress('Resources processing', resources.length)
@@ -113,7 +113,7 @@ export default ({
             }
             updateProgress()
         }
-    
+
         const resourceFiles = await globby('**/*', { cwd: runtime.options.resourcesFolder })
         const resourceFilesMap = new Set()
         for (let resourceFile of resourceFiles) {
@@ -127,11 +127,11 @@ export default ({
             let link = path.join(runtime.options.outputFolder, runtime.options.resources)
             if (runtime.config.resources?.outputFolder) link = path.join(runtime.options.outputFolder, runtime.config.resources?.outputFolder, runtime.options.resources)
             try {
-                await mkdir(path.dirname(link), { recursive: true }) 
+                await mkdir(path.dirname(link), { recursive: true })
                 await symlink(path.resolve(runtime.options.resourcesFolder), link, 'dir')
             } catch (err) {
                 if (err.code != 'EEXIST')
-                throw err
+                    throw err
             }
             let count = 0
             await map(downloads, async url => {
@@ -140,7 +140,7 @@ export default ({
                 pathname = decodeURI(pathname)
                 const resource = path.join(runtime.options.resourcesFolder, library, pathname)
                 const uri = path.join(runtime.options.outputFolder, library, pathname)
-        
+
                 let success = true
                 if (!resourceFilesMap.has(path.join(library, pathname))) {
                     const resourceTemp = path.join(runtime.options.resourcesFolder, library, pathname + '.temp')
@@ -153,7 +153,7 @@ export default ({
                         responseType: 'stream',
                         signal
                     }
-        
+
                     try {
                         count++
                         var response = await axios(request)
@@ -166,18 +166,18 @@ export default ({
                         }
                         return
                     }
-        
+
                     if (response && success) {
                         await mkdir(path.dirname(resource), { recursive: true })
                         const writer = createWriteStream(resourceTemp)
                         response.data.pipe(writer)
                         await finishedDownload(writer)
-            
+
                         logger.debug('Resource: %s %s', entity.id, url)
                         await rename(resourceTemp, resource)
                     }
                 }
-                
+
                 if (success) {
                     await createEntity({
                         id: path.join('/resources', library, pathname),
@@ -193,9 +193,9 @@ export default ({
                 updateProgress()
             }, { concurrency: 10, signal })
             count && logger.info('Downloaded: %d', count)
-        }    
+        }
     })
-    
+
     onFinalize(async () => {
         runtime.state.resources.resourceMap = {}
 

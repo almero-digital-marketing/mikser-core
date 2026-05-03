@@ -4,17 +4,17 @@ import { readFile } from 'fs/promises'
 
 export function load({ config, runtime, context }) {
     handlebars.registerHelper(helpers(config?.helpers || [
-        'array', 
+        'array',
         'collection',
-        'object', 
-        'comparison', 
-        'date', 
-        'markdown', 
-        'match', 
-        'math', 
-        'number', 
-        'regex', 
-        'string', 
+        'object',
+        'comparison',
+        'date',
+        'markdown',
+        'match',
+        'math',
+        'number',
+        'regex',
+        'string',
         'url'
     ]))
     for (let partial in context.layouts) {
@@ -32,7 +32,7 @@ export function load({ config, runtime, context }) {
 export async function render({ entity, runtime }) {
     const sandbox = {}
     for (let helper in runtime) {
-        if (typeof(runtime[helper]) == 'function') {
+        if (typeof (runtime[helper]) == 'function') {
             handlebars.registerHelper(helper, runtime[helper])
         } else {
             sandbox[helper] = runtime[helper]

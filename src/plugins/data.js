@@ -3,30 +3,30 @@ import { mkdir, writeFile, unlink } from 'fs/promises'
 import _ from 'lodash'
 import pMap from 'p-map'
 
-export default ({ 
-    onLoaded, 
-    useLogger, 
-    runtime, 
-    useJournal, 
-    normalize, 
-    findEntities, 
-    onAfterRender, 
-    onFinalize, 
+export default ({
+    onLoaded,
+    useLogger,
+    runtime,
+    useJournal,
+    normalize,
+    findEntities,
+    onAfterRender,
+    onFinalize,
     onBeforeRender,
-    constants: { OPERATION }, 
+    constants: { OPERATION },
 }) => {
     onLoaded(async () => {
         const logger = useLogger()
         runtime.options.data = runtime.config.data?.dataFolder || 'data'
         runtime.options.dataFolder = path.join(runtime.options.outputFolder, runtime.options.data)
-    
+
         logger.info('Data folder: %s', runtime.options.dataFolder)
         await mkdir(runtime.options.dataFolder, { recursive: true })
     })
-    
+
     onBeforeRender(async () => {
         const logger = useLogger()
-    
+
         let entitiesConfig = runtime.config.data?.entities
         if (entitiesConfig === undefined) {
             entitiesConfig = {
@@ -36,22 +36,22 @@ export default ({
             }
         }
         for (let entitiesName in entitiesConfig) {
-            const { 
-                query, 
-                map, 
+            const {
+                query,
+                map,
                 pick,
-                save : saveEntity = async entity => {
+                save: saveEntity = async entity => {
                     if (!entity.name) {
                         logger.warn('Entity name is missing: %o', entity)
                         return
                     }
                     const dump = JSON.stringify(normalize(entity))
-                    const entityFile = path.join(runtime.options.dataFolder,`${entity.name}.${entitiesName}.json`)
+                    const entityFile = path.join(runtime.options.dataFolder, `${entity.name}.${entitiesName}.json`)
                     await mkdir(path.dirname(entityFile), { recursive: true })
                     await writeFile(entityFile, dump, 'utf8')
                 },
-                delete : deleteEntity = async entity => {
-                    const entityFile = path.join(runtime.options.dataFolder,`${entity.name}.json`)
+                delete: deleteEntity = async entity => {
+                    const entityFile = path.join(runtime.options.dataFolder, `${entity.name}.json`)
                     await unlink(entityFile)
                 }
             } = entitiesConfig[entitiesName]
@@ -63,21 +63,21 @@ export default ({
                         case OPERATION.UPDATE:
                             logger.debug('Data export entity %s %s: %s', entity.collection, operation, entity.id)
                             await saveEntity(map ? await map(entity) : {
-                                refId: ('/' + entity.name.replaceAll('\\','/')).replace(/\/index$/g,'/'),
+                                refId: ('/' + entity.name.replaceAll('\\', '/')).replace(/\/index$/g, '/'),
                                 name: entity.name,
                                 date: new Date(entity.time),
                                 data: _.pick(entity, pick || ['collection', 'format', 'type', 'destination', 'stamp', 'meta', 'id',])
                             })
-                        break
+                            break
                         case OPERATION.DELETE:
                             await deleteEntity(entity)
-                        break
+                            break
                     }
                 }
             }
         }
     })
-    
+
     onAfterRender(async () => {
         const logger = useLogger()
 
@@ -90,11 +90,11 @@ export default ({
             }
         }
         for (let contextName in contextConfig) {
-            const { 
-                query, 
+            const {
+                query,
                 map,
                 pick,
-                save: saveConext = async (entity, context) => {                    
+                save: saveConext = async (entity, context) => {
                     if (context?.data) {
                         const entityName = entity.name
                         const contextFile = path.join(runtime.options.dataFolder, `${entityName}.${contextName}.json`)
@@ -112,12 +112,12 @@ export default ({
             }
         }
     })
-    
+
     onFinalize(async () => {
         const logger = useLogger()
         for (let catalogName in runtime.config.data?.catalog || {}) {
-            const { 
-                query: queryEntities = entity => entity.type == 'document', 
+            const {
+                query: queryEntities = entity => entity.type == 'document',
                 map,
                 pick,
                 save: saveEntities = async entities => {
@@ -128,7 +128,7 @@ export default ({
             } = runtime.config.data?.catalog[catalogName]
             const entities = await findEntities(queryEntities)
             await saveEntities(await pMap(entities, async entity => map ? await map(entity) : {
-                refId: ('/' + entity.name.replaceAll('\\','/')).replace(/\/index$/g,'/'),
+                refId: ('/' + entity.name.replaceAll('\\', '/')).replace(/\/index$/g, '/'),
                 name: entity.name,
                 date: new Date(entity.time),
                 data: _.pick(entity, pick || ['collection', 'format', 'type', 'destination', 'stamp', 'meta', 'id',])

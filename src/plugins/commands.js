@@ -3,7 +3,7 @@ import lineReader from 'line-reader'
 import { promisify } from 'util'
 import _ from 'lodash'
 
-export default ({ 
+export default ({
     runtime,
     useLogger,
     onLoad,
@@ -24,7 +24,7 @@ export default ({
 }) => {
     const eachLine = promisify(lineReader.eachLine)
     const running = {}
-    
+
     async function executeCommand(command) {
         const logger = useLogger()
         if (_.endsWith(command, '&')) {
@@ -34,8 +34,8 @@ export default ({
                 const subprocess = execaCommand(command, { cwd: runtime.options.wokrkingFolder, all: true })
                 eachLine(subprocess.all, line => logger.info(line))
                 running[command] = subprocess
-                .then(() => delete running[command])
-                .catch(err => logger.error(err, 'Command error'))
+                    .then(() => delete running[command])
+                    .catch(err => logger.error(err, 'Command error'))
             }
         } else {
             logger.info('Command: %s', command, runtime.options.wokrkingFolder)
@@ -44,17 +44,17 @@ export default ({
             await subprocess
         }
     }
-    
+
     async function executeCommands(hook) {
         let commands = runtime.config.commands && runtime.config.commands[hook] || []
         if (typeof commands == 'function') commands = await commands()
         if (typeof commands == 'string') commands = [commands]
-    
-        for(let command of commands) {
+
+        for (let command of commands) {
             await executeCommand(command)
         }
     }
-    
+
     onLoad(async () => await executeCommands('load'))
     onLoaded(async () => await executeCommands('loaded'))
     onImport(async () => await executeCommands('import'))
