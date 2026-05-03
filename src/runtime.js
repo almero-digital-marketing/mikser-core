@@ -1,219 +1,120 @@
-import pino from 'pino'
-import path from 'node:path'
-import { Command } from 'commander'
-import { rm, lstat, realpath, mkdir, writeFile } from 'fs/promises'
-import { existsSync } from 'fs'
-import _ from 'lodash'
-import Piscina from 'piscina'
-import mikser from './mikser.js'
-import { onInitialize, onInitialized, onRender, onCancel, onCancelled, onFinalized, onLoaded, onAfterRender } from './lifecycle.js'
-import { useJournal, updateEntry } from './journal.js'
-import { globby } from 'globby'
-import { OPERATION, TASKS } from './constants.js'
-import render from './render.js'
-import map from 'p-map'
-import Queue from 'p-queue'
-import packageInfo from '../package.json' with { type: 'json' }
+import { Mutex } from 'await-semaphore'
+import { AbortError } from './utils.js'
 
-export async function setup(options) {
-    mikser.options.threads = options?.threads !== undefined ? options.threads : 4
-    mikser.runtime = {
-        logger: pino(options?.logger || {
-            transport: {
-                target: 'pino-pretty'
-            },
-        }),
-        commander: new Command(),
-        workers: new Piscina({
-            filename: new URL('./render.js', import.meta.url).href,
-            maxThreads: mikser.options.threads
-        }),
-        queue: new Queue({ concurrency: 1 })
+export default class {
+    static stamp = Date.now()
+    static processTime
+    static mikser = {}
+    static options = {
+        plugins: []
     }
-    mikser.state = {}
-
-    onInitialize(async () => {
-        mikser.runtime.commander?.version(packageInfo.version)
-            .option('-i --working-folder <folder>', 'set mikser working folder', './')
-            .option('-p --plugins [plugins...]', 'list of mikser plugins to load', [])
-            .option('-c --config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
-            .option('-m --mode <mode>', 'set mikser runtime mode', 'development')
-            .option('-r --clear', 'clear current state before execution', false)
-            .option('-o --output-folder <folder>', 'set mikser output folder realtive to working folder', 'out')
-            .option('-w --watch', 'watch entities for changes', false)
-            .option('-d --debug', 'display debug statements')
-            .option('-t --trace', 'display trace statements')
-            .option('-e --runtime-folder <folder>', 'set mikser runtime folder realtive to working folder', 'runtime')
-
-        Object.assign(mikser.options, options || mikser.runtime.commander.parse(process.argv).opts())
-        mikser.options.info = true
-        if (mikser.options.debug) {
-            mikser.runtime.logger.level = 'debug'
-            mikser.options.info = false
+    static config = {}
+    static journal = []
+    static validators = []
+    static started = false
+    static mutex = new Mutex()
+    static hooks = {
+        initialize: [],
+        initialized: [],
+        load: [],
+        loaded: [],
+        import: [],
+        validate: [],
+        imported: [],
+        process: [],
+        processed: [],
+        persist: [],
+        persisted: [],
+        beforeRender: [],
+        render: [],
+        afterRender: [],
+        cancel: [],
+        cancelled: [],
+        finalize: [],
+        finalized: [],
+        sync: [],
+        completed: [],
+    }
+    static async callHooks(hooks, signal) {
+        for(let hook of hooks) {
+            if (signal?.aborted) throw new AbortError() 
+            await hook(signal)
         }
-        if (mikser.options.trace) {
-            mikser.runtime.logger.level = 'trace'
-            mikser.options.debug = false
-            mikser.options.info = false
+    }
+    static async start() {
+        await this.callHooks(this.hooks.initialize)
+        await this.callHooks(this.hooks.initialized)
+        await this.callHooks(this.hooks.load)
+        await this.callHooks(this.hooks.loaded)
+        
+        await this.callHooks(this.hooks.import)
+        await this.callHooks(this.hooks.imported)
+        
+        this.started = true
+        await this.process()
+    }
+    static abortController
+    static async process() {
+        if (this.abortController?.signal.aborted) return
+        else if (this.abortController) {
+            await this.cancel()            
         }
-        mikser.runtime.logger.notice = mikser.runtime.logger.info
-    })
-
-    onInitialized(async () => {
-        const logger = useLogger()
-
-        mikser.options.workingFolder = path.resolve(mikser.options.workingFolder)
-        process.chdir(mikser.options.workingFolder)
-
-        mikser.options.runtimeFolder = path.join(mikser.options.workingFolder, mikser.options.runtimeFolder || 'runtime')
-        mikser.options.outputFolder = path.join(mikser.options.workingFolder, mikser.options.outputFolder || 'out')
-
-        logger.info('Working folder: %s', mikser.options.workingFolder)
-        logger.info('Output folder: %s', mikser.options.outputFolder)
-
-        if (mikser.options.clear) {
+        this.mutex.use(async () => {
             try {
-                logger.info('Clearing folders')
-                await rm(mikser.options.outputFolder, { recursive: true })
-                await rm(mikser.options.runtimeFolder, { recursive: true })
-            } catch (err) {
-                if (err.code != 'ENOENT')
-                    throw err
+                this.abortController = new AbortController()
+                const { signal } = this.abortController
+        
+                await this.callHooks(this.hooks.process, signal)
+                await this.callHooks(this.hooks.processed, signal)
+                await this.callHooks(this.hooks.persist, signal)
+                await this.callHooks(this.hooks.persisted, signal)
+                
+                await this.render(signal)
+            } catch (e) {
+                if (e.name !== "AbortError") throw e
+                for(let hook of this.hooks.cancelled) await hook()
             }
-        }
-        await mkdir(mikser.options.runtimeFolder, { recursive: true })
-    })
-
-    onLoaded(async () => {
-        const logger = useLogger()
-        logger.debug(mikser.options, 'Mikser options')
-    })
-
-    onRender(async (signal) => {
-        const logger = useLogger()
-        const renderJobs = new Set()
-        await map(useJournal('Rendering', [OPERATION.RENDER], signal), async entry => {
-            const { id, entity, options, context } = entry
-            const jobId = entity.id + ':' + entity.destination
-            if (!renderJobs.has(jobId) && !options.ignore) {
-                renderJobs.add(jobId)
-                const renderOptions = {
-                    entity,
-                    options: {
-                        tasks: TASKS.POOL,
-                        ...mikser.options,
-                        ...options,
-                    },
-                    config: _.pickBy(mikser.config, (value, key) => _.startsWith(key, 'render-')),
-                    context,
-                    state: mikser.state
-                }
-                try {
-                    let result
-                    switch (renderOptions.options.tasks) {
-                        case TASKS.POOL:
-                            renderOptions.logger = logger
-                            renderOptions.signal = signal
-                            if (!signal.aborted) {
-                                result = await render(renderOptions)
-                            }
-                            break
-                        case TASKS.QUEUE:
-                            renderOptions.logger = logger
-                            renderOptions.signal = signal
-                            if (!signal.aborted) {
-                                result = await mikser.runtime.queue.add(() => render(renderOptions), { signal })
-                            }
-                            break
-                        case TASKS.WORKER:
-                            const mc = new MessageChannel();
-                            mc.port2.onmessage = event => {
-                                const message = JSON.parse(event.data)
-                                if (message.command == 'logger') {
-                                    mikser.runtime.logger[message.data.log](...message.data.args)
-                                }
-                            }
-                            mc.port2.unref()
-                            renderOptions.port = mc.port1
-                            result = await mikser.runtime.workers.run(
-                                renderOptions,
-                                { signal, transferList: [mc.port1] }
-                            )
-                            break
-                    }
-                    if (!signal.aborted) {
-                        entry.output = {
-                            success: true,
-                            result,
-                        }
-                        await mikser.complete(entry)
-                        await updateEntry({ id, output: entry.output })
-                    }
-
-                    logger.debug('Rendered: [%s] %s → %s', options.renderer, entity.name || entity.id, entity.destination)
-                } catch (err) {
-                    if (!signal.aborted) {
-                        await updateEntry({ id, output: { success: false } })
-                        logger.error('Render error: %s %s', entity.id, err.message)
-                    }
-                    logger.debug('Render canceled')
-                }
-            } else {
-                await updateEntry({ id, output: { success: true } })
-            }
-        }, {
-            concurrency: mikser.options.threads,
-            signal
         })
-        renderJobs.size && logger.info('Rendered: %d', renderJobs.size)
-    })
+    }
+    static async render(signal) {
+        await this.callHooks(this.hooks.beforeRender, signal)
+        await this.callHooks(this.hooks.render, signal)
+        await this.callHooks(this.hooks.afterRender, signal)
 
-    onAfterRender(async () => {
-        const results = new Map()
-        for await (let { output, entity } of useJournal('Output', [OPERATION.RENDER])) {
-            if (output?.success) {
-                const jobId = entity.id + ':' + entity.destination
-                results.set(jobId, entity)
+        await this.finalize(signal)
+    }
+    static async cancel() {
+        this.abortController?.abort()
+
+        await this.callHooks(this.hooks.cancel)
+    }
+    static async finalize(signal) {
+        await this.callHooks(this.hooks.finalize, signal)
+        await this.callHooks(this.hooks.finalized, signal)
+    }
+    static async sync(operation) {
+        let synced
+        for(let hook of this.hooks.sync) {
+            const result = await hook(operation)
+            if (result === true) {
+                synced = true
+            } else if (result === false && !synced) {
+				synced = false
             }
         }
-        const renderOutput = path.join(mikser.options.runtimeFolder, `render-details.json`)
-        await writeFile(renderOutput, JSON.stringify(Array.from(results.values())), 'utf8')
-    })
-
-    onCancel(async () => {
-        if (mikser.runtime.workers.queueSize) {
-            await new Promise(resolve => {
-                mikser.runtime.workers.once('drain', resolve)
-            })
+        return synced === undefined || synced
+    }
+    static async validate(entry) {
+        for(let hook of this.validators) {
+            if (!await hook(entry)) return false
         }
-    })
-
-    onFinalized(async () => {
-        const logger = useLogger()
-
-        const paths = await globby('**/*', { cwd: mikser.options.outputFolder, followSymbolicLinks: false })
-        for (let relativePath of paths) {
-            let source = path.join(mikser.options.outputFolder, relativePath)
-            const linkStat = await lstat(source)
-            if (linkStat.isSymbolicLink()) {
-                const destination = await realpath(source)
-                if (!existsSync(destination)) {
-                    await unlink(source)
-                }
-            }
+        return true
+    }
+    static async complete(entry) {
+        let success = true
+        for(let hook of this.hooks.completed) {
+            if (await hook(entry) === false) success = false
         }
-        logger.notice('Mikser completed')
-    })
-
-    onCancelled(async () => {
-        const logger = useLogger()
-        logger.notice('Mikser restarted')
-    })
-
-    console.info('Mikser: %s', packageInfo.version)
-    return mikser
-}
-
-export function useLogger() {
-    return mikser.runtime.logger
+        entry.success = success
+    }
 }

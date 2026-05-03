@@ -4,7 +4,7 @@ import { globby } from 'globby'
 import _ from 'lodash'
 
 export default ({ 
-    mikser, 
+    runtime, 
     onLoaded, 
     useLogger, 
     onImport, 
@@ -33,7 +33,7 @@ export default ({
     
     function addToSitemap(entity) {
         const logger = useLogger()
-        const { sitemap } = mikser.state.layouts
+        const { sitemap } = runtime.state.layouts
         const { href = '/' + entity.name, lang } = entity.meta || {}
         if (lang) {
             sitemap[href] = sitemap[href] || {};
@@ -53,7 +53,7 @@ export default ({
     }
     
     function removeFromSitemap(entity) {
-        const { sitemap } = mikser.state.layouts
+        const { sitemap } = runtime.state.layouts
         for (let href in sitemap) {
             let entry = sitemap[href]
             if (entry.id) {
@@ -82,7 +82,7 @@ export default ({
     }
     
     function* getSitemapEntities() {
-        const { sitemap } = mikser.state.layouts
+        const { sitemap } = runtime.state.layouts
         for (let href in sitemap) {
             let entry = sitemap[href]
             if (entry.id) {
@@ -105,8 +105,8 @@ export default ({
         let id = path.join(`/${collection}`, relativePath)
         if (_.endsWith(id, '.js')) id = id.replace(new RegExp('.js$'), '')
     
-        const uri = path.join(mikser.options.layoutsFolder, relativePath)
-        const { layouts } = mikser.state.layouts
+        const uri = path.join(runtime.options.layoutsFolder, relativePath)
+        const { layouts } = runtime.state.layouts
         switch (action) {
             case ACTION.CREATE:
                 var layout = {
@@ -152,26 +152,26 @@ export default ({
     onLoaded(async () => {
         const logger = useLogger()
         
-        mikser.state.layouts = {
+        runtime.state.layouts = {
             layouts: {},
             sitemap: {}
         }
         
-        mikser.options.layouts = mikser.config.layouts?.layoutsFolder || collection
-        mikser.options.layoutsFolder = path.join(mikser.options.workingFolder, mikser.options.layouts)
-        mikser.options.layoutsStateFolder = path.join(mikser.options.outputFolder, 'state')
+        runtime.options.layouts = runtime.config.layouts?.layoutsFolder || collection
+        runtime.options.layoutsFolder = path.join(runtime.options.workingFolder, runtime.options.layouts)
+        runtime.options.layoutsStateFolder = path.join(runtime.options.outputFolder, 'state')
     
-        logger.info('Layouts folder: %s', mikser.options.layoutsFolder)
-        await mkdir(mikser.options.layoutsFolder, { recursive: true })
+        logger.info('Layouts folder: %s', runtime.options.layoutsFolder)
+        await mkdir(runtime.options.layoutsFolder, { recursive: true })
         
-        watch(collection, mikser.options.layoutsFolder)
+        watch(collection, runtime.options.layoutsFolder)
     })
     
     onImport(async () => {
-        const { layouts } = mikser.state.layouts
-        const paths = await globby('**/*', { cwd: mikser.options.layoutsFolder, ignore: ['**/*.js'] })
+        const { layouts } = runtime.state.layouts
+        const paths = await globby('**/*', { cwd: runtime.options.layoutsFolder, ignore: ['**/*.js'] })
         for (let relativePath of paths) {
-            const uri = path.join(mikser.options.layoutsFolder, relativePath)
+            const uri = path.join(runtime.options.layoutsFolder, relativePath)
             const layout = {
                 id: path.join('/layouts', relativePath),
                 uri,
@@ -187,7 +187,7 @@ export default ({
     
     onProcessed(async (signal) => {
         const logger = useLogger()
-        const { layouts } = mikser.state.layouts
+        const { layouts } = runtime.state.layouts
         
         for await (let { entity, operation } of useJournal('Layouts processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE], signal)) {
             if (entity.collection == collection) continue
@@ -196,14 +196,14 @@ export default ({
                 case OPERATION.UPDATE:
                     removePagesFromSitemap(entity)
                     if (!entity.meta?.layout) {
-                        for (let pattern in mikser.config.layouts?.match || []) {
+                        for (let pattern in runtime.config.layouts?.match || []) {
                             if (matchEntity( entity, pattern)) {
-                                const layoutName = mikser.config.layouts?.match[pattern]
+                                const layoutName = runtime.config.layouts?.match[pattern]
                                 entity.layout = layouts[layoutName]
                                 break
                             }
                         }
-                        if (!entity.layout && mikser.config.layouts?.autoLayouts && entity.name) {
+                        if (!entity.layout && runtime.config.layouts?.autoLayouts && entity.name) {
                             const nameChunks = entity.name.split('.')
                             if (nameChunks?.length) {
                                 for (let index = 0; index < nameChunks.length; index++) {
@@ -260,7 +260,7 @@ export default ({
             entity.destination = '/' + entity.name
             let data
             try {
-                var { load, plugins = [] } = await import(`${path.join(mikser.options.layoutsFolder, entity.layout.name)}.js?stamp=${Date.now()}`)
+                var { load, plugins = [] } = await import(`${path.join(runtime.options.layoutsFolder, entity.layout.name)}.js?stamp=${Date.now()}`)
                 if (load) {
                     data = await load(entity, signal)
                 }
@@ -284,7 +284,7 @@ export default ({
                                 }
                             }
     
-                            if (mikser.config.layouts?.cleanUrls && entity.layout.format == 'html') {
+                            if (runtime.config.layouts?.cleanUrls && entity.layout.format == 'html') {
                                 pageEntity.destination = path.join(entity.destination.replace('index', ''), pageEntity.page.toString(), `index.${entity.layout.format}`)
                             } else {
                                 pageEntity.destination += page ? `.${pageEntity.page}.${entity.layout.format}` : `.${entity.layout.format}`
@@ -292,7 +292,7 @@ export default ({
                         } else {
                             removePagesFromSitemap(original)
                             pageEntity.page = 1
-                            if (mikser.config.layouts?.cleanUrls && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
+                            if (runtime.config.layouts?.cleanUrls && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
                                 pageEntity.destination = path.join(entity.destination, `index.${entity.layout.format}`)
                             } else {
                                 pageEntity.destination += `.${entity.layout.format}`
@@ -309,7 +309,7 @@ export default ({
             } else {
                 removePagesFromSitemap(original)
                 if (!_.endsWith(entity.name, entity.format)) {
-                    if (mikser.config.layouts?.cleanUrls && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
+                    if (runtime.config.layouts?.cleanUrls && !_.endsWith(entity.name, 'index') && entity.layout.format == 'html') {
                         entity.destination = path.join(entity.destination, `index.${entity.layout.format}`)
                     } else {
                         entity.destination += `.${entity.layout.format}`
@@ -331,13 +331,13 @@ export default ({
     onComplete(async ({ entity, options, output }) => {
         const logger = useLogger()
         if (entity.layout && !options?.ignore) {
-            const destinationFile = path.join(mikser.options.outputFolder, entity.destination)
+            const destinationFile = path.join(runtime.options.outputFolder, entity.destination)
             await mkdir(path.dirname(destinationFile), { recursive: true })
             try {
                 await unlink(destinationFile)
             } catch {}
             await writeFile(destinationFile, output.result)
-            logger.debug('Layout render finished: %s', entity.destination.replace(mikser.options.workingFolder, ''))
+            logger.debug('Layout render finished: %s', entity.destination.replace(runtime.options.workingFolder, ''))
         }
     })
     

@@ -3,7 +3,7 @@ import { hash } from 'hasha'
 import _ from 'lodash'
 
 export default ({ 
-    mikser, 
+    runtime, 
     useLogger, 
     onImport, 
     onLoaded, 
@@ -28,13 +28,13 @@ export default ({
             type = 'document', 
             readMany, 
             uri = '' 
-        } = mikser.config.api[apiName]
+        } = runtime.config.api[apiName]
         
         let synced = 0
         let removed = 0
         try {
             const recent = new Set()
-            const entities = await readMany(mikser)
+            const entities = await readMany(runtime)
             trackProgress(`Api sync ${apiName}`, entities.length)
             for (let meta of entities) {
                 if (collection && type && meta.id) {
@@ -99,12 +99,12 @@ export default ({
             type = 'document', 
             readOne, 
             uri = '' 
-        } = mikser.config.api[apiName]
+        } = runtime.config.api[apiName]
     
         try {
             const id = path.join('/api', collection, apiId.toString())
             const current = await findEntity({ id })
-            const meta = await readOne(apiId, mikser)
+            const meta = await readOne(apiId, runtime)
             if (meta?.id) {
                 const name = path.join(collection, meta.name || meta.id.toString())
                 const entity = normalize({
@@ -139,8 +139,8 @@ export default ({
     
     onLoaded(async () => {
         const logger = useLogger()
-        for (let apiName in mikser.config.api || {}) {
-            const { cron } = mikser.config.api[apiName]
+        for (let apiName in runtime.config.api || {}) {
+            const { cron } = runtime.config.api[apiName]
             if (cron) {
                 logger.info('Schedule api: [%s] %s', apiName, cron)
                 schedule(apiName, cron)
@@ -154,7 +154,7 @@ export default ({
                 }
             })
             
-            const { origin } = new URL(mikser.config.api[apiName].uri)
+            const { origin } = new URL(runtime.config.api[apiName].uri)
             onSync(origin, async ({ context }) => {
                 if (context.uri) {                
                     logger.info('Syncing api: [%s] %s', apiName, context.uri)
@@ -165,7 +165,7 @@ export default ({
     })
     
     onImport(async () => {
-        for (let apiName in mikser.config.api || {}) {
+        for (let apiName in runtime.config.api || {}) {
             await syncEntities(apiName)
         }
     })

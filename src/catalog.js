@@ -1,5 +1,5 @@
-import mikser from './mikser.js'
-import { useLogger } from './runtime.js'
+import runtime from './runtime.js'
+import { useLogger } from './mikser.js'
 import { onLoaded, onPersist, onFinalized } from './lifecycle.js'
 import { useJournal } from './journal.js'
 import { OPERATION } from './constants.js'
@@ -11,12 +11,12 @@ import _ from 'lodash'
 let catalog
 
 onLoaded(async () => {
-    const adapter = new JSONFile(path.join(mikser.options.runtimeFolder, `catalog.json`))
+    const adapter = new JSONFile(path.join(runtime.options.runtimeFolder, `catalog.json`))
     catalog = new Low(adapter, {
         entities: [],
     })
     catalog.chain = _.chain(catalog).get('data')
-    mikser.catalog = catalog
+    runtime.catalog = catalog
 })
 
 onPersist(async () => {

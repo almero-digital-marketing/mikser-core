@@ -1,6 +1,6 @@
-import { useLogger } from './runtime.js'
+import { useLogger } from './mikser.js'
 import { onLoad } from './lifecycle.js'
-import mikser from './mikser.js'
+import runtime from './runtime.js'
 import path from 'node:path'
 import fs from 'fs'
 
@@ -11,8 +11,8 @@ export async function loadPlugin(pluginName) {
 
     const resolveLocations = [
         path.join(path.dirname(import.meta.url), 'plugins', `${pluginName}.js`),
-        path.join(mikser.options.workingFolder, 'plugins', `${pluginName}.js`),
-        path.join(mikser.options.workingFolder, 'node_modules', `mikser-core-${pluginName}`,'index.js'),
+        path.join(runtime.options.workingFolder, 'plugins', `${pluginName}.js`),
+        path.join(runtime.options.workingFolder, 'node_modules', `mikser-core-${pluginName}`,'index.js'),
     ]
     for (let index = 0; index < resolveLocations.length; index++) {
         const resolveLocation = resolveLocations[index]
@@ -20,7 +20,7 @@ export async function loadPlugin(pluginName) {
             try {
                 const plugin = await import(resolveLocation)
                 const pluginRuntime = plugin.default(core)
-                mikser.runtime[pluginName] = pluginRuntime
+                runtime.mikser[pluginName] = pluginRuntime
                 if (pluginRuntime) {
                     logger.trace('Loaded %s plugin: %s', pluginName, pluginRuntime)
                 } else {
@@ -39,9 +39,9 @@ export async function loadPlugin(pluginName) {
 onLoad(async () => {
     const logger = useLogger()
 
-    mikser.options.plugins = mikser.options.plugins.concat(mikser.config.plugins).filter(plugin => plugin)
+    runtime.options.plugins = runtime.options.plugins.concat(runtime.config.plugins).filter(plugin => plugin)
 
-    const userPlugins =  mikser.options.plugins.filter(plugin => plugin.indexOf('render-') != 0)
+    const userPlugins =  runtime.options.plugins.filter(plugin => plugin.indexOf('render-') != 0)
     if (!userPlugins.length) {
         logger.info('No plugins loaded')
     } else {

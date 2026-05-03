@@ -1,14 +1,14 @@
-import mikser from './mikser.js'
+import runtime from './runtime.js'
 import { OPERATION } from './constants.js'
-import { useLogger } from './runtime.js'
+import { useLogger } from './mikser.js'
 import { addEntry, addEntries } from './journal.js'
 
 export async function createEntity(entity) {
     const logger = useLogger()
-    entity.stamp = mikser.stamp
+    entity.stamp = runtime.stamp
     entity.time = Date.now()
     const entry = { operation: OPERATION.CREATE, entity }
-    if (await mikser.validate(entry)) {
+    if (await runtime.validate(entry)) {
         logger.debug('Create %s entity: %s', entity.collection, entity.id)
         await addEntry(entry)
     }
@@ -17,7 +17,7 @@ export async function createEntity(entity) {
 export async function deleteEntity({ id, collection, type }) {
     const logger = useLogger()
     const entry = { operation: OPERATION.DELETE, entity: { id, type, collection } }
-    if (await mikser.validate(entry)) {
+    if (await runtime.validate(entry)) {
         logger.debug('Delete %s entity: %s %s', collection, type, id)
         await addEntry(entry)
     }
@@ -25,10 +25,10 @@ export async function deleteEntity({ id, collection, type }) {
 
 export async function updateEntity(entity) {
     const logger = useLogger()
-    entity.stamp = mikser.stamp
+    entity.stamp = runtime.stamp
     entity.time = Date.now()
     const entry = { operation: OPERATION.UPDATE, entity }
-    if (await mikser.validate(entry)) {
+    if (await runtime.validate(entry)) {
         logger.debug('Update %s entity: %s', entity.collection, entity.id)
         await addEntry(entry)
     }
@@ -62,34 +62,34 @@ export async function renderEntity(entity, options = {}, context = {}) {
 }
 
 export async function onInitialize(callback) {
-    mikser.hooks.initialize.push(callback)
+    runtime.hooks.initialize.push(callback)
 }
 
 export async function onInitialized(callback) {
-    mikser.hooks.initialized.push(callback)
+    runtime.hooks.initialized.push(callback)
 }
 
 export async function onLoad(callback) {
-    mikser.hooks.load.push(callback)
+    runtime.hooks.load.push(callback)
 }
 
 export async function onLoaded(callback) {
-    mikser.hooks.loaded.push(callback)
+    runtime.hooks.loaded.push(callback)
 }
 
 export async function onImport(callback) {
-    mikser.hooks.import.push(callback)
+    runtime.hooks.import.push(callback)
 }
 
 export async function onImported(callback) {
-    mikser.hooks.imported.push(callback)
+    runtime.hooks.imported.push(callback)
 }
 
 export async function onProcess(callback, once) {
-    if (!once) mikser.hooks.process.push(callback)
+    if (!once) runtime.hooks.process.push(callback)
     else {
         let called = false
-        mikser.hooks.process.push((signal) => {
+        runtime.hooks.process.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)
@@ -99,10 +99,10 @@ export async function onProcess(callback, once) {
 }
 
 export async function onProcessed(callback, once) {
-    if (!once) mikser.hooks.processed.push(callback)
+    if (!once) runtime.hooks.processed.push(callback)
     else {
         let called = false
-        mikser.hooks.processed.push((signal) => {
+        runtime.hooks.processed.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)
@@ -112,10 +112,10 @@ export async function onProcessed(callback, once) {
 }
 
 export async function onPersist(callback, once) {
-    if (!once) mikser.hooks.persist.push(callback)
+    if (!once) runtime.hooks.persist.push(callback)
     else {
         let called = false
-        mikser.hooks.persist.push((signal) => {
+        runtime.hooks.persist.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)
@@ -125,10 +125,10 @@ export async function onPersist(callback, once) {
 }
 
 export async function onPersisted(callback, once) {
-    if (!once) mikser.hooks.persisted.push(callback)
+    if (!once) runtime.hooks.persisted.push(callback)
     else {
         let called = false
-        mikser.hooks.persisted.push((signal) => {
+        runtime.hooks.persisted.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)
@@ -138,18 +138,18 @@ export async function onPersisted(callback, once) {
 }
 
 export async function onCancel(callback) {
-    mikser.hooks.cancel.push(callback)
+    runtime.hooks.cancel.push(callback)
 }
 
 export async function onCancelled(callback) {
-    mikser.hooks.cancelled.push(callback)
+    runtime.hooks.cancelled.push(callback)
 }
 
 export async function onBeforeRender(callback, once) {
-    if (!once) mikser.hooks.beforeRender.push(callback)
+    if (!once) runtime.hooks.beforeRender.push(callback)
     else {
         let called = false
-        mikser.hooks.beforeRender.push((signal) => {
+        runtime.hooks.beforeRender.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)
@@ -159,10 +159,10 @@ export async function onBeforeRender(callback, once) {
 }
 
 export async function onRender(callback, once) {
-    if (!once) mikser.hooks.render.push(callback)
+    if (!once) runtime.hooks.render.push(callback)
     else {
         let called = false
-        mikser.hooks.render.push((signal) => {
+        runtime.hooks.render.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)
@@ -172,10 +172,10 @@ export async function onRender(callback, once) {
 }
 
 export async function onAfterRender(callback, once) {
-    if (!once) mikser.hooks.afterRender.push(callback)
+    if (!once) runtime.hooks.afterRender.push(callback)
     else {
         let called = false
-        mikser.hooks.afterRender.push((signal) => {
+        runtime.hooks.afterRender.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)
@@ -185,10 +185,10 @@ export async function onAfterRender(callback, once) {
 }
 
 export async function onFinalize(callback, once) {
-    if (!once) mikser.hooks.finalize.push(callback)
+    if (!once) runtime.hooks.finalize.push(callback)
     else {
         let called = false
-        mikser.hooks.finalize.push((signal) => {
+        runtime.hooks.finalize.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)
@@ -198,10 +198,10 @@ export async function onFinalize(callback, once) {
 }
 
 export async function onFinalized(callback, once) {
-    if (!once) mikser.hooks.finalized.push(callback)
+    if (!once) runtime.hooks.finalized.push(callback)
     else {
         let called = false
-        mikser.hooks.finalized.push((signal) => {
+        runtime.hooks.finalized.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)
@@ -211,7 +211,7 @@ export async function onFinalized(callback, once) {
 }
 
 export function onSync(name, callback) {
-    mikser.hooks.sync.push(async (operation) => {
+    runtime.hooks.sync.push(async (operation) => {
         if (operation.name == name) {
             return await callback(operation)
         }
@@ -220,7 +220,7 @@ export function onSync(name, callback) {
 
 export function onValidate(operations, callback) {
     const logger = useLogger()
-    mikser.validators.push(async (entry) => {
+    runtime.validators.push(async (entry) => {
         if (operations.indexOf(entry.operation) != -1) {
             try {
                 const message = await callback(entry)
@@ -237,5 +237,5 @@ export function onValidate(operations, callback) {
 }
 
 export function onComplete(callback) {
-    mikser.hooks.completed.push(callback)
+    runtime.hooks.completed.push(callback)
 }

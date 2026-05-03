@@ -6,7 +6,7 @@ import pMap from 'p-map'
 export default ({ 
     onLoaded, 
     useLogger, 
-    mikser, 
+    runtime, 
     useJournal, 
     normalize, 
     findEntities, 
@@ -17,17 +17,17 @@ export default ({
 }) => {
     onLoaded(async () => {
         const logger = useLogger()
-        mikser.options.data = mikser.config.data?.dataFolder || 'data'
-        mikser.options.dataFolder = path.join(mikser.options.outputFolder, mikser.options.data)
+        runtime.options.data = runtime.config.data?.dataFolder || 'data'
+        runtime.options.dataFolder = path.join(runtime.options.outputFolder, runtime.options.data)
     
-        logger.info('Data folder: %s', mikser.options.dataFolder)
-        await mkdir(mikser.options.dataFolder, { recursive: true })
+        logger.info('Data folder: %s', runtime.options.dataFolder)
+        await mkdir(runtime.options.dataFolder, { recursive: true })
     })
     
     onBeforeRender(async () => {
         const logger = useLogger()
     
-        let entitiesConfig = mikser.config.data?.entities
+        let entitiesConfig = runtime.config.data?.entities
         if (entitiesConfig === undefined) {
             entitiesConfig = {
                 document: {
@@ -46,12 +46,12 @@ export default ({
                         return
                     }
                     const dump = JSON.stringify(normalize(entity))
-                    const entityFile = path.join(mikser.options.dataFolder,`${entity.name}.${entitiesName}.json`)
+                    const entityFile = path.join(runtime.options.dataFolder,`${entity.name}.${entitiesName}.json`)
                     await mkdir(path.dirname(entityFile), { recursive: true })
                     await writeFile(entityFile, dump, 'utf8')
                 },
                 delete : deleteEntity = async entity => {
-                    const entityFile = path.join(mikser.options.dataFolder,`${entity.name}.json`)
+                    const entityFile = path.join(runtime.options.dataFolder,`${entity.name}.json`)
                     await unlink(entityFile)
                 }
             } = entitiesConfig[entitiesName]
@@ -81,7 +81,7 @@ export default ({
     onAfterRender(async () => {
         const logger = useLogger()
 
-        let contextConfig = mikser.config.data?.context
+        let contextConfig = runtime.config.data?.context
         if (contextConfig === undefined) {
             contextConfig = {
                 context: {
@@ -97,7 +97,7 @@ export default ({
                 save: saveConext = async (entity, context) => {                    
                     if (context?.data) {
                         const entityName = entity.name
-                        const contextFile = path.join(mikser.options.dataFolder, `${entityName}.${contextName}.json`)
+                        const contextFile = path.join(runtime.options.dataFolder, `${entityName}.${contextName}.json`)
                         await mkdir(path.dirname(contextFile), { recursive: true })
                         await writeFile(contextFile, JSON.stringify(context), 'utf8')
                     }
@@ -115,17 +115,17 @@ export default ({
     
     onFinalize(async () => {
         const logger = useLogger()
-        for (let catalogName in mikser.config.data?.catalog || {}) {
+        for (let catalogName in runtime.config.data?.catalog || {}) {
             const { 
                 query: queryEntities = entity => entity.type == 'document', 
                 map,
                 pick,
                 save: saveEntities = async entities => {
-                    const entitiesFile = path.join(mikser.options.dataFolder, `${catalogName}.json`)
+                    const entitiesFile = path.join(runtime.options.dataFolder, `${catalogName}.json`)
                     logger.debug('Data export catalog %s %s: %s', catalogName, entities.length, entitiesFile)
                     await writeFile(entitiesFile, JSON.stringify(entities), 'utf8')
                 }
-            } = mikser.config.data?.catalog[catalogName]
+            } = runtime.config.data?.catalog[catalogName]
             const entities = await findEntities(queryEntities)
             await saveEntities(await pMap(entities, async entity => map ? await map(entity) : {
                 refId: ('/' + entity.name.replaceAll('\\','/')).replace(/\/index$/g,'/'),

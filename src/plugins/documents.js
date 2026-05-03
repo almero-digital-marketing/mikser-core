@@ -4,7 +4,7 @@ import { globby } from 'globby'
 import _ from 'lodash'
 
 export default ({ 
-    mikser, 
+    runtime, 
     onLoaded, 
     useLogger, 
     onImport, 
@@ -24,7 +24,7 @@ export default ({
         if (!context.relativePath) return false
         const { relativePath } = context
         const id = path.join(`/${collection}`, relativePath)
-        const uri = path.join(mikser.options.documentsFolder, relativePath)
+        const uri = path.join(runtime.options.documentsFolder, relativePath)
         switch (action) {
             case ACTION.CREATE:
                 await createEntity({
@@ -61,21 +61,21 @@ export default ({
     
     onLoaded(async () => {
         const logger = useLogger()
-        mikser.options.documents = mikser.config.documents?.documentsFolder || collection
-        mikser.options.documentsFolder = path.join(mikser.options.workingFolder, mikser.options.documents)
+        runtime.options.documents = runtime.config.documents?.documentsFolder || collection
+        runtime.options.documentsFolder = path.join(runtime.options.workingFolder, runtime.options.documents)
     
-        logger.info('Documents folder: %s', mikser.options.documentsFolder)
-        await mkdir(mikser.options.documentsFolder, { recursive: true })
+        logger.info('Documents folder: %s', runtime.options.documentsFolder)
+        await mkdir(runtime.options.documentsFolder, { recursive: true })
         
-        watch(collection, mikser.options.documentsFolder)
+        watch(collection, runtime.options.documentsFolder)
     })
     
     onImport(async () => {
-        const paths = await globby('**/*', { cwd: mikser.options.documentsFolder })
+        const paths = await globby('**/*', { cwd: runtime.options.documentsFolder })
 
         trackProgress('Documents import', paths.length)
         return Promise.all(paths.map(async relativePath => {
-            const uri = path.join(mikser.options.documentsFolder, relativePath)
+            const uri = path.join(runtime.options.documentsFolder, relativePath)
             await createEntity({
                 id: path.join(`/${collection}`, relativePath),
                 uri,

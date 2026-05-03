@@ -1,78 +1,78 @@
-import mikser from './mikser.js'
+import runtime from './runtime.js'
 import chokidar from 'chokidar'
 import cron from 'node-cron'
 import { onProcess, onFinalized } from './lifecycle.js'
-import { useLogger } from './runtime.js'
+import { useLogger } from './mikser.js'
 import { ACTION } from './constants.js'
 
 const tasks = []
 
 export async function createdHook(name, context) {
-    if (!mikser.started) return
+    if (!runtime.started) return
 
-    const synced = await mikser.sync({
+    const synced = await runtime.sync({
         action: ACTION.CREATE, 
         name,
         context
     })
 
     if (synced) {
-        clearTimeout(mikser.runtime.processTimeout)
-        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        clearTimeout(runtime.runtime.processTimeout)
+        runtime.runtime.processTimeout = setTimeout(() => runtime.process(), 1000)
     }
 }
 
 export async function updatedHook(name, context) {
-    if (!mikser.started) return
+    if (!runtime.started) return
 
-    const synced = await mikser.sync({
+    const synced = await runtime.sync({
         action: ACTION.UPDATE, 
         name,
         context
     })
 
     if (synced) {
-        clearTimeout(mikser.runtime.processTimeout)
-        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        clearTimeout(runtime.runtime.processTimeout)
+        runtime.runtime.processTimeout = setTimeout(() => runtime.process(), 1000)
     }
 }
 
 export async function triggeredHook(name, context) {
-    if (!mikser.started) return
+    if (!runtime.started) return
 
-    const synced = await mikser.sync({
+    const synced = await runtime.sync({
         action: ACTION.TRIGGER, 
         name,
         context
     })
 
     if (synced) {
-        clearTimeout(mikser.runtime.processTimeout)
-        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        clearTimeout(runtime.runtime.processTimeout)
+        runtime.runtime.processTimeout = setTimeout(() => runtime.process(), 1000)
     }
 }
 
 export async function deletedHook(name, context) {
-    if (!mikser.started) return
+    if (!runtime.started) return
 
-    const synced = await mikser.sync({
+    const synced = await runtime.sync({
         action: ACTION.DELETE, 
         name,
         context
     })
 
     if (synced) {
-        clearTimeout(mikser.runtime.processTimeout)
-        mikser.runtime.processTimeout = setTimeout(() => mikser.process(), 1000)
+        clearTimeout(runtime.runtime.processTimeout)
+        runtime.runtime.processTimeout = setTimeout(() => runtime.process(), 1000)
     }
 }
 
 export function watch(name, folder, options = { interval: 1000, binaryInterval: 3000, ignored: /[\/\\]\./, ignoreInitial: true }) {
-    if (mikser.options.watch !== true) return
+    if (runtime.options.watch !== true) return
     
     chokidar.watch(folder, options)
     .on('all', () => {
-        clearTimeout(mikser.runtime.processTimeout)
+        clearTimeout(runtime.runtime.processTimeout)
     })
     .on('add', async fullPath => {
         const relativePath = fullPath.replace(`${folder}/`, '')
@@ -89,7 +89,7 @@ export function watch(name, folder, options = { interval: 1000, binaryInterval: 
 }
 
 export function schedule(name, expression, context) {
-    if (mikser.options.watch !== true) return
+    if (runtime.options.watch !== true) return
     const logger = useLogger()
     const taks = cron.schedule(expression, async () => {
         logger.info('Scheduled task executed: %s %s', name, expression)
