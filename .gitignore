@@ -107,6 +107,7 @@ dist
 test/runtime
 test/out
 test/assets
+test/resources
 
 # Claude Code
 .claude/

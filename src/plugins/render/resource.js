@@ -4,8 +4,8 @@ export function load({ runtime, state }) {
         for (let library in resourceLib) {
             if (url.match(library)) {
                 const { origin } = new URL(url)
-                const name = url.replace(origin, `${resourceLib[library]}/`)
-                const link = url.replace(origin, `/${state.resources.resourcesFolder}/${resourceLib[library]}/`)
+                const name = url.replace(origin, `${resourceLib[library]}`)
+                const link = url.replace(origin, `${state.resources.resourcesFolder}/${resourceLib[library]}`)
                 return { link, name }
             }
         }
