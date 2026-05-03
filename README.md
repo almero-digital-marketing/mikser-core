@@ -6,15 +6,15 @@ Mikser Core is a lifecycle-driven static site generator and content processing p
 
 | Document | Audience | Description |
 |----------|----------|-------------|
-| [Getting Started](./getting-started.md) | Users | Installation, first project, basic usage |
-| [Configuration](./configuration.md) | Users | All CLI options and config file reference |
-| [Lifecycle](./lifecycle.md) | Users & Developers | Complete lifecycle phases and hook system |
-| [Plugins](./plugins.md) | Users & Developers | Built-in plugins, writing custom plugins |
-| [Entities](./entities.md) | Users & Developers | Entity model, operations, journal, catalog |
-| [Rendering](./rendering.md) | Users & Developers | Render pipeline, render plugins, render modes |
-| [Watch Mode](./watch-mode.md) | Users | File watching, scheduled tasks, incremental builds |
-| [Architecture](./architecture.md) | Developers | System design, module structure, extension points |
-| [API Reference](./api-reference.md) | Developers | Complete public API reference |
+| [Getting Started](./documentation/getting-started.md) | Users | Installation, first project, basic usage |
+| [Configuration](./documentation/configuration.md) | Users | All CLI options and config file reference |
+| [Lifecycle](./documentation/lifecycle.md) | Users & Developers | Complete lifecycle phases and hook system |
+| [Plugins](./documentation/plugins.md) | Users & Developers | Built-in plugins, writing custom plugins |
+| [Entities](./documentation/entities.md) | Users & Developers | Entity model, operations, journal, catalog |
+| [Rendering](./documentation/rendering.md) | Users & Developers | Render pipeline, render plugins, render modes |
+| [Watch Mode](./documentation/watch-mode.md) | Users | File watching, scheduled tasks, incremental builds |
+| [Architecture](./documentation/architecture.md) | Developers | System design, module structure, extension points |
+| [API Reference](./documentation/api-reference.md) | Developers | Complete public API reference |
 
 ## Quick Start
 
