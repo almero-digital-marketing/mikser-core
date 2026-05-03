@@ -1,0 +1,266 @@
+# Architecture
+
+## Module Structure
+
+```
+mikser-core/
+├── app.js                    CLI entry point
+├── index.js                  Public API re-exports
+│
+└── src/
+    ├── runtime.js            Static singleton — global state and lifecycle coordination
+    ├── mikser.js             setup() function, CLI option parsing, useLogger()
+    ├── lifecycle.js          Hook registration functions + entity write helpers
+    ├── journal.js            Ephemeral SQLite operation log
+    ├── catalog.js            Persistent lowdb entity registry
+    ├── config.js             Config file loading
+    ├── plugins.js            Plugin resolution and loading
+    ├── manager.js            File watching and cron scheduling
+    ├── tracking.js           Progress bars and log formatting
+    ├── render.js             Render worker function (runs in main or Piscina threads)
+    ├── utils.js              Checksum, normalize, matchEntity, changeExtension, AbortError
+    ├── constants.js          OPERATION, ACTION, TASKS enums
+    │
+    ├── plugins/              Built-in content source and transform plugins
+    │   ├── documents.js
+    │   ├── files.js
+    │   ├── layouts.js
+    │   ├── assets.js
+    │   ├── resources.js
+    │   ├── data.js
+    │   ├── api.js
+    │   ├── mapper.js
+    │   ├── validator.js
+    │   ├── commands.js
+    │   ├── shares.js
+    │   ├── front-matter.js
+    │   ├── json.js
+    │   └── yaml.js
+    │
+    └── plugins/render/       Render-time helper plugins
+        ├── hbs.js            Handlebars renderer
+        ├── preset.js         Asset preset renderer
+        ├── href.js           Link resolution
+        ├── asset.js          Asset path generation
+        ├── resource.js       CDN resource mapping
+        └── file.js           File reading utilities
+```
+
+## The Runtime Singleton
+
+`runtime` is a static class (`src/runtime.js`). It holds all global state and coordinates the lifecycle.
+
+```
+runtime
+├── stamp              Timestamp of current run (Date.now() at start)
+├── processTime        Timestamp of current process() call
+├── started            boolean — true after first import phase
+├── options            Merged CLI + config options
+├── config             Loaded from mikser.config.js
+├── state              Arbitrary plugin state (runtime.state.layouts, etc.)
+├── catalog            lowdb instance (set by catalog.js)
+├── validators[]       Array of validation functions
+├── mutex              Semaphore for process() serialisation
+├── abortController    Current run's AbortController
+│
+├── mikser             Service objects (set by mikser.js)
+│   ├── logger         pino instance
+│   ├── commander      Commander instance
+│   ├── workers        Piscina thread pool
+│   └── queue          p-queue instance
+│
+└── hooks
+    ├── initialize[]
+    ├── initialized[]
+    ├── load[]
+    ├── loaded[]
+    ├── import[]
+    ├── imported[]
+    ├── process[]
+    ├── processed[]
+    ├── persist[]
+    ├── persisted[]
+    ├── beforeRender[]
+    ├── render[]
+    ├── afterRender[]
+    ├── cancel[]
+    ├── cancelled[]
+    ├── finalize[]
+    ├── finalized[]
+    ├── sync[]
+    └── completed[]
+```
+
+### Why a static class?
+
+A static class gives a module-scoped singleton without needing a context object to be threaded through every call. Any module that imports `runtime` gets the same instance. This simplifies plugin authoring since plugins don't need to receive or store a context reference.
+
+**Trade-off:** Static state makes testing harder. Tests that need a clean slate must reset the static properties or use `vi.resetModules()` to reload the module.
+
+## Data Flow
+
+```
+Source files
+     │
+     ▼
+[IMPORT phase]
+  plugins glob folders → createEntity() / updateEntity() / deleteEntity()
+     │
+     ▼
+Journal (SQLite)
+  operations: CREATE, UPDATE, DELETE
+     │
+     ▼
+[PROCESS phase]
+  plugins read journal → transform entities → updateEntity()
+  (front-matter, mapper, layout matching, resource provisioning)
+     │
+     ▼
+[PERSIST phase]
+  catalog.js reads journal → applies to lowdb catalog
+     │
+     ▼
+Catalog (JSON)
+  current entity registry
+     │
+  [also] plugins write RENDER entries
+     │
+     ▼
+Journal (SQLite)
+  operations: RENDER
+     │
+     ▼
+[RENDER phase]
+  mikser.js reads RENDER entries → dispatches to render()
+     │
+     ▼
+render.js
+  loads plugins → calls plugin.load() → calls renderer.render()
+     │
+     ▼
+Output files
+```
+
+## Plugin Architecture
+
+Plugins follow a **factory function pattern**:
+
+```js
+// A plugin is a module exporting a default function
+export default (coreAPI) => {
+  // Register lifecycle hooks
+  coreAPI.onLoaded(async () => { ... })
+  coreAPI.onImport(async () => { ... })
+  coreAPI.onSync('name', async (op) => { ... })
+
+  // Return plugin exports (optional)
+  return { collection, type }
+}
+```
+
+The `coreAPI` passed to the factory is `import * as core from '../index.js'` — the full public API of Mikser. This means plugins have access to every exported function, including the runtime singleton, all hook registrations, entity operations, and utilities.
+
+Plugin exports are stored in `runtime.mikser[pluginName]` and are accessible to other plugins and to render templates via the `plugins` object.
+
+## Render Architecture
+
+The render system is designed to run both in the main process and in Piscina worker threads. The same `render()` function (`src/render.js`) is used in both cases.
+
+```
+main process
+  │
+  ├── POOL mode: render() called directly, concurrent via p-map
+  │
+  ├── QUEUE mode: render() called via p-queue (sequential)
+  │
+  └── WORKER mode:
+        │
+        ▼
+    Piscina worker thread
+        │
+        ├── render() called in worker
+        ├── Logger messages sent back via MessagePort
+        └── Result returned to main thread
+```
+
+Worker threads receive a serializable copy of the render options (entity, options, config, context, state) — no live references. The logger proxy in worker mode sends log messages through the `MessagePort` to be emitted in the main process.
+
+## Incremental Builds (Watch Mode)
+
+```
+File system event
+      │
+      ▼
+chokidar watcher
+      │
+      ▼
+sync hooks   ← plugins decide what changed and update the journal
+      │
+      ▼
+debounce (1s)
+      │
+      ▼
+runtime.process()   ← only if a sync hook returned true
+      │
+      ├── If already running → cancel() + wait + restart
+      │
+      └── mutex.use(() => { process → render → finalize })
+```
+
+The mutex ensures only one `process()` cycle runs at a time. The AbortController propagates cancellation through the signal parameter to all hooks, allowing graceful interruption.
+
+## Error Handling
+
+- **Render errors**: Caught per job. Failed renders are logged and the journal entry is marked `{ success: false }`. The run continues.
+- **Validation errors**: Entities that fail validation are not added to the journal. A warning is logged.
+- **Plugin errors**: Caught in the plugin loader. A failed plugin logs an error and is skipped.
+- **AbortError**: Expected in watch mode. Hooks should throw `AbortError` when `signal.aborted` is true.
+- **Unhandled errors in hooks**: Propagate up and terminate the current `process()` call.
+
+## Concurrency Model
+
+| Concern | Mechanism |
+|---------|-----------|
+| Single process() at a time | `Mutex` from `await-semaphore` |
+| Parallel render jobs | `p-map` with `concurrency: runtime.options.threads` |
+| Sequential render queue | `p-queue` with `concurrency: 1` |
+| CPU-bound rendering | Piscina worker thread pool |
+| Cancellation | `AbortController` / `AbortSignal` threaded through hooks |
+| File change debounce | `setTimeout` 1000ms, cleared on each new event |
+
+## Public API Exports (`index.js`)
+
+```js
+// Runtime singleton
+export { default as runtime } from './src/runtime.js'
+
+// Setup and logger
+export * from './src/mikser.js'        // setup(), useLogger()
+
+// Lifecycle hooks and entity operations
+export * from './src/lifecycle.js'     // onXxx(), createEntity(), etc.
+
+// Journal
+export * from './src/journal.js'       // addEntry(), useJournal(), etc.
+
+// Catalog
+export * from './src/catalog.js'       // findEntity(), findEntities()
+
+// Config
+export * from './src/config.js'        // (internal, no public exports)
+
+// Plugin loading
+export * from './src/plugins.js'       // loadPlugin()
+
+// Tracking
+export * from './src/tracking.js'      // trackProgress(), etc.
+
+// Manager
+export * from './src/manager.js'       // watch(), schedule(), xHook()
+
+// Constants
+export * as constants from './src/constants.js'
+
+// Utilities
+export * from './src/utils.js'         // checksum(), normalize(), matchEntity(), etc.
+```
