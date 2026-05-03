@@ -1,19 +1,20 @@
 import { Mutex } from 'await-semaphore'
 import { AbortError } from './utils.js'
 
-export default class {
-    static stamp = Date.now()
-    static processTime
-    static mikser = {}
-    static options = {
+const runtime = {
+    stamp: Date.now(),
+    processTime: undefined,
+    mikser: {},
+    options: {
         plugins: []
-    }
-    static config = {}
-    static journal = []
-    static validators = []
-    static started = false
-    static mutex = new Mutex()
-    static hooks = {
+    },
+    config: {},
+    journal: [],
+    validators: [],
+    started: false,
+    mutex: new Mutex(),
+    abortController: undefined,
+    hooks: {
         initialize: [],
         initialized: [],
         load: [],
@@ -34,87 +35,96 @@ export default class {
         finalized: [],
         sync: [],
         completed: [],
-    }
-    static async callHooks(hooks, signal) {
-        for(let hook of hooks) {
-            if (signal?.aborted) throw new AbortError() 
+    },
+
+    async callHooks(hooks, signal) {
+        for (let hook of hooks) {
+            if (signal?.aborted) throw new AbortError()
             await hook(signal)
         }
-    }
-    static async start() {
+    },
+
+    async start() {
         await this.callHooks(this.hooks.initialize)
         await this.callHooks(this.hooks.initialized)
         await this.callHooks(this.hooks.load)
         await this.callHooks(this.hooks.loaded)
-        
+
         await this.callHooks(this.hooks.import)
         await this.callHooks(this.hooks.imported)
-        
+
         this.started = true
         await this.process()
-    }
-    static abortController
-    static async process() {
+    },
+
+    async process() {
         if (this.abortController?.signal.aborted) return
         else if (this.abortController) {
-            await this.cancel()            
+            await this.cancel()
         }
         this.mutex.use(async () => {
             try {
                 this.abortController = new AbortController()
                 const { signal } = this.abortController
-        
+
                 await this.callHooks(this.hooks.process, signal)
                 await this.callHooks(this.hooks.processed, signal)
                 await this.callHooks(this.hooks.persist, signal)
                 await this.callHooks(this.hooks.persisted, signal)
-                
+
                 await this.render(signal)
             } catch (e) {
-                if (e.name !== "AbortError") throw e
-                for(let hook of this.hooks.cancelled) await hook()
+                if (e.name !== 'AbortError') throw e
+                for (let hook of this.hooks.cancelled) await hook()
             }
         })
-    }
-    static async render(signal) {
+    },
+
+    async render(signal) {
         await this.callHooks(this.hooks.beforeRender, signal)
         await this.callHooks(this.hooks.render, signal)
         await this.callHooks(this.hooks.afterRender, signal)
 
         await this.finalize(signal)
-    }
-    static async cancel() {
-        this.abortController?.abort()
+    },
 
+    async cancel() {
+        this.abortController?.abort()
         await this.callHooks(this.hooks.cancel)
-    }
-    static async finalize(signal) {
+    },
+
+    async finalize(signal) {
         await this.callHooks(this.hooks.finalize, signal)
         await this.callHooks(this.hooks.finalized, signal)
-    }
-    static async sync(operation) {
+    },
+
+    async sync(operation) {
         let synced
-        for(let hook of this.hooks.sync) {
+        for (let hook of this.hooks.sync) {
             const result = await hook(operation)
             if (result === true) {
                 synced = true
             } else if (result === false && !synced) {
-				synced = false
+                synced = false
             }
         }
         return synced === undefined || synced
-    }
-    static async validate(entry) {
-        for(let hook of this.validators) {
+    },
+
+    async validate(entry) {
+        for (let hook of this.validators) {
             if (!await hook(entry)) return false
         }
         return true
-    }
-    static async complete(entry) {
+    },
+
+    async complete(entry) {
         let success = true
-        for(let hook of this.hooks.completed) {
+        for (let hook of this.hooks.completed) {
             if (await hook(entry) === false) success = false
         }
         entry.success = success
     }
 }
+
+export default runtime
