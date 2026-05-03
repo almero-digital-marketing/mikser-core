@@ -18,14 +18,14 @@ export function load({ config, runtime, context }) {
         'url'
     ]))
     for (let partial in context.layouts) {
-        if (context.layouts[partial].tempalte == 'hbs' && partial.indexOf('partials') == 0) {
+        if (context.layouts[partial].template == 'hbs' && partial.indexOf('partials') == 0) {
             const partialLayout = readFile(context.layouts[partial].uri, 'utf8')
             handlebars.registerPartial(partial, partialLayout)
         }
     }
     runtime.hbs = (source, sandbox) => {
-        const tempalte = handlebars.compile(source)
-        return tempalte(sandbox)
+        const template = handlebars.compile(source)
+        return template(sandbox)
     }
 }
 
