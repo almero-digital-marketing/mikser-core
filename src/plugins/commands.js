@@ -4,7 +4,7 @@ import { promisify } from 'util'
 import _ from 'lodash'
 
 export default ({ 
-    mikser,
+    runtime,
     useLogger,
     onLoad,
     onLoaded,
@@ -30,23 +30,23 @@ export default ({
         if (_.endsWith(command, '&')) {
             command = command.slice(0, -1)
             if (!running[command]) {
-                logger.info('Command: %s', command, mikser.options.wokrkingFolder)
-                const subprocess = execaCommand(command, { cwd: mikser.options.wokrkingFolder, all: true })
+                logger.info('Command: %s', command, runtime.options.wokrkingFolder)
+                const subprocess = execaCommand(command, { cwd: runtime.options.wokrkingFolder, all: true })
                 eachLine(subprocess.all, line => logger.info(line))
                 running[command] = subprocess
                 .then(() => delete running[command])
                 .catch(err => logger.error(err, 'Command error'))
             }
         } else {
-            logger.info('Command: %s', command, mikser.options.wokrkingFolder)
-            const subprocess = execaCommand(command, { cwd: mikser.options.wokrkingFolder, all: true })
+            logger.info('Command: %s', command, runtime.options.wokrkingFolder)
+            const subprocess = execaCommand(command, { cwd: runtime.options.wokrkingFolder, all: true })
             await eachLine(subprocess.all, line => logger.debug(line))
             await subprocess
         }
     }
     
     async function executeCommands(hook) {
-        let commands = mikser.config.commands && mikser.config.commands[hook] || []
+        let commands = runtime.config.commands && runtime.config.commands[hook] || []
         if (typeof commands == 'function') commands = await commands()
         if (typeof commands == 'string') commands = [commands]
     

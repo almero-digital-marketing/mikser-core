@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node --no-warnings app.js"
+    "test": "node --no-warnings app.js --working-folder test"
   },
   "bin": {
     "mikser": "app.js"

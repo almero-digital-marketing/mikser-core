@@ -3,7 +3,7 @@ import { mkdir, symlink, unlink, lstat, realpath } from 'fs/promises'
 import { globby } from 'globby'
 
 export default ({ 
-    mikser, 
+    runtime, 
     onLoaded, 
     useLogger, 
     onImport, 
@@ -22,9 +22,9 @@ export default ({
     const type = 'file'
 
     async function ensureLink(relativePath) {
-        const source = path.join(mikser.options.filesFolder, relativePath)
-        let uri = path.join(mikser.options.outputFolder, relativePath)
-        if (mikser.config.files?.outputFolder) uri = path.join(mikser.options.outputFolder, mikser.config.files.outputFolder, relativePath)
+        const source = path.join(runtime.options.filesFolder, relativePath)
+        let uri = path.join(runtime.options.outputFolder, relativePath)
+        if (runtime.config.files?.outputFolder) uri = path.join(runtime.options.outputFolder, runtime.config.files.outputFolder, relativePath)
         try {
             await mkdir(path.dirname(uri), { recursive: true })
             await symlink(path.resolve(source), uri, 'file')
@@ -36,8 +36,8 @@ export default ({
     }
 
     async function removeLink(relativePath) {
-        let uri = path.join(mikser.options.outputFolder, relativePath)
-        if (mikser.config.files?.outputFolder) uri = path.join(mikser.options.outputFolder, mikser.config.files.outputFolder, relativePath)
+        let uri = path.join(runtime.options.outputFolder, relativePath)
+        if (runtime.config.files?.outputFolder) uri = path.join(runtime.options.outputFolder, runtime.config.files.outputFolder, relativePath)
         await unlink(path.resolve(uri))
     }
     
@@ -52,14 +52,14 @@ export default ({
         if (!context.relativePath) return false
         const { relativePath } = context
     
-        const source = path.join(mikser.options.filesFolder, relativePath)
+        const source = path.join(runtime.options.filesFolder, relativePath)
         const format = path.extname(relativePath).substring(1).toLowerCase()
         const id = path.join(`/${collection}`, relativePath)
-        let uri = path.join(mikser.options.outputFolder, relativePath)
+        let uri = path.join(runtime.options.outputFolder, relativePath)
         let name = relativePath
-        if (mikser.config.files?.outputFolder) {
-            uri = path.join(mikser.options.outputFolder, mikser.config.files.outputFolder, relativePath)
-            name = path.join(mikser.config.files.outputFolder, relativePath)
+        if (runtime.config.files?.outputFolder) {
+            uri = path.join(runtime.options.outputFolder, runtime.config.files.outputFolder, relativePath)
+            name = path.join(runtime.config.files.outputFolder, relativePath)
         }
         
         let synced = true
@@ -110,26 +110,26 @@ export default ({
     
     onLoaded(async () => {
         const logger = useLogger()
-        mikser.options.files = mikser.config.files?.filesFolder || collection
-        mikser.options.filesFolder = path.join(mikser.options.workingFolder, mikser.options.files)
+        runtime.options.files = runtime.config.files?.filesFolder || collection
+        runtime.options.filesFolder = path.join(runtime.options.workingFolder, runtime.options.files)
     
-        logger.info('Files folder: %s', mikser.options.filesFolder)
-        await mkdir(mikser.options.filesFolder, { recursive: true })
+        logger.info('Files folder: %s', runtime.options.filesFolder)
+        await mkdir(runtime.options.filesFolder, { recursive: true })
     
-        watch(collection, mikser.options.filesFolder)
+        watch(collection, runtime.options.filesFolder)
     })
     
     onImport(async () => {
-        await mkdir(mikser.options.outputFolder, { recursive: true }) 
-        if (mikser.config.files?.outputFolder) await mkdir(path.join(mikser.options.outputFolder, mikser.config.files.outputFolder), { recursive: true })
+        await mkdir(runtime.options.outputFolder, { recursive: true }) 
+        if (runtime.config.files?.outputFolder) await mkdir(path.join(runtime.options.outputFolder, runtime.config.files.outputFolder), { recursive: true })
 
-        const paths = await globby('**/*', { cwd: mikser.options.filesFolder })
+        const paths = await globby('**/*', { cwd: runtime.options.filesFolder })
         trackProgress('Files import', paths.length)   
         return Promise.all(paths.map(async relativePath => {
             const { uri, source } = await ensureLink(relativePath)
             let name = relativePath
-            if (mikser.config.files?.outputFolder) {
-                name = path.join(mikser.config.files.outputFolder, relativePath)
+            if (runtime.config.files?.outputFolder) {
+                name = path.join(runtime.config.files.outputFolder, relativePath)
             }
             await createEntity({
                 id: path.join(`/${collection}`, relativePath),

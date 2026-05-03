@@ -1,4 +1,4 @@
-import mikser from './mikser.js'
+import runtime from './runtime.js'
 import { onLoaded, onCancelled, onFinalized } from './lifecycle.js'
 import { unlink } from 'fs/promises'
 import knex from 'knex'
@@ -69,14 +69,14 @@ export async function* useJournal(name, operations, signal) {
 export async function clearJournal(aborted) {
     await journal('operations').del()
     if (!aborted) {
-        if (mikser.options.watch !== true) {
+        if (runtime.options.watch !== true) {
             journal.destroy()
         }
     }
 }
 
 onLoaded(async () => {
-    const filename = path.join(mikser.options.runtimeFolder, `journal.db`)
+    const filename = path.join(runtime.options.runtimeFolder, `journal.db`)
     try {
         await unlink(filename)
     } catch {}

@@ -5,7 +5,7 @@ import _ from 'lodash'
 import map from 'p-map'
 
 export default ({ 
-    mikser, 
+    runtime, 
     onLoaded, 
     useLogger, 
     onImport, 
@@ -31,8 +31,8 @@ export default ({
     
     async function getEntityPresets(entity) {
         const entityPresets = []
-        for(let preset in (mikser.config.assets?.presets || {})) {
-            const matches = Array.isArray(mikser.config.assets.presets[preset]) ? mikser.config.assets.presets[preset] : [mikser.config.assets.presets[preset]]
+        for(let preset in (runtime.config.assets?.presets || {})) {
+            const matches = Array.isArray(runtime.config.assets.presets[preset]) ? runtime.config.assets.presets[preset] : [runtime.config.assets.presets[preset]]
             for (let match of matches) {
                 if (matchEntity(entity, match)) {
                     entityPresets.push(preset)
@@ -44,7 +44,7 @@ export default ({
     
     async function getRevisions(entity) {
         let revisions = await globby(`${entity.destination.replaceAll('(','\\(').replaceAll(')','\\)')}.*.md5`, { 
-            cwd: path.join(mikser.options.assetsFolder, entity.preset.name), 
+            cwd: path.join(runtime.options.assetsFolder, entity.preset.name), 
             expandDirectories: false, 
             onlyFiles: true 
         })
@@ -78,7 +78,7 @@ export default ({
     }
 
     async function renderPresets(entities) {
-        const { presets, assetsMap } = mikser.state.assets
+        const { presets, assetsMap } = runtime.state.assets
 
         const tasks = []
         for (let entityToRender of entities) {
@@ -89,7 +89,7 @@ export default ({
                 if (entity.preset.format) {
                     destination = changeExtension(destination, entity.preset.format)
                 }
-                entity.destination = path.join(mikser.options.assetsFolder, entityPreset, destination)
+                entity.destination = path.join(runtime.options.assetsFolder, entityPreset, destination)
                 const ignore = await isPresetRendered(entity)
                 tasks.push({
                     entity, 
@@ -108,33 +108,33 @@ export default ({
     onLoaded(async () => {
         const logger = useLogger()
         
-        mikser.state.assets = {
+        runtime.state.assets = {
             presets: {},
             assetsMap: {},
-            assetsFolder: mikser.config.assets?.assetsFolder || 'assets',
+            assetsFolder: runtime.config.assets?.assetsFolder || 'assets',
         }
     
-        mikser.options.presets = mikser.config.presets?.presetsFolder || collection
-        mikser.options.presetsFolder = path.join(mikser.options.workingFolder, mikser.options.presets)
-        logger.info('Presets folder: %s', mikser.options.presetsFolder)
-        await mkdir(mikser.options.presetsFolder, { recursive: true })
+        runtime.options.presets = runtime.config.presets?.presetsFolder || collection
+        runtime.options.presetsFolder = path.join(runtime.options.workingFolder, runtime.options.presets)
+        logger.info('Presets folder: %s', runtime.options.presetsFolder)
+        await mkdir(runtime.options.presetsFolder, { recursive: true })
     
-        mikser.options.assets = mikser.config.assets?.assetsFolder || 'assets'
-        mikser.options.assetsFolder = path.join(mikser.options.workingFolder, mikser.options.assets)
-        logger.info('Assets folder: %s', mikser.options.assetsFolder)
-        await mkdir(mikser.options.assetsFolder, { recursive: true })
+        runtime.options.assets = runtime.config.assets?.assetsFolder || 'assets'
+        runtime.options.assetsFolder = path.join(runtime.options.workingFolder, runtime.options.assets)
+        logger.info('Assets folder: %s', runtime.options.assetsFolder)
+        await mkdir(runtime.options.assetsFolder, { recursive: true })
     
-        let link = path.join(mikser.options.outputFolder, mikser.options.assets)
-        if (mikser.config.assets?.outputFolder) link = path.join(mikser.options.outputFolder, mikser.config.assets?.outputFolder, mikser.options.assets)
+        let link = path.join(runtime.options.outputFolder, runtime.options.assets)
+        if (runtime.config.assets?.outputFolder) link = path.join(runtime.options.outputFolder, runtime.config.assets?.outputFolder, runtime.options.assets)
         try {
             await mkdir(path.dirname(link), { recursive: true }) 
-            await symlink(path.resolve(mikser.options.assetsFolder), link, 'dir')
+            await symlink(path.resolve(runtime.options.assetsFolder), link, 'dir')
         } catch (err) {
             if (err.code != 'EEXIST')
             throw err
         }
     
-        watch(collection, mikser.options.presetsFolder)
+        watch(collection, runtime.options.presetsFolder)
     })
     
     onSync(collection, async ({ action, context }) => {
@@ -142,10 +142,10 @@ export default ({
         const { relativePath } = context
     
         const logger = useLogger()
-        const { presets } = mikser.state.assets
+        const { presets } = runtime.state.assets
         
         const name = relativePath.replace(path.extname(relativePath), '')
-        const uri = path.join(mikser.options.presetsFolder, relativePath)
+        const uri = path.join(runtime.options.presetsFolder, relativePath)
         const source = uri
     
         let synced = true
@@ -213,11 +213,11 @@ export default ({
     
     onImport(async () => {
         const logger = useLogger()
-        const { presets } = mikser.state.assets
+        const { presets } = runtime.state.assets
         
-        const paths = await globby('*.js', { cwd: mikser.options.presetsFolder })
+        const paths = await globby('*.js', { cwd: runtime.options.presetsFolder })
         for (let relativePath of paths) {
-            const uri = path.join(mikser.options.presetsFolder, relativePath)
+            const uri = path.join(runtime.options.presetsFolder, relativePath)
             const source = uri
             try {
                 const { revision = 1, format, options } = await import(`${uri}?stamp=${Date.now()}`)
@@ -246,7 +246,7 @@ export default ({
     
     onProcessed(async (signal) => {
         const logger = useLogger()
-        const { assetsMap } = mikser.state.assets
+        const { assetsMap } = runtime.state.assets
         
         for await (let { entity, operation } of useJournal('Assets processing', [OPERATION.CREATE, OPERATION.UPDATE, OPERATION.DELETE], signal)) {
             if (entity.collection != collection) {
@@ -268,12 +268,12 @@ export default ({
     })
     
     onBeforeRender(async signal => {
-        const { assetsMap } = mikser.state.assets
+        const { assetsMap } = runtime.state.assets
 
         checksumMap.clear()
-        const checksumFiles = await globby('**/*.md5', { cwd: mikser.options.assetsFolder })
+        const checksumFiles = await globby('**/*.md5', { cwd: runtime.options.assetsFolder })
         for (let checksumFile of checksumFiles) {
-            checksumMap.add(path.join(mikser.options.assetsFolder, checksumFile))
+            checksumMap.add(path.join(runtime.options.assetsFolder, checksumFile))
         }
 
         const entitiesToRender = new Map()
@@ -305,21 +305,21 @@ export default ({
             await mkdir(path.dirname(entity.destination), { recursive: true })
             const assetChecksum = `${entity.destination}.${entity.preset.checksum}.md5`
             await writeFile(assetChecksum, entity.checksum, 'utf8')
-            logger.debug('Asset render finished: [%s] %s', assetChecksum, entity.destination.replace(mikser.options.workingFolder, ''))
+            logger.debug('Asset render finished: [%s] %s', assetChecksum, entity.destination.replace(runtime.options.workingFolder, ''))
         }
     })
     
     onFinalize(async () => {
         const logger = useLogger()
-        const { presets } = mikser.state.assets
+        const { presets } = runtime.state.assets
         
-        let revisions = await globby('**/*.md5', { cwd: mikser.options.assetsFolder })
+        let revisions = await globby('**/*.md5', { cwd: runtime.options.assetsFolder })
         for (let revision of revisions) {
             const [preset] = revision.split(path.sep)
             const [assetsRevision] = revision.split('.').slice(-2,-1)
     
             if (!presets[preset]) {
-                const assetsPresetFolder = path.join(mikser.options.assetsFolder, preset)
+                const assetsPresetFolder = path.join(runtime.options.assetsFolder, preset)
                 const assetsPresetRemoved = false
                 try {
                     await rm(assetsPresetFolder, { recursive: true, force: true })
@@ -330,7 +330,7 @@ export default ({
                 }
             } else {
                 if (Number.parseInt(assetsRevision) < presets[preset].checksum) {
-                    await unlink(path.join(mikser.options.assetsFolder, revision))
+                    await unlink(path.join(runtime.options.assetsFolder, revision))
                 }
             }
         }

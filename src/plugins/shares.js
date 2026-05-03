@@ -4,12 +4,12 @@ import path from 'node:path'
 export default ({ 
     useLogger, 
     onLoaded, 
-    mikser 
+    runtime 
 }) => {
     onLoaded(async () => {
         const logger = useLogger()
     
-        for (let item of (mikser.config.shares?.locations || [])) {
+        for (let item of (runtime.config.shares?.locations || [])) {
             let source, destination
             if (typeof item == 'string') {
                 source = destination = item
@@ -18,10 +18,10 @@ export default ({
                 destination = item.destination
             }
     
-            let destinationLocation = path.join(mikser.options.outputFolder, destination)
+            let destinationLocation = path.join(runtime.options.outputFolder, destination)
             let destinationFolder = path.dirname(destinationLocation)
             try {
-                const sourceLocation = path.join(mikser.options.workingFolder, source)
+                const sourceLocation = path.join(runtime.options.workingFolder, source)
                 const sourceStat = await stat(sourceLocation)
     
                 await mkdir(destinationFolder, { recursive: true })

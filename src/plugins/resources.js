@@ -15,7 +15,7 @@ export default ({
     useLogger, 
     useJournal, 
     onLoaded, 
-    mikser, 
+    runtime, 
     stopProgress, 
     createEntity, 
     onProcessed, 
@@ -36,25 +36,25 @@ export default ({
     onLoaded(async () => {
         const logger = useLogger()
         
-        mikser.state.resources = {
+        runtime.state.resources = {
             resourceLib: {},
             resourceMap: {},
-            resourcesFolder: mikser.config.resources?.resourcesFolder || collection,
+            resourcesFolder: runtime.config.resources?.resourcesFolder || collection,
         }
     
-        mikser.options.resources = mikser.config.resources?.resourcesFolder || collection
-        mikser.options.resourcesFolder = path.join(mikser.options.workingFolder, mikser.options.resources)
-        logger.info('Resources folder: %s', mikser.options.resourcesFolder)
+        runtime.options.resources = runtime.config.resources?.resourcesFolder || collection
+        runtime.options.resourcesFolder = path.join(runtime.options.workingFolder, runtime.options.resources)
+        logger.info('Resources folder: %s', runtime.options.resourcesFolder)
 
-        for (let library in (mikser.config.resources?.libraries || [])) {
-            let resource = mikser.config.resources.libraries[library]
-            mikser.state.resources.resourceLib[resource.match || escapeStringRegexp(resource.url)] = library
+        for (let library in (runtime.config.resources?.libraries || [])) {
+            let resource = runtime.config.resources.libraries[library]
+            runtime.state.resources.resourceLib[resource.match || escapeStringRegexp(resource.url)] = library
         }
     })
     
     onProcessed(async (signal) => {
         const logger = useLogger()
-        const { resourceLib, resourceMap } = mikser.state.resources
+        const { resourceLib, resourceMap } = runtime.state.resources
     
         for await (let { id, entity } of useJournal('Resources provision', [OPERATION.CREATE, OPERATION.UPDATE], signal)) {    
             if (entity.collection != collection && entity.meta) {
@@ -96,13 +96,13 @@ export default ({
                     if (!localResources.has(id)) {
                         await createEntity({
                             id,
-                            uri: path.join(mikser.options.workingFolder, resource),
+                            uri: path.join(runtime.options.workingFolder, resource),
                             collection,
                             type,
                             format: path.extname(resource).substring(1).toLowerCase(),
                             name: resource.indexOf('/') == 0 ? resource.substring(1) : resource,
-                            source: path.join(mikser.options.workingFolder, resource),
-                            checksum: await checksum(path.join(mikser.options.workingFolder, resource))
+                            source: path.join(runtime.options.workingFolder, resource),
+                            checksum: await checksum(path.join(runtime.options.workingFolder, resource))
                         })
                         logger.debug('Resource: %s %s', id, resource)
                         localResources.add(id)
@@ -114,7 +114,7 @@ export default ({
             updateProgress()
         }
     
-        const resourceFiles = await globby('**/*', { cwd: mikser.options.resourcesFolder })
+        const resourceFiles = await globby('**/*', { cwd: runtime.options.resourcesFolder })
         const resourceFilesMap = new Set()
         for (let resourceFile of resourceFiles) {
             resourceFilesMap.add(resourceFile)
@@ -123,12 +123,12 @@ export default ({
         const downloads = Object.keys(resourceDownloads)
         if (downloads.length) {
             trackProgress('Resources download', downloads.length)
-            await mkdir(mikser.options.resourcesFolder, { recursive: true })
-            let link = path.join(mikser.options.outputFolder, mikser.options.resources)
-            if (mikser.config.resources?.outputFolder) link = path.join(mikser.options.outputFolder, mikser.config.resources?.outputFolder, mikser.options.resources)
+            await mkdir(runtime.options.resourcesFolder, { recursive: true })
+            let link = path.join(runtime.options.outputFolder, runtime.options.resources)
+            if (runtime.config.resources?.outputFolder) link = path.join(runtime.options.outputFolder, runtime.config.resources?.outputFolder, runtime.options.resources)
             try {
                 await mkdir(path.dirname(link), { recursive: true }) 
-                await symlink(path.resolve(mikser.options.resourcesFolder), link, 'dir')
+                await symlink(path.resolve(runtime.options.resourcesFolder), link, 'dir')
             } catch (err) {
                 if (err.code != 'EEXIST')
                 throw err
@@ -138,14 +138,14 @@ export default ({
                 const { library, entity } = resourceDownloads[url]
                 let { pathname } = new URL(url)
                 pathname = decodeURI(pathname)
-                const resource = path.join(mikser.options.resourcesFolder, library, pathname)
-                const uri = path.join(mikser.options.outputFolder, library, pathname)
+                const resource = path.join(runtime.options.resourcesFolder, library, pathname)
+                const uri = path.join(runtime.options.outputFolder, library, pathname)
         
                 let success = true
                 if (!resourceFilesMap.has(path.join(library, pathname))) {
-                    const resourceTemp = path.join(mikser.options.resourcesFolder, library, pathname + '.temp')
+                    const resourceTemp = path.join(runtime.options.resourcesFolder, library, pathname + '.temp')
                     logger.debug('Downloading resource: %s %s', entity.id, url)
-                    const config = mikser.config.resources.libraries[library]
+                    const config = runtime.config.resources.libraries[library]
                     const request = {
                         method: 'get',
                         ...config,
@@ -197,11 +197,11 @@ export default ({
     })
     
     onFinalize(async () => {
-        mikser.state.resources.resourceMap = {}
+        runtime.state.resources.resourceMap = {}
 
-        const paths = await globby('**/*.temp', { cwd: mikser.options.resourcesFolder })
+        const paths = await globby('**/*.temp', { cwd: runtime.options.resourcesFolder })
         for (let relativePath of paths) {
-            let resourceTemp = path.join(mikser.options.resourcesFolder, relativePath)
+            let resourceTemp = path.join(runtime.options.resourcesFolder, relativePath)
             await unlink(resourceTemp)
         }
     })

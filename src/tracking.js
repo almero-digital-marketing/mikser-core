@@ -1,6 +1,6 @@
 import cliProgress from 'cli-progress'
-import mikser from './mikser.js'
-import { useLogger } from './runtime.js'
+import runtime from './runtime.js'
+import { useLogger } from './engine.js'
 import formatTime from 'cli-progress/lib/format-time.js'
 import { onInitialized } from './lifecycle.js'
 import util from 'util'
@@ -17,7 +17,7 @@ function log(log) {
 
 onInitialized(() => {
     const logger = useLogger()
-    if (mikser.options.info) {
+    if (runtime.options.info) {
         logger.info = (...args) => log(() => console.log(...args))
         logger.warn = (...args) => log(() => console.log('🟡 ' + args[0], ...args.slice(1)))
         logger.error = (...args) => log(() => console.log('🔴 ' + args[0], ...args.slice(1)))
@@ -35,7 +35,7 @@ export function trackProgress(name, total) {
         total,
         value: 0,
         stamp: Date.now(),
-        bar: mikser.options.info ? new cliProgress.SingleBar({
+        bar: runtime.options.info ? new cliProgress.SingleBar({
             noTTYOutput: true,
             hideCursor: true,
             clearOnComplete: true,

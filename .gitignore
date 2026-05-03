@@ -104,5 +104,9 @@ dist
 # TernJS port file
 .tern-port
 
+test/runtime
+test/out
+test/assets
+
 # Claude Code
 .claude/
