@@ -105,6 +105,8 @@ dist
 .tern-port
 
 test/runtime
+test/out
+test/assets
 
 # Claude Code
 .claude/

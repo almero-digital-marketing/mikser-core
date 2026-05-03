@@ -11,63 +11,46 @@ import _ from 'lodash'
 let catalog
 
 onLoaded(async () => {
-    const adapter = new JSONFile(path.join(runtime.options.runtimeFolder, `catalog.json`))
-    catalog = new Low(adapter, {
-        entities: [],
-    })
-    catalog.chain = _.chain(catalog).get('data')
-    runtime.catalog = catalog
+	const adapter = new JSONFile(path.join(runtime.options.runtimeFolder, `catalog.json`))
+	catalog = new Low(adapter, {
+		entities: [],
+	})
+	catalog.chain = _.chain(catalog).get('data')
+	runtime.catalog = catalog
 })
 
 onPersist(async () => {
-    const logger = useLogger()
-    for await (let { operation, entity } of useJournal('Catalog')) {
-        switch (operation) {
-            case OPERATION.CREATE:
-                logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
-                catalog.data.entities.push(entity)
-            break
-            case OPERATION.UPDATE:
-                logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
-                catalog
-                .chain
-                .get('entities')
-                .find({ id: entity.id })
-                .assign(entity)
-                .value()
-            break
-            case OPERATION.DELETE:
-                logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
-                catalog
-                .chain
-                .get('entities')
-                .remove({ id: entity.id })
-                .value()
-            break
-        }
-    }
+	const logger = useLogger()
+	for await (let { operation, entity } of useJournal('Catalog')) {
+		switch (operation) {
+			case OPERATION.CREATE:
+				logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
+				catalog.data.entities.push(entity)
+				break
+			case OPERATION.UPDATE:
+				logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
+				catalog.chain.get('entities').find({ id: entity.id }).assign(entity).value()
+				break
+			case OPERATION.DELETE:
+				logger.trace('Database %s %s: %s', entity.collection, operation, entity.id)
+				catalog.chain.get('entities').remove({ id: entity.id }).value()
+				break
+		}
+	}
 })
 
 onFinalized(async () => {
-    await catalog.write()
+	await catalog.write()
 })
 
 export async function findEntity(query) {
-    if (!query) return
-    return catalog
-    .chain
-    .get('entities')
-    .find(query)
-    .value()
+	if (!query) return
+	return catalog.chain.get('entities').find(query).value()
 }
 
 export async function findEntities(query) {
-    if (!query) {
-        return catalog.chain.get('entities').value()
-    }
-    return catalog
-    .chain
-    .get('entities')
-    .filter(query)
-    .value()
+	if (!query) {
+		return catalog.chain.get('entities').value()
+	}
+	return catalog.chain.get('entities').filter(query).value()
 }
