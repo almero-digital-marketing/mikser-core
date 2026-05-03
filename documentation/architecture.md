@@ -8,7 +8,7 @@ mikser-core/
 ├── index.js                  Public API re-exports
 │
 └── src/
-    ├── runtime.js            Static singleton — global state and lifecycle coordination
+    ├── runtime.js            Singleton object — global state and lifecycle coordination
     ├── mikser.js             setup() function, CLI option parsing, useLogger()
     ├── lifecycle.js          Hook registration functions + entity write helpers
     ├── journal.js            Ephemeral SQLite operation log
@@ -48,7 +48,7 @@ mikser-core/
 
 ## The Runtime Singleton
 
-`runtime` is a static class (`src/runtime.js`). It holds all global state and coordinates the lifecycle.
+`runtime` is a plain object exported from `src/runtime.js`. It holds all global state and coordinates the lifecycle.
 
 ```
 runtime
@@ -91,11 +91,11 @@ runtime
     └── completed[]
 ```
 
-### Why a static class?
+### Why a plain object module singleton?
 
-A static class gives a module-scoped singleton without needing a context object to be threaded through every call. Any module that imports `runtime` gets the same instance. This simplifies plugin authoring since plugins don't need to receive or store a context reference.
+ES modules are evaluated once and then cached by Node.js. Every file that does `import runtime from './runtime.js'` receives the same object reference — the module cache provides the singleton guarantee without any class machinery.
 
-**Trade-off:** Static state makes testing harder. Tests that need a clean slate must reset the static properties or use `vi.resetModules()` to reload the module.
+This approach is simpler and easier to test than a static class: there are no class-specific concepts (`instanceof`, `prototype`, `constructor`) to reason about, and a test that needs a clean slate can use `vi.resetModules()` to get a fresh evaluation of the module.
 
 ## Data Flow
 

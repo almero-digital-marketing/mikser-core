@@ -41,5 +41,5 @@ npx mikser
 - **Lifecycle** — Processing runs through fixed phases: initialize → load → import → process → persist → render → finalize. Plugins hook into any phase.
 - **Entities** — Everything is an entity (document, file, layout, asset). Entities flow through the journal and are tracked in the catalog.
 - **Plugins** — Functionality is delivered via plugins. Built-in plugins handle common sources (documents, files, layouts, assets). Custom plugins can be added to any project.
-- **Runtime Singleton** — A static class holds all global state and coordinates the lifecycle.
+- **Runtime Singleton** — A plain module-level object holds all global state and coordinates the lifecycle. The ES module cache guarantees every importer gets the same instance.
 - **Watch Mode** — In watch mode, file changes trigger incremental re-processing without restarting.

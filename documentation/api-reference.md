@@ -68,7 +68,7 @@ logger.notice('Completion message')  // styled green in info mode
 
 ### `runtime`
 
-The static class singleton. Import directly:
+The singleton object. Import directly:
 
 ```js
 import { runtime } from 'mikser-core'
