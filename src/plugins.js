@@ -20,7 +20,7 @@ export async function loadPlugin(pluginName) {
             try {
                 const plugin = await import(resolveLocation)
                 const pluginRuntime = plugin.default(core)
-                runtime.mikser[pluginName] = pluginRuntime
+                runtime.engine[pluginName] = pluginRuntime
                 if (pluginRuntime) {
                     logger.trace('Loaded %s plugin: %s', pluginName, pluginRuntime)
                 } else {

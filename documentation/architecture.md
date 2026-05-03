@@ -160,7 +160,7 @@ export default (coreAPI) => {
 
 The `coreAPI` passed to the factory is `import * as core from '../index.js'` — the full public API of Mikser. This means plugins have access to every exported function, including the runtime singleton, all hook registrations, entity operations, and utilities.
 
-Plugin exports are stored in `runtime.mikser[pluginName]` and are accessible to other plugins and to render templates via the `plugins` object.
+Plugin exports are stored in `runtime.engine[pluginName]` and are accessible to other plugins and to render templates via the `plugins` object.
 
 ## Render Architecture
 

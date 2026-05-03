@@ -17,7 +17,7 @@ import packageInfo from '../package.json' with { type: 'json' }
 
 export async function setup(options) {
     runtime.options.threads = options?.threads !== undefined ? options.threads : 4
-    runtime.mikser = {
+    runtime.engine = {
         logger: pino(options?.logger || {
             transport: {
                 target: 'pino-pretty'
@@ -33,7 +33,7 @@ export async function setup(options) {
     runtime.state = {}
 
     onInitialize(async () => {
-        runtime.mikser.commander?.version(packageInfo.version)
+        runtime.engine.commander?.version(packageInfo.version)
             .option('-i --working-folder <folder>', 'set mikser working folder', './')
             .option('-p --plugins [plugins...]', 'list of mikser plugins to load', [])
             .option('-c --config <file>', 'set mikser mikser.config.js location', './mikser.config.js')
@@ -45,18 +45,18 @@ export async function setup(options) {
             .option('-t --trace', 'display trace statements')
             .option('-e --runtime-folder <folder>', 'set mikser runtime folder realtive to working folder', 'runtime')
 
-        Object.assign(runtime.options, options || runtime.mikser.commander.parse(process.argv).opts())
+        Object.assign(runtime.options, options || runtime.engine.commander.parse(process.argv).opts())
         runtime.options.info = true
         if (runtime.options.debug) {
-            runtime.mikser.logger.level = 'debug'
+            runtime.engine.logger.level = 'debug'
             runtime.options.info = false
         }
         if (runtime.options.trace) {
-            runtime.mikser.logger.level = 'trace'
+            runtime.engine.logger.level = 'trace'
             runtime.options.debug = false
             runtime.options.info = false
         }
-        runtime.mikser.logger.notice = runtime.mikser.logger.info
+        runtime.engine.logger.notice = runtime.engine.logger.info
     })
 
     onInitialized(async () => {
@@ -122,7 +122,7 @@ export async function setup(options) {
                             renderOptions.logger = logger
                             renderOptions.signal = signal
                             if (!signal.aborted) {
-                                result = await runtime.mikser.queue.add(() => render(renderOptions), { signal })
+                                result = await runtime.engine.queue.add(() => render(renderOptions), { signal })
                             }
                             break
                         case TASKS.WORKER:
@@ -130,12 +130,12 @@ export async function setup(options) {
                             mc.port2.onmessage = event => {
                                 const message = JSON.parse(event.data)
                                 if (message.command == 'logger') {
-                                    runtime.mikser.logger[message.data.log](...message.data.args)
+                                    runtime.engine.logger[message.data.log](...message.data.args)
                                 }
                             }
                             mc.port2.unref()
                             renderOptions.port = mc.port1
-                            result = await runtime.mikser.workers.run(
+                            result = await runtime.engine.workers.run(
                                 renderOptions,
                                 { signal, transferList: [mc.port1] }
                             )
@@ -181,9 +181,9 @@ export async function setup(options) {
     })
 
     onCancel(async () => {
-        if (runtime.mikser.workers.queueSize) {
+        if (runtime.engine.workers.queueSize) {
             await new Promise(resolve => {
-                runtime.mikser.workers.once('drain', resolve)
+                runtime.engine.workers.once('drain', resolve)
             })
         }
     })
@@ -215,5 +215,5 @@ export async function setup(options) {
 }
 
 export function useLogger() {
-    return runtime.mikser.logger
+    return runtime.engine.logger
 }

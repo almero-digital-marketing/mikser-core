@@ -86,11 +86,11 @@ import { runtime } from 'mikser-core'
 | `runtime.state` | object | Arbitrary state set by plugins |
 | `runtime.catalog` | object | The lowdb catalog instance |
 | `runtime.validators` | function[] | Registered validation functions |
-| `runtime.mikser` | object | Runtime services (logger, workers, queue, commander) |
-| `runtime.mikser.logger` | object | pino logger |
-| `runtime.mikser.workers` | object | Piscina thread pool |
-| `runtime.mikser.queue` | object | p-queue instance |
-| `runtime.mikser.commander` | object | Commander CLI instance |
+| `runtime.engine` | object | Runtime services (logger, workers, queue, commander) |
+| `runtime.engine.logger` | object | pino logger |
+| `runtime.engine.workers` | object | Piscina thread pool |
+| `runtime.engine.queue` | object | p-queue instance |
+| `runtime.engine.commander` | object | Commander CLI instance |
 | `runtime.hooks` | object | Hook arrays (read-only; use `onXxx()` to register) |
 
 #### Methods

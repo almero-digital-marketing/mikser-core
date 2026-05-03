@@ -4,7 +4,7 @@ import { AbortError } from './utils.js'
 const runtime = {
     stamp: Date.now(),
     processTime: undefined,
-    mikser: {},
+    engine: {},
     options: {
         plugins: []
     },
