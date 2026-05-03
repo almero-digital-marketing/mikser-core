@@ -1,81 +1,57 @@
 import runtime from './runtime.js'
 import { onLoaded, onCancelled, onFinalized } from './lifecycle.js'
 import { unlink } from 'fs/promises'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import Database from 'better-sqlite3'
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
-import { eq, inArray, sql, asc } from 'drizzle-orm'
+import knex from 'knex'
 import path from 'path'
 import { stopProgress, trackProgress, updateProgress } from './tracking.js'
 import { AbortError } from './utils.js'
 
-const operations = sqliteTable('operations', {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    operation: text('operation'),
-    entity: text('entity'),
-    context: text('context'),
-    options: text('options'),
-    output: text('output'),
-})
-
-let db
-let sqlite
+let journal
 
 export async function addEntry({ entity, operation, context, options }) {
-    db.insert(operations).values({
-        entity: JSON.stringify(entity),
-        operation,
-        context: JSON.stringify(context),
-        options: JSON.stringify(options)
-    }).run()
+    await journal('operations').insert([{ entity, operation, context, options }])
 }
 
 export async function addEntries(entries) {
-    const BATCH_SIZE = 10
-    for (let i = 0; i < entries.length; i += BATCH_SIZE) {
-        const batch = entries.slice(i, i + BATCH_SIZE).map(({ entity, operation, context, options }) => ({
-            entity: JSON.stringify(entity),
-            operation,
-            context: JSON.stringify(context),
-            options: JSON.stringify(options)
-        }))
-        db.insert(operations).values(batch).run()
-    }
+    await journal.batchInsert('operations', entries.map(({ entity, operation, context, options }) => ({ 
+        entity: JSON.stringify(entity), 
+        operation, 
+        context: JSON.stringify(context), 
+        options: JSON.stringify(options) 
+    })), 10)
 }
 
 export async function updateEntry({ id, entity, output }) {
     const data = {}
-    if (entity) data.entity = JSON.stringify(entity)
-    if (output) data.output = JSON.stringify(output)
-    db.update(operations).set(data).where(eq(operations.id, id)).run()
+    if ( entity ) data.entity = JSON.stringify(entity)
+    if ( output ) data.output = JSON.stringify(output)
+    await journal('operations').where({ id }).update(data)
 }
 
-export async function* useJournal(name, ops, signal) {
-    const where = ops?.length ? inArray(operations.operation, ops) : undefined
-
-    const countQuery = where
-        ? db.select({ total: sql`count(*)` }).from(operations).where(where)
-        : db.select({ total: sql`count(*)` }).from(operations)
-    const [{ total }] = countQuery.all()
+export async function* useJournal(name, operations, signal) {
+    let query = journal('operations')
+    if (operations?.length) {
+        query.whereIn('operation', operations)
+    }
+    let [total] = await query.clone().count()
+    total = total['count(*)']
     if (!total) return
 
-    trackProgress(name, Number(total))
+    trackProgress(name, total)
 
     let offset = 0
     const limit = 1000
-    let rowCount = 0
+    let count = 0
     do {
-        rowCount = 0
-        const rowQuery = where
-            ? db.select().from(operations).where(where).orderBy(asc(operations.id)).limit(limit).offset(offset)
-            : db.select().from(operations).orderBy(asc(operations.id)).limit(limit).offset(offset)
-        const rows = rowQuery.all()
-        for (let { id, entity, operation, context, options, output } of rows) {
+        count = 0
+        const entries = await query.clone().orderBy('id').select().offset(offset).limit(limit)
+        for (let { id, entity, operation, context, options, output} of entries) {
             if (signal?.aborted) {
                 stopProgress()
                 throw new AbortError()
             }
-            rowCount++
+            count++
+            
             updateProgress()
             yield {
                 id,
@@ -87,14 +63,14 @@ export async function* useJournal(name, ops, signal) {
             }
         }
         offset += limit
-    } while (rowCount == limit)
+    } while (count == limit)
 }
 
 export async function clearJournal(aborted) {
-    db.delete(operations).run()
+    await journal('operations').del()
     if (!aborted) {
         if (runtime.options.watch !== true) {
-            sqlite.close()
+            journal.destroy()
         }
     }
 }
@@ -105,20 +81,22 @@ onLoaded(async () => {
         await unlink(filename)
     } catch {}
 
-    sqlite = new Database(filename)
-    db = drizzle(sqlite)
+    journal = knex({
+        client: 'sqlite3',
+        connection: {
+            filename
+        },
+        useNullAsDefault: true
+    })
 
-    sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS operations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            operation TEXT,
-            entity TEXT,
-            context TEXT,
-            options TEXT,
-            output TEXT
-        )
-    `)
-    sqlite.exec(`CREATE INDEX IF NOT EXISTS operation_idx ON operations (operation)`)
+    await journal.schema.createTable('operations', table => {
+        table.increments('id')
+        table.string('operation').index()
+        table.json('entity')
+        table.json('context')
+        table.json('options')
+        table.json('output')
+    })
 })
 
 onFinalized(async (signal) => {
