@@ -9,7 +9,7 @@ mikser-core/
 │
 └── src/
     ├── runtime.js            Singleton object — global state and lifecycle coordination
-    ├── mikser.js             setup() function, CLI option parsing, useLogger()
+    ├── engine.js             setup() function, CLI option parsing, useLogger()
     ├── lifecycle.js          Hook registration functions + entity write helpers
     ├── journal.js            Ephemeral SQLite operation log
     ├── catalog.js            Persistent lowdb entity registry
@@ -63,7 +63,7 @@ runtime
 ├── mutex              Semaphore for process() serialisation
 ├── abortController    Current run's AbortController
 │
-├── mikser             Service objects (set by mikser.js)
+├── mikser             Service objects (set by engine.js)
 │   ├── logger         pino instance
 │   ├── commander      Commander instance
 │   ├── workers        Piscina thread pool
@@ -131,7 +131,7 @@ Journal (SQLite)
      │
      ▼
 [RENDER phase]
-  mikser.js reads RENDER entries → dispatches to render()
+  engine.js reads RENDER entries → dispatches to render()
      │
      ▼
 render.js
@@ -235,7 +235,7 @@ The mutex ensures only one `process()` cycle runs at a time. The AbortController
 export { default as runtime } from './src/runtime.js'
 
 // Setup and logger
-export * from './src/mikser.js'        // setup(), useLogger()
+export * from './src/engine.js'        // setup(), useLogger()
 
 // Lifecycle hooks and entity operations
 export * from './src/lifecycle.js'     // onXxx(), createEntity(), etc.

@@ -1,6 +1,6 @@
 import cliProgress from 'cli-progress'
 import runtime from './runtime.js'
-import { useLogger } from './mikser.js'
+import { useLogger } from './engine.js'
 import formatTime from 'cli-progress/lib/format-time.js'
 import { onInitialized } from './lifecycle.js'
 import util from 'util'

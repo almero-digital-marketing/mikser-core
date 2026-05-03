@@ -1,5 +1,5 @@
 import runtime from './runtime.js'
-import { useLogger } from './mikser.js'
+import { useLogger } from './engine.js'
 import { onLoaded, onPersist, onFinalized } from './lifecycle.js'
 import { useJournal } from './journal.js'
 import { OPERATION } from './constants.js'

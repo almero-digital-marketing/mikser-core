@@ -234,7 +234,7 @@ onFinalized(async () => {
 
 **What Mikser does here:**
 - `catalog.js` writes `catalog.json` to disk
-- `mikser.js` cleans up broken symlinks in the output folder
+- `engine.js` cleans up broken symlinks in the output folder
 - `manager.js` starts scheduled cron tasks (if any)
 
 ---

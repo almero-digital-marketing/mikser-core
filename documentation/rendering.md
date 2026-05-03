@@ -10,7 +10,7 @@ Rendering is triggered by RENDER operations in the journal. Each entry describes
 RENDER journal entries
         │
         ▼
-   onRender hook (mikser.js)
+   onRender hook (engine.js)
         │
         ├── For each unique entity:destination pair
         │
