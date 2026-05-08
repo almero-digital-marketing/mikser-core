@@ -1,25 +1,7 @@
 import path from 'node:path'
 import _ from 'lodash'
 
-export default async ({ entity, options, config, context, state, logger, port }) => {
-    logger = logger || {
-        info(...args) {
-            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'info', args } }))
-        },
-        warn(...args) {
-            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'warn', args } }))
-        },
-        error(...args) {
-            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'error', args } }))
-        },
-        trace(...args) {
-            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'trace', args } }))
-        },
-        notice(...args) {
-            port.postMessage(JSON.stringify({ command: 'logger', data: { log: 'notice', args } }))
-        }
-    }
-
+export default async ({ entity, options, config, context, state, logger }) => {
     async function loadPlugin(pluginName) {
         const resolveLocations = [
             path.join(options.workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),

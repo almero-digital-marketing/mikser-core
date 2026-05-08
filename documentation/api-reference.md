@@ -86,10 +86,9 @@ import { runtime } from 'mikser-core'
 | `runtime.state` | object | Arbitrary state set by plugins |
 | `runtime.catalog` | object | The lowdb catalog instance |
 | `runtime.validators` | function[] | Registered validation functions |
-| `runtime.engine` | object | Runtime services (logger, renderWorkers, postprocessWorkers, queue, commander) |
+| `runtime.engine` | object | Runtime services (logger, renderWorkers, queue, commander) |
 | `runtime.engine.logger` | object | pino logger |
 | `runtime.engine.renderWorkers` | object | Piscina thread pool for render jobs |
-| `runtime.engine.postprocessWorkers` | object | Piscina thread pool for postprocess jobs |
 | `runtime.engine.queue` | object | p-queue instance |
 | `runtime.engine.commander` | object | Commander CLI instance |
 | `runtime.hooks` | object | Hook arrays (read-only; use `onXxx()` to register) |

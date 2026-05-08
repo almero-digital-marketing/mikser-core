@@ -29,10 +29,6 @@ export async function setup(options) {
             filename: new URL('./render.js', import.meta.url).href,
             maxThreads: runtime.options.threads
         }),
-        postprocessWorkers: new Piscina({
-            filename: new URL('./postprocess.js', import.meta.url).href,
-            maxThreads: runtime.options.threads
-        }),
         queue: new Queue({ concurrency: 1 })
     }
     runtime.state = {}
@@ -235,21 +231,6 @@ export async function setup(options) {
                                 result = await runtime.engine.queue.add(() => postprocess(postprocessOptions), { signal })
                             }
                             break
-                        case TASKS.WORKER:
-                            const mc = new MessageChannel()
-                            mc.port2.onmessage = event => {
-                                const message = JSON.parse(event.data)
-                                if (message.command == 'logger') {
-                                    runtime.engine.logger[message.data.log](...message.data.args)
-                                }
-                            }
-                            mc.port2.unref()
-                            postprocessOptions.port = mc.port1
-                            result = await runtime.engine.postprocessWorkers.run(
-                                postprocessOptions,
-                                { signal, transferList: [mc.port1] }
-                            )
-                            break
                     }
                     if (!signal.aborted) {
                         entry.output = { success: true }
@@ -279,11 +260,6 @@ export async function setup(options) {
         if (runtime.engine.renderWorkers.queueSize) {
             await new Promise(resolve => {
                 runtime.engine.renderWorkers.once('drain', resolve)
-            })
-        }
-        if (runtime.engine.postprocessWorkers.queueSize) {
-            await new Promise(resolve => {
-                runtime.engine.postprocessWorkers.once('drain', resolve)
             })
         }
     })
