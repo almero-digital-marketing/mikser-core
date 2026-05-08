@@ -6,7 +6,7 @@ import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
 import runtime from './runtime.js'
-import { onInitialize, onInitialized, onRender, onCancel, onCancelled, onFinalized, onLoaded, onAfterRender, onPostprocess } from './lifecycle.js'
+import { onInitialize, onInitialized, onRender, onCancel, onCancelled, onFinalized, onLoaded, onAfterRender, onBeforePostprocess, onPostprocess, postprocessEntities } from './lifecycle.js'
 import { useJournal, updateEntry } from './journal.js'
 import { globby } from 'globby'
 import { OPERATION, TASKS } from './constants.js'
@@ -183,6 +183,20 @@ export async function setup(options) {
         }
         const renderOutput = path.join(runtime.options.runtimeFolder, `render-details.json`)
         await writeFile(renderOutput, JSON.stringify(Array.from(results.values())), 'utf8')
+    })
+
+    onBeforePostprocess(async (signal) => {
+        const tasks = []
+        for await (const { entity, options, context, output } of useJournal('Queuing postprocess', [OPERATION.RENDER], signal)) {
+            if (output?.success && options.postprocessor) {
+                tasks.push({
+                    entity,
+                    options: { postprocessor: options.postprocessor, tasks: options.tasks },
+                    context
+                })
+            }
+        }
+        if (tasks.length) await postprocessEntities(tasks)
     })
 
     onPostprocess(async (signal) => {

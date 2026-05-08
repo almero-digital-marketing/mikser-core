@@ -26,9 +26,9 @@ export default ({
     const type = 'layout'
 
     function getFormatInfo(relativePath) {
-        const template = path.extname(relativePath).substring(1).toLowerCase()
+        const [template, postprocessor] = path.extname(relativePath).substring(1).toLowerCase().split('-')
         const format = path.extname(relativePath.replace(path.extname(relativePath), '')).substring(1).toLowerCase() || 'html'
-        return { format, template }
+        return { format, template, postprocessor }
     }
 
     function addToSitemap(entity) {
@@ -222,9 +222,12 @@ export default ({
                     } else {
                         entity.layout = layouts[entity.meta.layout]
                     }
-
                     if (entity.meta?.layout && !entity.layout) {
                         logger.warn('Layout not found for %s: %s', entity.collection, entity.id)
+                    }
+
+                    if (entity.layout && entity.meta?.postprocessor) {
+                        entity.layout.postprocessor = entity.meta.postprocessor
                     }
 
                     if (entity.layout) {
@@ -301,7 +304,11 @@ export default ({
                         addToSitemap(pageEntity)
                         tasks.push({
                             entity: pageEntity,
-                            options: { renderer: entity.layout.template, tasks: entity.meta?.task || TASKS.POOL },
+                            options: {
+                                renderer: entity.layout.template,
+                                postprocessor: entity.layout.postprocessor,
+                                tasks: entity.meta?.task || TASKS.POOL
+                            },
                             context: { data, plugins }
                         })
                     }
@@ -319,7 +326,11 @@ export default ({
                 if (entity.destination) {
                     tasks.push({
                         entity,
-                        options: { renderer: entity.layout.template, tasks: entity.meta?.task || TASKS.POOL },
+                        options: {
+                            renderer: entity.layout.template,
+                            postprocessor: entity.layout.postprocessor,
+                            tasks: entity.meta?.task || TASKS.POOL
+                        },
                         context: { data, plugins }
                     })
                 }
