@@ -1,8 +1,14 @@
-import puppeteer from 'puppeteer'
 import { mkdir } from 'fs/promises'
 import path from 'node:path'
 
 export async function postprocess({ entity, options, config, logger }) {
+    let puppeteer
+    try {
+        puppeteer = (await import('puppeteer')).default
+    } catch {
+        throw new Error('puppeteer is required for the pdf postprocessor — run: npm install puppeteer')
+    }
+
     const sourcePath = path.join(options.outputFolder, entity.destination)
     const destinationPath = sourcePath.replace(/\.html?$/i, '.pdf')
 
