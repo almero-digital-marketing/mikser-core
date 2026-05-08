@@ -6,7 +6,7 @@ import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
 import runtime from './runtime.js'
-import { onInitialize, onInitialized, onRender, onCancel, onCancelled, onFinalized, onLoaded, onAfterRender } from './lifecycle.js'
+import { onInitialize, onInitialized, onRender, onCancel, onCancelled, onFinalized, onLoaded, onAfterRender, onPostprocess } from './lifecycle.js'
 import { useJournal, updateEntry } from './journal.js'
 import { globby } from 'globby'
 import { OPERATION, TASKS } from './constants.js'
@@ -178,6 +178,81 @@ export async function setup(options) {
         }
         const renderOutput = path.join(runtime.options.runtimeFolder, `render-details.json`)
         await writeFile(renderOutput, JSON.stringify(Array.from(results.values())), 'utf8')
+    })
+
+    onPostprocess(async (signal) => {
+        const logger = useLogger()
+        const postprocessJobs = new Set()
+        await map(useJournal('Postprocessing', [OPERATION.POSTPROCESS], signal), async entry => {
+            const { id, entity, options, context } = entry
+            const jobId = entity.id + ':' + entity.destination
+            if (!postprocessJobs.has(jobId) && !options.ignore) {
+                postprocessJobs.add(jobId)
+                const postprocessOptions = {
+                    entity,
+                    options: {
+                        tasks: TASKS.POOL,
+                        ...runtime.options,
+                        ...options,
+                    },
+                    config: _.pickBy(runtime.config, (value, key) => _.startsWith(key, 'postprocess-')),
+                    context,
+                    state: runtime.state
+                }
+                try {
+                    let result
+                    switch (postprocessOptions.options.tasks) {
+                        case TASKS.POOL:
+                            postprocessOptions.logger = logger
+                            postprocessOptions.signal = signal
+                            if (!signal.aborted) {
+                                result = await render(postprocessOptions)
+                            }
+                            break
+                        case TASKS.QUEUE:
+                            postprocessOptions.logger = logger
+                            postprocessOptions.signal = signal
+                            if (!signal.aborted) {
+                                result = await runtime.engine.queue.add(() => render(postprocessOptions), { signal })
+                            }
+                            break
+                        case TASKS.WORKER:
+                            const mc = new MessageChannel()
+                            mc.port2.onmessage = event => {
+                                const message = JSON.parse(event.data)
+                                if (message.command == 'logger') {
+                                    runtime.engine.logger[message.data.log](...message.data.args)
+                                }
+                            }
+                            mc.port2.unref()
+                            postprocessOptions.port = mc.port1
+                            result = await runtime.engine.workers.run(
+                                postprocessOptions,
+                                { signal, transferList: [mc.port1] }
+                            )
+                            break
+                    }
+                    if (!signal.aborted) {
+                        entry.output = { success: true, result }
+                        await runtime.complete(entry)
+                        await updateEntry({ id, output: entry.output })
+                    }
+                    logger.debug('Postprocessed: [%s] %s → %s', options.postprocessor, entity.name || entity.id, entity.destination)
+                } catch (err) {
+                    if (!signal.aborted) {
+                        await updateEntry({ id, output: { success: false } })
+                        logger.error('Postprocess error: %s %s', entity.id, err.message)
+                    }
+                    logger.debug('Postprocess canceled')
+                }
+            } else {
+                await updateEntry({ id, output: { success: true } })
+            }
+        }, {
+            concurrency: runtime.options.threads,
+            signal
+        })
+        postprocessJobs.size && logger.info('Postprocessed: %d', postprocessJobs.size)
     })
 
     onCancel(async () => {

@@ -83,6 +83,9 @@ runtime
     ├── beforeRender[]
     ├── render[]
     ├── afterRender[]
+    ├── beforePostprocess[]
+    ├── postprocess[]
+    ├── afterPostprocess[]
     ├── cancel[]
     ├── cancelled[]
     ├── finalize[]
@@ -139,6 +142,21 @@ render.js
      │
      ▼
 Output files
+     │
+  [also] plugins write POSTPROCESS entries in onBeforePostprocess
+     │
+     ▼
+Journal (SQLite)
+  operations: POSTPROCESS
+     │
+     ▼
+[POSTPROCESS phase]
+  engine.js reads POSTPROCESS entries → dispatches to render()
+  (same POOL/QUEUE/WORKER concurrency model)
+     │
+     ▼
+Converted output files
+  (e.g. HTML → PDF, minified HTML, image transforms)
 ```
 
 ## Plugin Architecture

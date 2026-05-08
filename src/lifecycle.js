@@ -34,6 +34,25 @@ export async function updateEntity(entity) {
     }
 }
 
+export async function postprocessEntity(entity, options = {}, context = {}) {
+    const logger = useLogger()
+    const entry = { operation: OPERATION.POSTPROCESS, entity, options, context }
+    logger.debug('Postprocess %s entity: [%s] %s → %s', entity.collection, options.postprocessor, entity.id, entity.destination)
+    await addEntry(entry)
+}
+
+export async function postprocessEntities(tasks) {
+    const logger = useLogger()
+    if (!tasks.length) return
+    const entries = []
+    for (let { entity, options = {}, context = {} } of tasks) {
+        const entry = { operation: OPERATION.POSTPROCESS, entity, options, context }
+        logger.debug('Postprocess %s entity: [%s] %s → %s', entity.collection, options.postprocessor, entity.id, entity.destination)
+        entries.push(entry)
+    }
+    await addEntries(entries)
+}
+
 export async function renderEntities(tasks) {
     const logger = useLogger()
     if (!tasks.length) return
@@ -176,6 +195,45 @@ export async function onAfterRender(callback, once) {
     else {
         let called = false
         runtime.hooks.afterRender.push((signal) => {
+            if (!called) {
+                called = true
+                callback(signal)
+            }
+        })
+    }
+}
+
+export async function onBeforePostprocess(callback, once) {
+    if (!once) runtime.hooks.beforePostprocess.push(callback)
+    else {
+        let called = false
+        runtime.hooks.beforePostprocess.push((signal) => {
+            if (!called) {
+                called = true
+                callback(signal)
+            }
+        })
+    }
+}
+
+export async function onPostprocess(callback, once) {
+    if (!once) runtime.hooks.postprocess.push(callback)
+    else {
+        let called = false
+        runtime.hooks.postprocess.push((signal) => {
+            if (!called) {
+                called = true
+                callback(signal)
+            }
+        })
+    }
+}
+
+export async function onAfterPostprocess(callback, once) {
+    if (!once) runtime.hooks.afterPostprocess.push(callback)
+    else {
+        let called = false
+        runtime.hooks.afterPostprocess.push((signal) => {
             if (!called) {
                 called = true
                 callback(signal)

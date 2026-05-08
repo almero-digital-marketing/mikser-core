@@ -118,6 +118,7 @@ import {
   onProcess, onProcessed,
   onPersist, onPersisted,
   onBeforeRender, onRender, onAfterRender,
+  onBeforePostprocess, onPostprocess, onAfterPostprocess,
   onCancel, onCancelled,
   onFinalize, onFinalized,
   onSync, onValidate, onComplete
@@ -162,6 +163,15 @@ Runs during the render phase. Receives `signal`.
 
 ### `onAfterRender(callback, once?)`
 Runs after all render jobs complete.
+
+### `onBeforePostprocess(callback, once?)`
+Runs before the postprocess phase. Use to queue postprocess jobs by calling `postprocessEntity()`. Receives `signal`.
+
+### `onPostprocess(callback, once?)`
+Runs during the postprocess phase. Dispatches `POSTPROCESS` journal entries using the same POOL/QUEUE/WORKER concurrency model as render. Receives `signal`.
+
+### `onAfterPostprocess(callback, once?)`
+Runs after all postprocess jobs complete. Receives `signal`.
 
 ### `onFinalize(callback, once?)`
 Runs during finalization. Receives `signal`.
@@ -218,7 +228,8 @@ onComplete(async (entry) => {
 ```js
 import {
   createEntity, updateEntity, deleteEntity,
-  renderEntity, renderEntities
+  renderEntity, renderEntities,
+  postprocessEntity, postprocessEntities
 } from 'mikser-core'
 ```
 
@@ -267,6 +278,28 @@ Batch-adds multiple RENDER operations.
 await renderEntities([
   { entity: e1, options: { renderer: 'hbs' }, context: {} },
   { entity: e2, options: { renderer: 'hbs' }, context: {} }
+])
+```
+
+### `postprocessEntity(entity, options?, context?)`
+
+Adds a POSTPROCESS operation to the journal. Call inside `onBeforePostprocess`.
+
+```js
+await postprocessEntity(
+  { ...entity, destination: changeExtension(entity.destination, 'pdf') },
+  { postprocessor: 'puppeteer-pdf', tasks: TASKS.WORKER }
+)
+```
+
+### `postprocessEntities(tasks)`
+
+Batch-adds multiple POSTPROCESS operations.
+
+```js
+await postprocessEntities([
+  { entity: e1, options: { postprocessor: 'minify-html' }, context: {} },
+  { entity: e2, options: { postprocessor: 'minify-html' }, context: {} }
 ])
 ```
 
@@ -474,6 +507,7 @@ const { OPERATION, ACTION, TASKS } = constants
 | `OPERATION.UPDATE` | `'update'` | Entity was updated |
 | `OPERATION.DELETE` | `'delete'` | Entity was deleted |
 | `OPERATION.RENDER` | `'render'` | Entity should be rendered |
+| `OPERATION.POSTPROCESS` | `'postprocess'` | Entity should be postprocessed |
 
 ### `ACTION`
 

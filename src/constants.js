@@ -3,6 +3,7 @@ export const OPERATION = {
     UPDATE: 'update',
     DELETE: 'delete',
     RENDER: 'render',
+    POSTPROCESS: 'postprocess',
 }
 
 export const ACTION = {

@@ -29,6 +29,9 @@ const runtime = {
         beforeRender: [],
         render: [],
         afterRender: [],
+        beforePostprocess: [],
+        postprocess: [],
+        afterPostprocess: [],
         cancel: [],
         cancelled: [],
         finalize: [],
@@ -84,6 +87,14 @@ const runtime = {
         await this.callHooks(this.hooks.beforeRender, signal)
         await this.callHooks(this.hooks.render, signal)
         await this.callHooks(this.hooks.afterRender, signal)
+
+        await this.postprocess(signal)
+    },
+
+    async postprocess(signal) {
+        await this.callHooks(this.hooks.beforePostprocess, signal)
+        await this.callHooks(this.hooks.postprocess, signal)
+        await this.callHooks(this.hooks.afterPostprocess, signal)
 
         await this.finalize(signal)
     },
