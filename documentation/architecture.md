@@ -18,6 +18,7 @@ mikser-core/
     ├── manager.js            File watching and cron scheduling
     ├── tracking.js           Progress bars and log formatting
     ├── render.js             Render worker function (runs in main or Piscina threads)
+    ├── postprocess.js        Postprocess worker function (runs in main or Piscina threads)
     ├── utils.js              Checksum, normalize, matchEntity, changeExtension, AbortError
     ├── constants.js          OPERATION, ACTION, TASKS enums
     │
@@ -37,13 +38,15 @@ mikser-core/
     │   ├── json.js
     │   └── yaml.js
     │
-    └── plugins/render/       Render-time helper plugins
-        ├── hbs.js            Handlebars renderer
-        ├── preset.js         Asset preset renderer
-        ├── href.js           Link resolution
-        ├── asset.js          Asset path generation
-        ├── resource.js       CDN resource mapping
-        └── file.js           File reading utilities
+    ├── plugins/render/       Render-time helper plugins (prefix: render-)
+    │   ├── hbs.js            Handlebars renderer
+    │   ├── preset.js         Asset preset renderer
+    │   ├── href.js           Link resolution
+    │   ├── asset.js          Asset path generation
+    │   ├── resource.js       CDN resource mapping
+    │   └── file.js           File reading utilities
+    │
+    └── plugins/post/         Postprocess-time helper plugins (prefix: post-)
 ```
 
 ## The Runtime Singleton
@@ -202,6 +205,40 @@ main process
 ```
 
 Worker threads receive a serializable copy of the render options (entity, options, config, context, state) — no live references. The logger proxy in worker mode sends log messages through the `MessagePort` to be emitted in the main process.
+
+## Postprocess Architecture
+
+The postprocess system mirrors render exactly, but uses `src/postprocess.js` and a separate Piscina pool (`runtime.engine.postprocessWorkers`).
+
+```
+main process
+  │
+  ├── POOL mode: postprocess() called directly, concurrent via p-map
+  │
+  ├── QUEUE mode: postprocess() called via p-queue (sequential)
+  │
+  └── WORKER mode:
+        │
+        ▼
+    Piscina worker thread (postprocessWorkers pool)
+        │
+        ├── postprocess() called in worker
+        ├── Logger messages sent back via MessagePort
+        └── Result returned to main thread
+```
+
+Postprocess plugins use the `post-` prefix and live in `src/plugins/post/` (built-in) or `plugins/post-<name>.js` (project-level) or `node_modules/mikser-core-post-<name>/` (npm). A postprocess plugin exports a `postprocess()` function (and optionally `load()`):
+
+```js
+// plugins/post-pdf.js
+export async function load({ entity, options, config, state, logger }) {
+  // one-time setup per job
+}
+
+export async function postprocess({ entity, options, config, context, plugins, runtime, state, logger }) {
+  // read entity.source or entity.destination, write converted output
+}
+```
 
 ## Incremental Builds (Watch Mode)
 

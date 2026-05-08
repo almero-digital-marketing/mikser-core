@@ -11,6 +11,7 @@ import { useJournal, updateEntry } from './journal.js'
 import { globby } from 'globby'
 import { OPERATION, TASKS } from './constants.js'
 import render from './render.js'
+import postprocess from './postprocess.js'
 import map from 'p-map'
 import Queue from 'p-queue'
 import packageInfo from '../package.json' with { type: 'json' }
@@ -26,6 +27,10 @@ export async function setup(options) {
         commander: new Command(),
         workers: new Piscina({
             filename: new URL('./render.js', import.meta.url).href,
+            maxThreads: runtime.options.threads
+        }),
+        postprocessWorkers: new Piscina({
+            filename: new URL('./postprocess.js', import.meta.url).href,
             maxThreads: runtime.options.threads
         }),
         queue: new Queue({ concurrency: 1 })
@@ -206,14 +211,14 @@ export async function setup(options) {
                             postprocessOptions.logger = logger
                             postprocessOptions.signal = signal
                             if (!signal.aborted) {
-                                result = await render(postprocessOptions)
+                                result = await postprocess(postprocessOptions)
                             }
                             break
                         case TASKS.QUEUE:
                             postprocessOptions.logger = logger
                             postprocessOptions.signal = signal
                             if (!signal.aborted) {
-                                result = await runtime.engine.queue.add(() => render(postprocessOptions), { signal })
+                                result = await runtime.engine.queue.add(() => postprocess(postprocessOptions), { signal })
                             }
                             break
                         case TASKS.WORKER:
@@ -226,7 +231,7 @@ export async function setup(options) {
                             }
                             mc.port2.unref()
                             postprocessOptions.port = mc.port1
-                            result = await runtime.engine.workers.run(
+                            result = await runtime.engine.postprocessWorkers.run(
                                 postprocessOptions,
                                 { signal, transferList: [mc.port1] }
                             )
@@ -259,6 +264,11 @@ export async function setup(options) {
         if (runtime.engine.workers.queueSize) {
             await new Promise(resolve => {
                 runtime.engine.workers.once('drain', resolve)
+            })
+        }
+        if (runtime.engine.postprocessWorkers.queueSize) {
+            await new Promise(resolve => {
+                runtime.engine.postprocessWorkers.once('drain', resolve)
             })
         }
     })
