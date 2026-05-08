@@ -25,7 +25,7 @@ export async function setup(options) {
             },
         }),
         commander: new Command(),
-        workers: new Piscina({
+        renderWorkers: new Piscina({
             filename: new URL('./render.js', import.meta.url).href,
             maxThreads: runtime.options.threads
         }),
@@ -140,7 +140,7 @@ export async function setup(options) {
                             }
                             mc.port2.unref()
                             renderOptions.port = mc.port1
-                            result = await runtime.engine.workers.run(
+                            result = await runtime.engine.renderWorkers.run(
                                 renderOptions,
                                 { signal, transferList: [mc.port1] }
                             )
@@ -238,7 +238,8 @@ export async function setup(options) {
                             break
                     }
                     if (!signal.aborted) {
-                        entry.output = { success: true, result }
+                        entry.output = { success: true }
+                        if (result) entry.output.result = result
                         await runtime.complete(entry)
                         await updateEntry({ id, output: entry.output })
                     }
@@ -261,9 +262,9 @@ export async function setup(options) {
     })
 
     onCancel(async () => {
-        if (runtime.engine.workers.queueSize) {
+        if (runtime.engine.renderWorkers.queueSize) {
             await new Promise(resolve => {
-                runtime.engine.workers.once('drain', resolve)
+                runtime.engine.renderWorkers.once('drain', resolve)
             })
         }
         if (runtime.engine.postprocessWorkers.queueSize) {
