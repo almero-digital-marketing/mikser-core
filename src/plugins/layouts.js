@@ -27,9 +27,11 @@ export default ({
 
     function getFormatInfo(relativePath) {
         const template = path.extname(relativePath).substring(1).toLowerCase()
-        const formatExt = path.extname(relativePath.replace(path.extname(relativePath), '')).substring(1).toLowerCase()
+        const withoutTemplate = relativePath.replace(path.extname(relativePath), '')
+        const formatExt = path.extname(withoutTemplate).substring(1).toLowerCase()
         const [format, postprocessor] = formatExt.split('-')
-        return { format: format || 'html', template, postprocessor }
+        const name = formatExt ? withoutTemplate.replace(path.extname(withoutTemplate), '') : withoutTemplate
+        return { name, format: format || 'html', template, postprocessor }
     }
 
     function addToSitemap(entity) {
