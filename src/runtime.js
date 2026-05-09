@@ -47,6 +47,18 @@ const runtime = {
         }
     },
 
+    addHook(name, hook) {
+        if (!this.hooks[name]) throw new Error(`Unknown hook: ${name}`)
+        this.hooks[name].push(hook)
+        return hook
+    },
+
+    removeHook(name, hook) {
+        if (!this.hooks[name]) throw new Error(`Unknown hook: ${name}`)
+        const idx = this.hooks[name].indexOf(hook)
+        if (idx > -1) this.hooks[name].splice(idx, 1)
+    },
+
     async start() {
         await this.callHooks(this.hooks.initialize)
         await this.callHooks(this.hooks.initialized)

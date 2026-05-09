@@ -288,3 +288,18 @@ export default {
   }
 }
 ```
+
+### `rest`
+
+```js
+export default {
+  rest: {
+    port: 3001,           // Port to listen on. Default: 3001
+    token: 'my-secret',   // Bearer token required on all requests. Default: none (open)
+    pageSize: 10,         // Default page size for GET /entities. Default: 10
+    renderTimeout: 30000  // Max ms to wait for POST /render to complete. Default: 30000
+  }
+}
+```
+
+Requires `express` to be installed: `npm install express`.

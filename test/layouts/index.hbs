@@ -234,12 +234,12 @@
 		<nav>
 			<span class='brand'>Mikser</span>
 			<ul>
-				<li><a href='{{relative (get "link" (href "/blog"))}}'>Blog</a></li>
-				<li><a href='{{relative (get "link" (href "/en/report"))}}'>Report</a></li>
+				<li><a href='{{url (get "link" (href "/blog"))}}'>Blog</a></li>
+				<li><a href='{{url (get "link" (href "/en/report"))}}'>Report</a></li>
 				{{#if (eq document.meta.lang 'en')}}
-					<li><a href='{{relative (get "link" (href "/blog"))}}'>BG</a></li>
+					<li><a href='{{url (get "link" (href "/blog"))}}'>BG</a></li>
 				{{else}}
-					<li><a href='{{relative (get "link" (href "/blog"))}}'>EN</a></li>
+					<li><a href='{{url (get "link" (href "/blog"))}}'>EN</a></li>
 				{{/if}}
 			</ul>
 		</nav>
@@ -247,7 +247,7 @@
 		<div class='hero'>
 			<h1>{{document.meta.title}}</h1>
 			<p>{{document.meta.description}}</p>
-			<a class='cta' href='{{relative (get "link" (href "/blog/getting-started"))}}'>Read the Blog</a>
+			<a class='cta' href='{{url (get "link" (href "/blog/getting-started"))}}'>Read the Blog</a>
 		</div>
 
 		<div class='container'>
@@ -257,7 +257,7 @@
 				{{#with (href '/blog/getting-started')}}
 					<div class='post-card'>
 						<div class='date'>{{date meta.date 'MMMM D, YYYY'}}</div>
-						<h3><a href='{{relative link}}'>{{meta.title}}</a></h3>
+						<h3><a href='{{url link}}'>{{meta.title}}</a></h3>
 						<p>{{meta.description}}</p>
 						<div class='tags'>
 							{{#each meta.tags}}<span class='tag'>{{this}}</span>{{/each}}
@@ -267,7 +267,7 @@
 				{{#with (href '/blog/clean-code')}}
 					<div class='post-card'>
 						<div class='date'>{{date meta.date 'MMMM D, YYYY'}}</div>
-						<h3><a href='{{relative link}}'>{{meta.title}}</a></h3>
+						<h3><a href='{{url link}}'>{{meta.title}}</a></h3>
 						<p>{{meta.description}}</p>
 						<div class='tags'>
 							{{#each meta.tags}}<span class='tag'>{{this}}</span>{{/each}}
@@ -277,7 +277,7 @@
 				{{#with (href '/blog/handlebars-layouts')}}
 					<div class='post-card'>
 						<div class='date'>{{date meta.date 'MMMM D, YYYY'}}</div>
-						<h3><a href='{{relative link}}'>{{meta.title}}</a></h3>
+						<h3><a href='{{url link}}'>{{meta.title}}</a></h3>
 						<p>{{meta.description}}</p>
 						<div class='tags'>
 							{{#each meta.tags}}<span class='tag'>{{this}}</span>{{/each}}
@@ -290,12 +290,12 @@
 				<h2 class='section-title'>Media</h2>
 				<div class='media-grid'>
 					<div class='media-card'>
-						<img src='{{relative (get "link" (resource document.meta.image))}}' alt='Placeholder image' />
+						<img src='{{url (get "link" (resource document.meta.image))}}' alt='Placeholder image' />
 						<div class='caption'>Original image via resource plugin</div>
 					</div>
 					<div class='media-card'>
 						<img
-							src='{{relative (asset "small-image" (get "name" (resource document.meta.image)) "webp")}}'
+							src='{{url (asset "small-image" (get "name" (resource document.meta.image)) "webp")}}'
 							alt='Processed image'
 						/>
 						<div class='caption'>Optimised WebP via asset preset <code>small-image</code></div>
@@ -303,14 +303,14 @@
 					{{#if document.meta.video}}
 						<div class='media-card'>
 							<video controls>
-								<source src='{{relative (get "link" (resource document.meta.video))}}' type='video/mp4' />
+								<source src='{{url (get "link" (resource document.meta.video))}}' type='video/mp4' />
 							</video>
 							<div class='caption'>Original video via resource plugin</div>
 						</div>
 						<div class='media-card'>
 							<video controls>
 								<source
-									src='{{relative (asset "small-video" (get "name" (resource document.meta.video)) "mp4")}}'
+									src='{{url (asset "small-video" (get "name" (resource document.meta.video)) "mp4")}}'
 									type='video/mp4'
 								/>
 							</video>
@@ -325,7 +325,7 @@
 					<h3>Quarterly Report</h3>
 					<p>Auto-generated PDF via the <code>post-pdf</code> postprocessor. The same document renders as PDF.</p>
 				</div>
-				<a href='{{relative (get "link" (href "/en/report"))}}'>Download PDF</a>
+				<a href='{{url (get "link" (href "/en/report"))}}'>Download PDF</a>
 			</div>
 
 		</div>

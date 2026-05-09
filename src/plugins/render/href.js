@@ -32,7 +32,7 @@ export function load({ entity, runtime, state }) {
         }
     }
 
-    runtime.relative = (link) => {
+    runtime.url = (link) => {
         if (!link) return ''
         const from = path.dirname(entity.destination || '/')
         return path.relative(from, link)

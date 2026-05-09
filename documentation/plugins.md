@@ -434,6 +434,93 @@ shares: {
 }
 ```
 
+### `rest`
+
+Exposes a lightweight HTTP API over the Mikser pipeline. Useful for headless CMS workflows, live preview, and programmatic content management.
+
+**Requires:** `npm install express`
+
+**Endpoints:**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/entities` | Query the catalog with optional filters and pagination |
+| `PUT` | `/entities` | Write a file to a collection folder (triggers normal pipeline) |
+| `DELETE` | `/entities` | Delete a file from a collection folder |
+| `POST` | `/render` | Render an entity in memory without touching the filesystem |
+
+**`GET /entities`**
+
+Returns a paginated list of entities from the catalog. All query parameters except `page` and `limit` are forwarded to `findEntities()` as a filter.
+
+```
+GET /entities                          → all entities, page 1
+GET /entities?collection=documents     → filter by collection
+GET /entities?collection=documents&page=2&limit=25
+```
+
+Response envelope:
+```json
+{
+  "items": [...],
+  "page": 1,
+  "limit": 10,
+  "total": 47,
+  "totalPages": 5,
+  "hasNext": true,
+  "hasPrev": false
+}
+```
+
+**`PUT /entities`**
+
+Writes content to a file in a collection folder. The file change is picked up by the chokidar watcher and runs through the normal import → process → render pipeline.
+
+```json
+{ "collection": "documents", "relativePath": "blog/new-post.md", "content": "---\ntitle: Hello\n---\n\nContent here." }
+```
+
+**`DELETE /entities`**
+
+Deletes a file from a collection folder. Triggers the normal delete pipeline.
+
+```json
+{ "collection": "documents", "relativePath": "blog/old-post.md" }
+```
+
+**`POST /render`**
+
+Renders an entity in memory without writing any file. Returns the rendered output directly in the response. Useful for live preview.
+
+```json
+{
+  "id": "/documents/blog/preview.md",
+  "collection": "documents",
+  "type": "document",
+  "format": "md",
+  "meta": { "title": "Preview", "layout": "post" },
+  "content": "# Preview\n\nThis is a live preview."
+}
+```
+
+**Config:**
+
+```js
+rest: {
+  port: 3001,          // Port to listen on. Default: 3001
+  token: 'secret',     // Bearer token for auth. Default: none (open)
+  pageSize: 10,        // Default page size for GET /entities. Default: 10
+  renderTimeout: 30000 // Render timeout in ms. Default: 30000
+}
+```
+
+**Authentication:**
+
+When `rest.token` is set, every request must include:
+```
+Authorization: Bearer <token>
+```
+
 ---
 
 ## npm Plugin Packages

@@ -209,27 +209,58 @@ These plugins extend the `runtime` object inside templates. They are loaded auto
 
 ### `render-href` — Link Resolution
 
-Resolves internal links using the layouts sitemap.
+Resolves internal links using the layouts sitemap and computes relative URLs from the current document's output location.
 
 **Functions added to `runtime`:**
 
+#### `href(path, page?, lang?)`
+
+Looks up an entity in the sitemap by its virtual path. Returns an object with the entity's metadata and a `link` property pointing to its output URL.
+
 ```handlebars
-{{! Resolve an internal href (returns the entity's destination URL) }}
-<a href="{{href '/blog/post'}}">Read more</a>
+{{! Look up an entity — returns { link, meta, ... } }}
+{{#with (href '/blog/getting-started')}}
+  <a href="{{url link}}">{{meta.title}}</a>
+  <p>{{meta.description}}</p>
+  <span>{{date meta.date 'MMMM D, YYYY'}}</span>
+{{/with}}
 
 {{! Resolve with page number for paginated content }}
-<a href="{{href '/blog' 2}}">Page 2</a>
+<a href="{{url (get 'link' (href '/blog' 2))}}">Page 2</a>
 
-{{! Resolve with language }}
-<a href="{{hrefLang '/blog/post' 'fr'}}">FR</a>
+{{! Resolve with language override }}
+<a href="{{url (get 'link' (hrefLang '/blog/post' 'fr'))}}">FR</a>
 
 {{! Pagination links }}
-{{#if runtime.prev}}
-  <a href="{{href document.name runtime.prev}}">Previous</a>
+{{#if prev}}
+  <a href="{{url (get 'link' (href document.name prev))}}">Previous</a>
 {{/if}}
-{{#if runtime.next}}
-  <a href="{{href document.name runtime.next}}">Next</a>
+{{#if next}}
+  <a href="{{url (get 'link' (href document.name next))}}">Next</a>
 {{/if}}
+```
+
+#### `url(link)`
+
+Converts an absolute virtual output path to a **relative URL** from the current document's output location. Always use `url` when building `href` attributes — it ensures links work regardless of where the site is deployed or nested.
+
+```handlebars
+{{! Absolute virtual path → relative URL }}
+<a href="{{url '/en/blog/index.html'}}">Blog</a>
+
+{{! Combine with href }}
+<a href="{{url (get 'link' (href '/blog'))}}">Blog</a>
+
+{{! Combine with asset }}
+<img src="{{url (asset 'thumbnail' name 'webp')}}" />
+
+{{! Combine with resource }}
+<link rel="stylesheet" href="{{url (get 'link' (resource 'https://cdn.example.com/lib.css'))}}">
+
+{{! Inside {{#with (href '...')}} — link is already resolved }}
+{{#with (href '/blog/getting-started')}}
+  <a href="{{url link}}">{{meta.title}}</a>
+{{/with}}
 ```
 
 The `href` plugin reads `runtime.state.layouts.sitemap` to resolve paths to output URLs. It understands clean URLs and pagination.

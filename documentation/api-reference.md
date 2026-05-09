@@ -103,6 +103,20 @@ import { runtime } from 'mikser-core'
 | `runtime.sync(operation)` | Run sync hooks for an operation |
 | `runtime.validate(entry)` | Run all validators for an entry |
 | `runtime.complete(entry)` | Run completion hooks for an entry |
+| `runtime.addHook(name, fn)` | Register a hook callback dynamically; returns the function for later removal |
+| `runtime.removeHook(name, fn)` | Remove a previously registered hook callback |
+
+`addHook` / `removeHook` are useful when you need a **one-shot** hook that cleans itself up, or when you need to wire hooks from outside the normal plugin lifecycle (e.g. the REST plugin registers a `completed` hook per render request and removes it when the promise settles):
+
+```js
+const hook = runtime.addHook('completed', async (entry) => {
+    if (entry.entity._correlationId !== correlationId) return
+    runtime.removeHook('completed', hook)
+    resolve(entry.output)
+})
+```
+
+All hook names in `runtime.hooks` are valid: `initialize`, `initialized`, `load`, `loaded`, `import`, `imported`, `process`, `processed`, `persist`, `persisted`, `beforeRender`, `render`, `afterRender`, `beforePostprocess`, `postprocess`, `afterPostprocess`, `cancel`, `cancelled`, `finalize`, `finalized`, `sync`, `completed`.
 
 ---
 
