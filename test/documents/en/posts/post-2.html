@@ -1,19 +1,61 @@
 ---
 layout: post
 lang: en
+href: /blog/clean-code
 title: Tips for Writing Clean Code
+description: Five rules that cover most cases — naming, function size, consistency, and deleting dead code.
 date: 2026-01-15
 tags: [coding, tips]
 ---
 
-<h1>Tips for Writing Clean Code</h1>
+<p>Clean code is not about style guides or linters — it is about writing code that the next person (often future you) can read without frustration. A few rules cover most of the ground.</p>
 
-<p>Three rules that cover most cases:</p>
+<h2>1. Name things clearly</h2>
 
-<ol>
-  <li><strong>Name things clearly</strong> — a good name is better than a comment.</li>
-  <li><strong>Keep functions small</strong> — if it needs a scrollbar, split it.</li>
-  <li><strong>Delete unused code</strong> — version control has your back.</li>
-</ol>
+<p>A well-chosen name eliminates the need for a comment. Compare:</p>
 
-<p>Simple, but easy to forget under pressure.</p>
+<pre><code>// bad
+const d = new Date(ts * 1000)
+
+// good
+const publishedAt = new Date(timestampSeconds * 1000)</code></pre>
+
+<p>If you find yourself adding a comment to explain a variable, rename it instead.</p>
+
+<h2>2. Keep functions small</h2>
+
+<p>A function should do <em>one thing</em>. A practical test: if describing what it does requires the word "and", split it. Functions that fit on a screen are easier to test, easier to move, and easier to delete.</p>
+
+<h2>3. Delete unused code</h2>
+
+<p>Dead code is a reader tax. Every commented-out block, every unused import, every feature flag that was never cleaned up — all of it costs future readers time. Version control has the history; you do not need to keep it in the source.</p>
+
+<h2>4. Make the happy path obvious</h2>
+
+<p>Handle edge cases early and return, so the main logic is not buried in nested conditions:</p>
+
+<pre><code>// harder to follow
+function process(item) {
+    if (item) {
+        if (item.active) {
+            // ... main logic deeply nested
+        }
+    }
+}
+
+// cleaner
+function process(item) {
+    if (!item) return
+    if (!item.active) return
+    // main logic at the top level
+}</code></pre>
+
+<h2>5. Consistency beats perfection</h2>
+
+<p>A codebase where every file follows the same conventions is easier to navigate than one where each file reflects a different author's preferences. Pick an approach and apply it everywhere — even if it is not the optimal one.</p>
+
+<blockquote>
+    The best code is the code your teammates can maintain without asking you questions.
+</blockquote>
+
+<p>These principles apply beyond application code. If you are building a Mikser site, the same rules apply to your layouts and templates — see <a href="../../blog/handlebars-layouts">Building Layouts with Handlebars</a> for concrete examples.</p>

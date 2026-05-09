@@ -1,11 +1,173 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{document.meta.lang}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{document.meta.title}}</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f8f9fa;
+            color: #1a1a2e;
+            line-height: 1.7;
+        }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* Nav */
+        nav {
+            background: #1a1a2e;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        nav .brand { color: #fff; font-weight: 700; font-size: 1.2rem; }
+        nav .back { color: #ccd6f6; font-size: .9rem; }
+        nav .back:hover { color: #fff; text-decoration: none; }
+
+        /* Article */
+        .article-wrap {
+            max-width: 720px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+        header.post-header { margin-bottom: 2rem; }
+        header.post-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: .75rem;
+            color: #1a1a2e;
+        }
+        .post-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .5rem 1.2rem;
+            font-size: .85rem;
+            color: #666;
+        }
+        .post-meta .date::before { content: "📅 "; }
+        .tags { display: flex; flex-wrap: wrap; gap: .4rem; }
+        .tag {
+            background: #eef2ff;
+            color: #4c6ef5;
+            font-size: .75rem;
+            padding: .2rem .6rem;
+            border-radius: 12px;
+        }
+
+        /* Article body */
+        article {
+            background: #fff;
+            border-radius: 8px;
+            padding: 2.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        }
+        article h1, article h2, article h3 {
+            margin: 1.8rem 0 .8rem;
+            color: #1a1a2e;
+            line-height: 1.3;
+        }
+        article h1 { font-size: 1.8rem; }
+        article h2 { font-size: 1.4rem; border-bottom: 2px solid #f0f0f0; padding-bottom: .4rem; }
+        article h3 { font-size: 1.1rem; }
+        article p { margin-bottom: 1.2rem; }
+        article ul, article ol { padding-left: 1.8rem; margin-bottom: 1.2rem; }
+        article li { margin-bottom: .4rem; }
+        article strong { color: #1a1a2e; }
+        article code {
+            background: #f0f4ff;
+            color: #0066cc;
+            padding: .1em .4em;
+            border-radius: 3px;
+            font-size: .88em;
+            font-family: 'Fira Code', 'Courier New', monospace;
+        }
+        article pre {
+            background: #1a1a2e;
+            color: #ccd6f6;
+            border-radius: 6px;
+            padding: 1.2rem 1.5rem;
+            overflow-x: auto;
+            margin-bottom: 1.2rem;
+        }
+        article pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+            font-size: .88rem;
+        }
+        article blockquote {
+            border-left: 4px solid #e94560;
+            margin: 1.5rem 0;
+            padding: .8rem 1.2rem;
+            background: #fff5f5;
+            color: #555;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Footer */
+        .article-footer {
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: .85rem;
+            color: #888;
+        }
+        .article-footer a { color: #0066cc; }
+
+        footer {
+            background: #1a1a2e;
+            color: #8892b0;
+            text-align: center;
+            padding: 2rem;
+            font-size: .85rem;
+            margin-top: 3rem;
+        }
+        footer strong { color: #ccd6f6; }
+    </style>
 </head>
 <body>
-    {{{markdown document.content}}}
+    <nav>
+        <span class="brand">Mikser</span>
+        <a class="back" href="{{relative (get 'link' (href '/blog'))}}">← Back to Blog</a>
+    </nav>
+
+    <div class="article-wrap">
+        <header class="post-header">
+            <h1>{{document.meta.title}}</h1>
+            <div class="post-meta">
+                {{#if document.meta.date}}
+                <span class="date">{{date document.meta.date 'MMMM D, YYYY'}}</span>
+                {{/if}}
+                {{#if document.meta.tags}}
+                <div class="tags">
+                    {{#each document.meta.tags}}
+                    <span class="tag">{{this}}</span>
+                    {{/each}}
+                </div>
+                {{/if}}
+            </div>
+        </header>
+
+        <article>
+            {{{markdown document.content}}}
+        </article>
+
+        <div class="article-footer">
+            <a href="{{relative (get 'link' (href '/blog'))}}">← All posts</a>
+            <span>Published with <strong>Mikser</strong></span>
+        </div>
+    </div>
+
+    <footer>
+        Built with <strong>Mikser</strong> — fast, plugin-driven static site generation.
+    </footer>
 </body>
 </html>

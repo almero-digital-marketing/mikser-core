@@ -5,7 +5,7 @@ export function load({ runtime, state }) {
             if (url.match(library)) {
                 const { origin } = new URL(url)
                 const name = url.replace(origin, `${resourceLib[library]}`)
-                const link = url.replace(origin, `${state.resources.resourcesFolder}/${resourceLib[library]}`)
+                const link = '/' + url.replace(origin, `${state.resources.resourcesFolder}/${resourceLib[library]}`)
                 return { link, name }
             }
         }

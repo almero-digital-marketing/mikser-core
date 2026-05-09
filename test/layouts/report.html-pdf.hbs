@@ -5,36 +5,159 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{document.meta.title}}</title>
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: Georgia, serif;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 0 40px;
-            color: #222;
-            line-height: 1.7;
+            font-family: Georgia, 'Times New Roman', serif;
+            color: #1a1a2e;
+            line-height: 1.75;
+            background: #fff;
+            padding: 60px 80px;
+            max-width: 860px;
+            margin: 0 auto;
         }
-        h1 {
-            font-size: 2em;
-            border-bottom: 2px solid #444;
-            padding-bottom: 0.3em;
-            margin-bottom: 0.5em;
+
+        /* Cover header */
+        .cover {
+            border-bottom: 3px solid #1a1a2e;
+            padding-bottom: 2rem;
+            margin-bottom: 2.5rem;
         }
-        .meta {
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 2em;
+        .cover .label {
+            font-family: system-ui, sans-serif;
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #e94560;
+            font-weight: 700;
+            margin-bottom: .5rem;
         }
-        .meta span {
-            margin-right: 1.5em;
+        .cover h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #1a1a2e;
+            margin-bottom: 1rem;
+        }
+        .cover .meta {
+            font-family: system-ui, sans-serif;
+            font-size: .85rem;
+            color: #555;
+            display: flex;
+            flex-wrap: wrap;
+            gap: .4rem 2rem;
+        }
+        .cover .meta span::before { color: #aaa; margin-right: .3rem; }
+
+        /* Body content */
+        h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin: 2.5rem 0 .8rem;
+            color: #1a1a2e;
+            border-left: 4px solid #e94560;
+            padding-left: .8rem;
+        }
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 1.8rem 0 .6rem;
+            color: #1a1a2e;
+        }
+        p { margin-bottom: 1.1rem; }
+        ul, ol { padding-left: 1.8rem; margin-bottom: 1.1rem; }
+        li { margin-bottom: .35rem; }
+        strong { color: #1a1a2e; }
+        em { color: #444; }
+
+        /* Code */
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: .85em;
+            background: #f0f4ff;
+            color: #0044aa;
+            padding: .1em .35em;
+            border-radius: 2px;
+        }
+        pre {
+            background: #1a1a2e;
+            color: #ccd6f6;
+            border-radius: 4px;
+            padding: 1.2rem 1.5rem;
+            overflow-x: auto;
+            margin-bottom: 1.2rem;
+            font-size: .82rem;
+            line-height: 1.6;
+        }
+        pre code { background: none; color: inherit; padding: 0; }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: system-ui, sans-serif;
+            font-size: .9rem;
+            margin-bottom: 1.5rem;
+        }
+        th {
+            background: #1a1a2e;
+            color: #ccd6f6;
+            font-weight: 600;
+            text-align: left;
+            padding: .6rem 1rem;
+        }
+        td {
+            padding: .55rem 1rem;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        tr:nth-child(even) td { background: #f8f9fa; }
+
+        /* Blockquote */
+        blockquote {
+            border-left: 4px solid #e94560;
+            margin: 1.5rem 0;
+            padding: .8rem 1.2rem;
+            background: #fff8f8;
+            color: #555;
+            font-style: italic;
+        }
+
+        /* Page break hint for PDF */
+        .page-break { page-break-after: always; }
+
+        /* Footer */
+        .doc-footer {
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid #ddd;
+            font-family: system-ui, sans-serif;
+            font-size: .78rem;
+            color: #aaa;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        @media print {
+            body { padding: 0; }
+            @page { margin: 2cm 2.5cm; }
         }
     </style>
 </head>
 <body>
-    <h1>{{document.meta.title}}</h1>
-    <div class="meta">
-        <span>Date: {{document.meta.date}}</span>
-        {{#if document.meta.author}}<span>Author: {{document.meta.author}}</span>{{/if}}
+    <div class="cover">
+        <div class="label">Report</div>
+        <h1>{{document.meta.title}}</h1>
+        <div class="meta">
+            {{#if document.meta.date}}<span>{{document.meta.date}}</span>{{/if}}
+            {{#if document.meta.author}}<span>{{document.meta.author}}</span>{{/if}}
+            {{#if document.meta.version}}<span>v{{document.meta.version}}</span>{{/if}}
+        </div>
     </div>
+
     {{{markdown document.content}}}
+
+    <div class="doc-footer">
+        <span>Generated by Mikser</span>
+        <span>{{document.meta.title}}</span>
+    </div>
 </body>
 </html>

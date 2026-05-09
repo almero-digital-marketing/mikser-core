@@ -1,5 +1,6 @@
 href: /blog
-title: 'Home Page'
+title: 'Welcome to Mikser'
+description: 'A fast, plugin-driven static site generator. Build sites with documents, layouts, assets, and PDF exports — all from a single config.'
 layout: index
 lang: en
 video: https://lorem.video/720p.mp4

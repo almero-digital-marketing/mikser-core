@@ -36,10 +36,13 @@ export default ({
     onLoaded(async () => {
         const logger = useLogger()
 
+        const resourcesName = runtime.config.resources?.resourcesFolder || collection
         runtime.state.resources = {
             resourceLib: {},
             resourceMap: {},
-            resourcesFolder: runtime.config.resources?.resourcesFolder || collection,
+            resourcesFolder: runtime.config.resources?.outputFolder
+                ? path.join(runtime.config.resources.outputFolder, resourcesName)
+                : resourcesName,
         }
 
         runtime.options.resources = runtime.config.resources?.resourcesFolder || collection

@@ -42,7 +42,13 @@ export async function postprocess({ entity, options, config, logger }) {
     }
 }
 
-export async function teardown({ config, logger }) {
+export async function teardown({ options, config, logger }) {
+    if (!options?.watch) {
+        await browser?.close()
+        browser = undefined
+        logger.debug('Puppeteer browser closed')
+        return
+    }
     const delay = config?.teardownDelay ?? TEARDOWN_DELAY
     teardownTimer = setTimeout(async () => {
         teardownTimer = undefined

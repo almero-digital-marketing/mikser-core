@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 export function load({ entity, runtime, state }) {
     runtime.hrefLang = (href, page) => {
         const { sitemap } = state.layouts
@@ -28,6 +30,12 @@ export function load({ entity, runtime, state }) {
             }
             return found
         }
+    }
+
+    runtime.relative = (link) => {
+        if (!link) return ''
+        const from = path.dirname(entity.destination || '/')
+        return path.relative(from, link)
     }
 
     runtime.prev = entity.page > 1 ? entity.page - 1 : false

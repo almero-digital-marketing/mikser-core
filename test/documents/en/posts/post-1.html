@@ -1,13 +1,60 @@
 ---
 layout: post
 lang: en
-title: Getting Started
+href: /blog/getting-started
+title: Getting Started with Mikser
+description: A quick introduction to documents, layouts, assets, and PDF generation out of the box.
 date: 2026-01-10
 tags: [intro, basics]
 ---
 
-<h1>Getting Started</h1>
+<p>Mikser is a static site generator built around a simple idea: your content lives in documents, your templates live in layouts, and a small config wires them together. This post walks through the basics to get you up and running.</p>
 
-<p>Welcome to the blog. This is the first post.</p>
+<h2>Project structure</h2>
 
-<p>Here you'll find short articles on various topics — no fluff, just the useful bits.</p>
+<p>A typical Mikser project looks like this:</p>
+
+<pre><code>my-site/
+├── documents/        # your content (Markdown, HTML, YAML, …)
+├── layouts/          # Handlebars templates
+├── resources/        # referenced assets (images, videos)
+├── mikser.config.js  # plugin list &amp; options
+└── out/              # generated output</code></pre>
+
+<p>Run <code>mikser</code> and the engine imports all documents, matches them to layouts, renders the HTML, and writes the output folder.</p>
+
+<h2>Defining a layout</h2>
+
+<p>Create a file in <code>layouts/</code> with a double extension. The first extension sets the output format, the second sets the template engine:</p>
+
+<ul>
+    <li><code>post.html.hbs</code> — renders HTML with Handlebars</li>
+    <li><code>feed.xml.hbs</code> — renders XML with Handlebars</li>
+    <li><code>report.html-pdf.hbs</code> — renders HTML and then converts it to PDF</li>
+</ul>
+
+<p>Inside the layout, the current document is exposed as <code>document</code>. Metadata from front-matter lives under <code>document.meta</code> and the body content is in <code>document.content</code>.</p>
+
+<h2>Connecting documents to layouts</h2>
+
+<p>Set a <code>layout</code> key in the document's front-matter:</p>
+
+<pre><code>---
+layout: post
+title: My First Post
+date: 2026-01-10
+---</code></pre>
+
+<p>Alternatively, configure auto-layout matching in <code>mikser.config.js</code> so documents are picked up by naming convention — no front-matter needed.</p>
+
+<h2>Running a build</h2>
+
+<pre><code>npx mikser --working-folder ./my-site</code></pre>
+
+<p>Add <code>--watch</code> to rebuild on file changes during development. The incremental watcher only processes the documents that actually changed.</p>
+
+<blockquote>
+    Tip: pass <code>--clear</code> on the first run to start from a clean output folder.
+</blockquote>
+
+<p>Once you are comfortable with the basics, the next post covers <a href="../../blog/clean-code">writing clean, maintainable code</a> — habits that pay off as your project grows.</p>

@@ -108,10 +108,13 @@ export default ({
     onLoaded(async () => {
         const logger = useLogger()
 
+        const assetsName = runtime.config.assets?.assetsFolder || 'assets'
         runtime.state.assets = {
             presets: {},
             assetsMap: {},
-            assetsFolder: runtime.config.assets?.assetsFolder || 'assets',
+            assetsFolder: runtime.config.assets?.outputFolder
+                ? path.join(runtime.config.assets.outputFolder, assetsName)
+                : assetsName,
         }
 
         runtime.options.presets = runtime.config.presets?.presetsFolder || collection

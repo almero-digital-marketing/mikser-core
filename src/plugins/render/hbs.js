@@ -30,6 +30,7 @@ export function load({ config, runtime, context }) {
 }
 
 export async function render({ entity, runtime }) {
+    const source = await readFile(entity.layout.uri, 'utf8')
     const sandbox = {}
     for (let helper in runtime) {
         if (typeof (runtime[helper]) == 'function') {
@@ -38,7 +39,5 @@ export async function render({ entity, runtime }) {
             sandbox[helper] = runtime[helper]
         }
     }
-    const source = await readFile(entity.layout.uri, 'utf8')
-    const output = runtime.hbs(source, sandbox)
-    return output
+    return runtime.hbs(source, sandbox)
 }

@@ -1,0 +1,73 @@
+---
+layout: post
+lang: en
+href: /blog/handlebars-layouts
+title: Building Layouts with Handlebars
+description: How to build reusable layouts using Handlebars helpers for markdown, resources, assets, and relative links.
+date: 2026-02-03
+tags: [layouts, handlebars]
+---
+
+<p>Mikser layouts are Handlebars templates with a double extension. The first extension defines the output format (<code>.html</code>, <code>.xml</code>, …), the second names the template engine (<code>.hbs</code>). This post covers the most useful patterns.</p>
+
+<h2>Accessing document data</h2>
+
+<p>Inside every layout the current document is available as <code>document</code>:</p>
+
+<pre><code>&lt;!-- front-matter fields --&gt;
+{{document.meta.title}}
+{{document.meta.date}}
+
+&lt;!-- rendered body content --&gt;
+{{{markdown document.content}}}</code></pre>
+
+<p>Use triple braces <code>{{{…}}}</code> when you want to output raw HTML — otherwise Handlebars will escape it.</p>
+
+<h2>Conditional blocks</h2>
+
+<pre><code>{{#if document.meta.author}}
+  &lt;span&gt;By {{document.meta.author}}&lt;/span&gt;
+{{/if}}</code></pre>
+
+<h2>Iterating over arrays</h2>
+
+<p>Front-matter arrays (like <code>tags</code>) can be looped with <code>#each</code>:</p>
+
+<pre><code>{{#each document.meta.tags}}
+  &lt;span class="tag"&gt;{{this}}&lt;/span&gt;
+{{/each}}</code></pre>
+
+<h2>The href helper</h2>
+
+<p>The <code>render-href</code> plugin registers an <code>href()</code> Handlebars helper that resolves any entity from the sitemap by its <code>href</code> value. This is the right way to create links between pages — the helper returns the entity's actual output destination, so links stay correct even when clean URLs are enabled:</p>
+
+<pre><code>{{#with (href '/blog/getting-started')}}
+  &lt;a href="{{link}}"&gt;{{meta.title}}&lt;/a&gt;
+{{/with}}</code></pre>
+
+<p>To resolve a specific language variant, pass the lang as a second argument: <code>{{href '/blog/getting-started' 'bg'}}</code>.</p>
+
+<h2>Resource and asset helpers</h2>
+
+<p>The <code>render-resource</code> and <code>render-asset</code> plugins register Handlebars helpers that resolve remote media through the resource and asset plugins:</p>
+
+<pre><code>&lt;!-- original image URL resolved through the resource library --&gt;
+&lt;img src="../public/{{get 'link' (resource document.meta.image)}}"&gt;
+
+&lt;!-- processed WebP via an asset preset --&gt;
+&lt;img src="../public/{{asset 'small-image' (get 'name' (resource document.meta.image)) 'webp'}}"&gt;</code></pre>
+
+<h2>PDF layouts</h2>
+
+<p>Add <code>-pdf</code> to the format segment of the layout filename to enable PDF post-processing:</p>
+
+<pre><code>layouts/
+└── report.html-pdf.hbs   # renders HTML, then Puppeteer converts to PDF</code></pre>
+
+<p>The <code>post-pdf</code> plugin launches a headless Chromium instance, navigates to the rendered HTML file, and prints it to PDF using the browser's built-in print engine — so you get full CSS, page breaks, and print media queries for free.</p>
+
+<blockquote>
+    The Puppeteer browser instance is shared across all PDF jobs in a single run and kept alive for 60 seconds after the build completes, so rapid watch-mode rebuilds reuse the same instance without relaunching.
+</blockquote>
+
+<p>This series started with <a href="../../blog/getting-started">Getting Started with Mikser</a> — go back there if you need to set up a project from scratch before working on layouts.</p>
