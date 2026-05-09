@@ -10,6 +10,7 @@ export default async ({ options }) => ({
 		'render-href',
 		'render-resource',
 		'render-asset',
+		'post-pdf',
 	],
     resources: {
         outputFolder: 'public',

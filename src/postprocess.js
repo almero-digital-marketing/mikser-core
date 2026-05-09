@@ -1,24 +1,22 @@
 import path from 'node:path'
 import _ from 'lodash'
 
-export default async ({ entity, options, config, context, state, logger }) => {
-    async function loadPlugin(pluginName) {
-        const resolveLocations = [
-            path.join(options.workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
-            path.join(options.workingFolder, 'plugins', `${pluginName}.js`),
-            path.join(path.dirname(import.meta.url), 'plugins', 'post', `${pluginName.replace('post-', '')}.js`)
-        ]
-        for (let resolveLocation of resolveLocations) {
-            try {
-                return await import(resolveLocation)
-            } catch (err) {
-                if (err.code != 'ERR_MODULE_NOT_FOUND') {
-                    logger.error('Post plugin error:', resolveLocation, err)
-                    throw err
-                }
-            }
+export async function loadPlugin(pluginName, workingFolder) {
+    const resolveLocations = [
+        path.join(workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
+        path.join(workingFolder, 'plugins', `${pluginName}.js`),
+        path.join(path.dirname(import.meta.url), 'plugins', 'post', `${pluginName.replace('post-', '')}.js`)
+    ]
+    for (let resolveLocation of resolveLocations) {
+        try {
+            return await import(resolveLocation)
+        } catch (err) {
+            if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
         }
     }
+}
+
+export default async ({ entity, options, config, context, state, logger }) => {
 
     const { postprocessor } = options
     const plugins = {}
@@ -39,7 +37,7 @@ export default async ({ entity, options, config, context, state, logger }) => {
     }
 
     for (let pluginName of pluginsToLoad) {
-        const plugin = await loadPlugin(pluginName)
+        const plugin = await loadPlugin(pluginName, options.workingFolder)
         plugins[pluginName] = plugin
         if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context, runtime, state, logger })
     }

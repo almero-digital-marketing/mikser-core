@@ -41,7 +41,7 @@ onLoad(async () => {
 
     runtime.options.plugins = runtime.options.plugins.concat(runtime.config.plugins).filter(plugin => plugin)
 
-    const userPlugins = runtime.options.plugins.filter(plugin => plugin.indexOf('render-') != 0)
+    const userPlugins = runtime.options.plugins.filter(plugin => plugin.indexOf('render-') != 0 && plugin.indexOf('post-') != 0)
     if (!userPlugins.length) {
         logger.info('No plugins loaded')
     } else {

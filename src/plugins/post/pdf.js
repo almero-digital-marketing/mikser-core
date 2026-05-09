@@ -1,25 +1,27 @@
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'node:path'
 
-export async function postprocess({ entity, options, config, logger }) {
-    let puppeteer
-    try {
-        puppeteer = (await import('puppeteer')).default
-    } catch {
-        throw new Error('puppeteer is required for the pdf postprocessor — run: npm install puppeteer')
-    }
+let browser
 
+export async function setup({ config, logger }) {
+    const { default: puppeteer } = await import('puppeteer').catch(() => {
+        throw new Error('puppeteer is required for the pdf postprocessor — run: npm install puppeteer')
+    })
+    browser = await puppeteer.launch({
+        headless: true,
+        ...config?.launch
+    })
+    logger.debug('Puppeteer browser launched')
+}
+
+export async function postprocess({ entity, options, config, logger }) {
     const sourcePath = path.join(options.outputFolder, entity.destination)
     const destinationPath = sourcePath.replace(/\.html?$/i, '.pdf')
 
     await mkdir(path.dirname(destinationPath), { recursive: true })
 
-    const browser = await puppeteer.launch({
-        headless: true,
-        ...config?.launch
-    })
+    const page = await browser.newPage()
     try {
-        const page = await browser.newPage()
         await page.goto(`file://${sourcePath}`, {
             waitUntil: 'networkidle0',
             ...config?.navigation
@@ -32,6 +34,12 @@ export async function postprocess({ entity, options, config, logger }) {
         await writeFile(destinationPath, buffer)
         logger.debug('PDF generated: %s', destinationPath)
     } finally {
-        await browser.close()
+        await page.close()
     }
+}
+
+export async function teardown({ logger }) {
+    await browser?.close()
+    browser = undefined
+    logger.debug('Puppeteer browser closed')
 }

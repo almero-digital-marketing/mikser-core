@@ -11,7 +11,7 @@ import { useJournal, updateEntry } from './journal.js'
 import { globby } from 'globby'
 import { OPERATION, TASKS } from './constants.js'
 import render from './render.js'
-import postprocess from './postprocess.js'
+import postprocess, { loadPlugin as loadPostPlugin } from './postprocess.js'
 import map from 'p-map'
 import Queue from 'p-queue'
 import packageInfo from '../package.json' with { type: 'json' }
@@ -197,7 +197,19 @@ export async function setup(options) {
 
     onPostprocess(async (signal) => {
         const logger = useLogger()
+        const config = _.pickBy(runtime.config, (value, key) => _.startsWith(key, 'post-'))
+
+        const postPlugins = {}
+        for (const pluginName of runtime.options.plugins.filter(p => p.startsWith('post-'))) {
+            const plugin = await loadPostPlugin(pluginName, runtime.options.workingFolder)
+            if (plugin) {
+                postPlugins[pluginName] = plugin
+                if (plugin.setup) await plugin.setup({ options: runtime.options, config: config[pluginName], state: runtime.state, logger })
+            }
+        }
+
         const postprocessJobs = new Set()
+        try {
         await map(useJournal('Postprocessing', [OPERATION.POSTPROCESS], signal), async entry => {
             const { id, entity, options, context } = entry
             const jobId = entity.id + ':' + entity.destination
@@ -210,7 +222,7 @@ export async function setup(options) {
                         ...runtime.options,
                         ...options,
                     },
-                    config: _.pickBy(runtime.config, (value, key) => _.startsWith(key, 'postprocess-')),
+                    config,
                     context,
                     state: runtime.state
                 }
@@ -254,6 +266,11 @@ export async function setup(options) {
             signal
         })
         postprocessJobs.size && logger.info('Postprocessed: %d', postprocessJobs.size)
+        } finally {
+            for (const [pluginName, plugin] of Object.entries(postPlugins)) {
+                if (plugin.teardown) await plugin.teardown({ options: runtime.options, config: config[pluginName], state: runtime.state, logger })
+            }
+        }
     })
 
     onCancel(async () => {
