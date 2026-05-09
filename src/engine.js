@@ -148,7 +148,9 @@ export async function setup(options) {
                             success: true,
                             result,
                         }
-                        await runtime.complete(entry)
+                        if (!options.postprocessor) {
+                            await runtime.complete(entry)
+                        }
                         await updateEntry({ id, output: entry.output })
                     }
 
