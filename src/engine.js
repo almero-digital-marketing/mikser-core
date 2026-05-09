@@ -10,6 +10,7 @@ import { onInitialize, onInitialized, onRender, onCancel, onCancelled, onFinaliz
 import { useJournal, updateEntry } from './journal.js'
 import { globby } from 'globby'
 import { OPERATION, TASKS } from './constants.js'
+import { changeExtension } from './utils.js'
 import render from './render.js'
 import postprocess, { loadPlugin as loadPostPlugin } from './postprocess.js'
 import map from 'p-map'
@@ -186,7 +187,11 @@ export async function setup(options) {
         for await (const { entity, options, context, output } of useJournal('Queuing postprocess', [OPERATION.RENDER], signal)) {
             if (output?.success && options.postprocessor) {
                 tasks.push({
-                    entity,
+                    entity: {
+                        ...entity,
+                        origin: entity.destination,
+                        destination: changeExtension(entity.destination, options.postprocessor)
+                    },
                     options: { postprocessor: options.postprocessor, tasks: options.tasks },
                     context
                 })

@@ -1,4 +1,3 @@
-import { mkdir, writeFile } from 'fs/promises'
 import path from 'node:path'
 
 const TEARDOWN_DELAY = 60_000
@@ -25,10 +24,7 @@ export async function setup({ config, logger }) {
 }
 
 export async function postprocess({ entity, options, config, logger }) {
-    const sourcePath = path.join(options.outputFolder, entity.destination)
-    const destinationPath = sourcePath.replace(/\.html?$/i, '.pdf')
-
-    await mkdir(path.dirname(destinationPath), { recursive: true })
+    const sourcePath = path.join(options.outputFolder, entity.origin)
 
     const page = await browser.newPage()
     try {
@@ -36,13 +32,11 @@ export async function postprocess({ entity, options, config, logger }) {
             waitUntil: 'networkidle0',
             ...config?.navigation
         })
-        const buffer = await page.pdf({
+        return await page.pdf({
             format: 'A4',
             printBackground: true,
             ...config?.pdf
         })
-        await writeFile(destinationPath, buffer)
-        logger.debug('PDF generated: %s', destinationPath)
     } finally {
         await page.close()
     }
