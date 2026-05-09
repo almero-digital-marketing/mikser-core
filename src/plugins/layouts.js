@@ -352,6 +352,12 @@ export default ({
             } catch { }
             await writeFile(destinationFile, output.result)
             logger.debug('Layout render finished: %s', entity.destination.replace(runtime.options.workingFolder, ''))
+            if (entity.origin) {
+                const originFile = path.join(runtime.options.outputFolder, entity.origin)
+                try {
+                    await unlink(originFile)
+                } catch { }
+            }
         }
     })
 
