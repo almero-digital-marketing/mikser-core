@@ -344,7 +344,7 @@ export default ({
 
     onComplete(async ({ entity, options, output }) => {
         const logger = useLogger()
-        if (entity.layout && !options?.ignore) {
+        if (entity.layout && !options?.ignore && output.result != null) {
             const destinationFile = path.join(runtime.options.outputFolder, entity.destination)
             await mkdir(path.dirname(destinationFile), { recursive: true })
             try {
