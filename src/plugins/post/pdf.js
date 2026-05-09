@@ -1,4 +1,4 @@
-import { mkdir } from 'fs/promises'
+import { mkdir, writeFile } from 'fs/promises'
 import path from 'node:path'
 
 export async function postprocess({ entity, options, config, logger }) {
@@ -24,12 +24,12 @@ export async function postprocess({ entity, options, config, logger }) {
             waitUntil: 'networkidle0',
             ...config?.navigation
         })
-        await page.pdf({
-            path: destinationPath,
+        const buffer = await page.pdf({
             format: 'A4',
             printBackground: true,
             ...config?.pdf
         })
+        await writeFile(destinationPath, buffer)
         logger.debug('PDF generated: %s', destinationPath)
     } finally {
         await browser.close()
