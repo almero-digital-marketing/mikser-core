@@ -111,3 +111,5 @@ test/resources
 
 # Claude Code
 .claude/
+
+.DS_Store
