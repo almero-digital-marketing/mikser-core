@@ -26,9 +26,10 @@ export default ({
     const type = 'layout'
 
     function getFormatInfo(relativePath) {
-        const [template, postprocessor] = path.extname(relativePath).substring(1).toLowerCase().split('-')
-        const format = path.extname(relativePath.replace(path.extname(relativePath), '')).substring(1).toLowerCase() || 'html'
-        return { format, template, postprocessor }
+        const template = path.extname(relativePath).substring(1).toLowerCase()
+        const formatExt = path.extname(relativePath.replace(path.extname(relativePath), '')).substring(1).toLowerCase()
+        const [format, postprocessor] = formatExt.split('-')
+        return { format: format || 'html', template, postprocessor }
     }
 
     function addToSitemap(entity) {
