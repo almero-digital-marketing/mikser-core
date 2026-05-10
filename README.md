@@ -4,21 +4,21 @@
 
 # Mikser Documentation
 
-Mikser is a precision content engine for Node.js — built around a strict lifecycle, a composable plugin system, and zero compromise on output control. Every document, asset, and template flows through the same deterministic pipeline: import → process → render → finalize. Plugins hook in at any phase; nothing runs outside the cycle. The result is a system that scales from a single markdown blog to a multi-language, multi-format publishing platform — without ever losing sight of what it produced and why.
+Mikser is a precision content engine for Node.js — built around a strict lifecycle, a composable plugin system, and zero compromise on output control. Every document, asset, and template flows through the same deterministic pipeline. Plugins hook in at any phase; nothing runs outside the cycle. The result is a system that scales from a single markdown blog to a multi-language, multi-format publishing platform — without ever losing sight of what it produced and why.
 
 ## Documentation Index
 
-| Document | Audience | Description |
-|----------|----------|-------------|
-| [Getting Started](./documentation/getting-started.md) | Users | Installation, first project, basic usage |
-| [Configuration](./documentation/configuration.md) | Users | All CLI options and config file reference |
-| [Lifecycle](./documentation/lifecycle.md) | Users & Developers | Complete lifecycle phases and hook system |
-| [Plugins](./documentation/plugins.md) | Users & Developers | Built-in plugins, writing custom plugins |
-| [Entities](./documentation/entities.md) | Users & Developers | Entity model, operations, journal, catalog |
-| [Rendering](./documentation/rendering.md) | Users & Developers | Render pipeline, render plugins, render modes |
-| [Watch Mode](./documentation/watch-mode.md) | Users | File watching, scheduled tasks, incremental builds |
-| [Architecture](./documentation/architecture.md) | Developers | System design, module structure, extension points |
-| [API Reference](./documentation/api-reference.md) | Developers | Complete public API reference |
+| Document                                              | Audience           | Description                                        |
+| ----------------------------------------------------- | ------------------ | -------------------------------------------------- |
+| [Getting Started](./documentation/getting-started.md) | Users              | Installation, first project, basic usage           |
+| [Configuration](./documentation/configuration.md)     | Users              | All CLI options and config file reference          |
+| [Lifecycle](./documentation/lifecycle.md)             | Users & Developers | Complete lifecycle phases and hook system          |
+| [Plugins](./documentation/plugins.md)                 | Users & Developers | Built-in plugins, writing custom plugins           |
+| [Entities](./documentation/entities.md)               | Users & Developers | Entity model, operations, journal, catalog         |
+| [Rendering](./documentation/rendering.md)             | Users & Developers | Render pipeline, render plugins, render modes      |
+| [Watch Mode](./documentation/watch-mode.md)           | Users              | File watching, scheduled tasks, incremental builds |
+| [Architecture](./documentation/architecture.md)       | Developers         | System design, module structure, extension points  |
+| [API Reference](./documentation/api-reference.md)     | Developers         | Complete public API reference                      |
 
 ## Quick Start
 
@@ -29,10 +29,10 @@ npm install mikser-io
 ```js
 // mikser.config.js
 export default {
-  plugins: ['documents', 'layouts'],
-  layouts: {
-    cleanUrls: true
-  }
+	plugins: ['documents', 'layouts'],
+	layouts: {
+		cleanUrls: true,
+	},
 }
 ```
 
