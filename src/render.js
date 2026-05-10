@@ -23,7 +23,7 @@ export default async ({ entity, options, config, context, state, logger, port })
 
     async function loadPlugin(pluginName) {
         const resolveLocations = [
-            path.join(options.workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
+            path.join(options.workingFolder, 'node_modules', `mikser-io-${pluginName}/index.js`),
             path.join(options.workingFolder, 'plugins', `${pluginName}.js`),
             path.join(path.dirname(import.meta.url), 'plugins', 'render', `${pluginName.replace('render-', '')}.js`)
         ]
