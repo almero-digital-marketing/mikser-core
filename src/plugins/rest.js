@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { writeFile, unlink, mkdir } from 'node:fs/promises'
+import { writeFile, unlink, mkdir, access } from 'node:fs/promises'
 import { updateEntity } from '../lifecycle.js'
 import { findEntities } from '../catalog.js'
 
@@ -15,12 +15,15 @@ export default ({
             throw new Error('express is required for the rest plugin — run: npm install express')
         })
 
-        const app = express()
-        app.use(express.json())
+        const ownApp = !runtime.options.app
+        const app = runtime.options.app ?? express()
+
+        const router = express.Router()
+        router.use(express.json())
 
         const token = runtime.config.rest?.token
         if (token) {
-            app.use((req, res, next) => {
+            router.use((req, res, next) => {
                 if (req.headers.authorization === `Bearer ${token}`) return next()
                 res.status(401).json({ error: 'Unauthorized' })
             })
@@ -30,7 +33,7 @@ export default ({
             return runtime.options[`${collection}Folder`]
         }
 
-        app.get('/entities', async (req, res) => {
+        router.get('/entities', async (req, res) => {
             try {
                 const { page: rawPage, limit: rawLimit, ...filter } = req.query
                 const page = Math.max(1, parseInt(rawPage) || 1)
@@ -57,7 +60,7 @@ export default ({
             }
         })
 
-        app.put('/entities', async (req, res) => {
+        router.put('/entities', async (req, res) => {
             try {
                 const { collection, relativePath, content = '' } = req.body
                 const folder = collectionFolder(collection)
@@ -72,7 +75,7 @@ export default ({
             }
         })
 
-        app.delete('/entities', async (req, res) => {
+        router.delete('/entities', async (req, res) => {
             try {
                 const { collection, relativePath } = req.body
                 const folder = collectionFolder(collection)
@@ -86,7 +89,7 @@ export default ({
             }
         })
 
-        app.post('/render', async (req, res) => {
+        router.post('/render', async (req, res) => {
             try {
                 const entity = { ...req.body, _correlationId: crypto.randomUUID() }
                 const timeout = runtime.config.rest?.renderTimeout ?? 30_000
@@ -111,7 +114,12 @@ export default ({
                 })
 
                 if (output?.result != null) {
-                    res.send(output.result)
+                    const isFile = await access(output.result).then(() => true).catch(() => false)
+                    if (isFile) {
+                        res.sendFile(output.result)
+                    } else {
+                        res.send(output.result)
+                    }
                 } else {
                     res.status(204).send()
                 }
@@ -121,9 +129,16 @@ export default ({
             }
         })
 
-        const port = runtime.config.rest?.port ?? 3001
-        app.listen(port, () => {
-            logger.info('REST plugin listening on port %d', port)
-        })
+        const base = runtime.config.rest?.base ?? '/mikser'
+        app.use(base, router)
+
+        if (ownApp) {
+            const port = runtime.config.rest?.port ?? 3001
+            app.listen(port, () => {
+                logger.info('REST plugin listening on port %d', port)
+            })
+        } else {
+            logger.info('REST plugin mounted on %s', base)
+        }
     })
 }

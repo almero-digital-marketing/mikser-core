@@ -20,7 +20,7 @@ import packageInfo from '../package.json' with { type: 'json' }
 export async function setup(options) {
     runtime.options.threads = options?.threads !== undefined ? options.threads : 4
     runtime.engine = {
-        logger: pino(options?.logger || {
+        logger: options?.logger || pino({
             transport: {
                 target: 'pino-pretty'
             },
@@ -215,62 +215,62 @@ export async function setup(options) {
 
         const postprocessJobs = new Set()
         try {
-        await map(useJournal('Postprocessing', [OPERATION.POSTPROCESS], signal), async entry => {
-            const { id, entity, options, context } = entry
-            const jobId = entity.id + ':' + entity.destination
-            if (!postprocessJobs.has(jobId) && !options.ignore) {
-                postprocessJobs.add(jobId)
-                const postprocessOptions = {
-                    entity,
-                    options: {
-                        tasks: TASKS.POOL,
-                        ...runtime.options,
-                        ...options,
-                    },
-                    config,
-                    context,
-                    state: runtime.state
+            await map(useJournal('Postprocessing', [OPERATION.POSTPROCESS], signal), async entry => {
+                const { id, entity, options, context } = entry
+                const jobId = entity.id + ':' + entity.destination
+                if (!postprocessJobs.has(jobId) && !options.ignore) {
+                    postprocessJobs.add(jobId)
+                    const postprocessOptions = {
+                        entity,
+                        options: {
+                            tasks: TASKS.POOL,
+                            ...runtime.options,
+                            ...options,
+                        },
+                        config,
+                        context,
+                        state: runtime.state
+                    }
+                    try {
+                        let result
+                        switch (postprocessOptions.options.tasks) {
+                            case TASKS.POOL:
+                                postprocessOptions.logger = logger
+                                postprocessOptions.signal = signal
+                                if (!signal.aborted) {
+                                    result = await postprocess(postprocessOptions)
+                                }
+                                break
+                            case TASKS.QUEUE:
+                                postprocessOptions.logger = logger
+                                postprocessOptions.signal = signal
+                                if (!signal.aborted) {
+                                    result = await runtime.engine.queue.add(() => postprocess(postprocessOptions), { signal })
+                                }
+                                break
+                        }
+                        if (!signal.aborted) {
+                            entry.output = { success: true }
+                            if (result) entry.output.result = result
+                            await runtime.complete(entry)
+                            await updateEntry({ id, output: entry.output })
+                        }
+                        logger.debug('Postprocessed: [%s] %s → %s', options.postprocessor, entity.name || entity.id, entity.destination)
+                    } catch (err) {
+                        if (!signal.aborted) {
+                            await updateEntry({ id, output: { success: false } })
+                            logger.error('Postprocess error: %s %s', entity.id, err.message)
+                        }
+                        logger.debug('Postprocess canceled')
+                    }
+                } else {
+                    await updateEntry({ id, output: { success: true } })
                 }
-                try {
-                    let result
-                    switch (postprocessOptions.options.tasks) {
-                        case TASKS.POOL:
-                            postprocessOptions.logger = logger
-                            postprocessOptions.signal = signal
-                            if (!signal.aborted) {
-                                result = await postprocess(postprocessOptions)
-                            }
-                            break
-                        case TASKS.QUEUE:
-                            postprocessOptions.logger = logger
-                            postprocessOptions.signal = signal
-                            if (!signal.aborted) {
-                                result = await runtime.engine.queue.add(() => postprocess(postprocessOptions), { signal })
-                            }
-                            break
-                    }
-                    if (!signal.aborted) {
-                        entry.output = { success: true }
-                        if (result) entry.output.result = result
-                        await runtime.complete(entry)
-                        await updateEntry({ id, output: entry.output })
-                    }
-                    logger.debug('Postprocessed: [%s] %s → %s', options.postprocessor, entity.name || entity.id, entity.destination)
-                } catch (err) {
-                    if (!signal.aborted) {
-                        await updateEntry({ id, output: { success: false } })
-                        logger.error('Postprocess error: %s %s', entity.id, err.message)
-                    }
-                    logger.debug('Postprocess canceled')
-                }
-            } else {
-                await updateEntry({ id, output: { success: true } })
-            }
-        }, {
-            concurrency: runtime.options.threads,
-            signal
-        })
-        postprocessJobs.size && logger.info('Postprocessed: %d', postprocessJobs.size)
+            }, {
+                concurrency: runtime.options.threads,
+                signal
+            })
+            postprocessJobs.size && logger.info('Postprocessed: %d', postprocessJobs.size)
         } finally {
             for (const [pluginName, plugin] of Object.entries(postPlugins)) {
                 if (plugin.teardown) await plugin.teardown({ options: runtime.options, config: config[pluginName], state: runtime.state, logger })

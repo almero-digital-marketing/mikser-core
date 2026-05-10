@@ -4,229 +4,84 @@
 		<meta name='viewport' content='width=device-width, initial-scale=1.0' />
 		<title>{{document.meta.title}}</title>
 		<style>
-			*,
-			*::before,
-			*::after {
-				box-sizing: border-box;
-				margin: 0;
-				padding: 0;
-			}
+			*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 			body {
-				font-family:
-					system-ui,
-					-apple-system,
-					sans-serif;
-				background: #f8f9fa;
-				color: #1a1a2e;
+				font-family: system-ui, -apple-system, sans-serif;
+				font-size: 1rem;
 				line-height: 1.6;
+				color: #111;
+				background: #fff;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 2rem 1.5rem;
 			}
-			a {
-				color: #0066cc;
-				text-decoration: none;
-			}
-			a:hover {
-				text-decoration: underline;
-			}
+			a { color: inherit; }
+			a:hover { text-decoration: none; }
 
 			/* Nav */
 			nav {
-				background: #1a1a2e;
-				padding: 1rem 2rem;
 				display: flex;
 				justify-content: space-between;
-				align-items: center;
+				align-items: baseline;
+				border-bottom: 1px solid #111;
+				padding-bottom: .75rem;
+				margin-bottom: 3rem;
 			}
-			nav .brand {
-				color: #fff;
-				font-weight: 700;
-				font-size: 1.2rem;
-				letter-spacing: 0.5px;
-			}
-			nav ul {
-				list-style: none;
-				display: flex;
-				gap: 1.5rem;
-			}
-			nav ul a {
-				color: #ccd6f6;
-				font-size: 0.95rem;
-				transition: color 0.2s;
-			}
-			nav ul a:hover {
-				color: #fff;
-				text-decoration: none;
-			}
+			nav .brand { font-weight: 700; font-size: 1rem; }
+			nav ul { list-style: none; display: flex; gap: 1.5rem; font-size: .9rem; }
 
 			/* Hero */
-			.hero {
-				background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
-				color: #fff;
-				padding: 5rem 2rem;
-				text-align: center;
-			}
-			.hero h1 {
-				font-size: 2.8rem;
-				font-weight: 800;
-				margin-bottom: 1rem;
-			}
-			.hero p {
-				font-size: 1.2rem;
-				color: #a8b2d8;
-				max-width: 600px;
-				margin: 0 auto 2rem;
-			}
-			.hero .cta {
-				display: inline-block;
-				background: #e94560;
-				color: #fff;
-				padding: 0.8rem 2rem;
-				border-radius: 4px;
-				font-weight: 600;
-				transition: background 0.2s;
-			}
-			.hero .cta:hover {
-				background: #c73652;
-				text-decoration: none;
-			}
+			.hero { margin-bottom: 3rem; }
+			.hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+			.hero p { color: #555; margin-bottom: 1rem; }
+			.hero a { font-size: .9rem; text-decoration: underline; }
 
-			/* Container */
-			.container {
-				max-width: 960px;
-				margin: 0 auto;
-				padding: 3rem 2rem;
-			}
-
-			/* Section title */
+			/* Section */
 			.section-title {
-				font-size: 1.4rem;
+				font-size: .75rem;
 				font-weight: 700;
-				color: #1a1a2e;
+				text-transform: uppercase;
+				letter-spacing: .1em;
+				border-bottom: 1px solid #111;
+				padding-bottom: .25rem;
 				margin-bottom: 1.5rem;
-				padding-bottom: 0.5rem;
-				border-bottom: 3px solid #e94560;
-				display: inline-block;
 			}
 
-			/* Posts grid */
-			.posts {
-				display: grid;
-				grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-				gap: 1.5rem;
-				margin-bottom: 3rem;
-			}
-			.post-card {
-				background: #fff;
-				border-radius: 8px;
-				padding: 1.5rem;
-				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-				transition:
-					transform 0.2s,
-					box-shadow 0.2s;
-			}
-			.post-card:hover {
-				transform: translateY(-3px);
-				box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-			}
-			.post-card .date {
-				font-size: 0.8rem;
-				color: #888;
-				margin-bottom: 0.5rem;
-			}
-			.post-card h3 {
-				font-size: 1.1rem;
-				margin-bottom: 0.6rem;
-			}
-			.post-card p {
-				font-size: 0.9rem;
-				color: #555;
-				margin-bottom: 1rem;
-			}
-			.post-card .tags {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 0.4rem;
-			}
-			.tag {
-				background: #eef2ff;
-				color: #4c6ef5;
-				font-size: 0.75rem;
-				padding: 0.2rem 0.6rem;
-				border-radius: 12px;
-			}
+			/* Posts */
+			.posts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+			.post-card { border: 1px solid #ddd; padding: 1.25rem; }
+			.post-card .date { font-size: .75rem; color: #888; margin-bottom: .4rem; }
+			.post-card h3 { font-size: 1rem; margin-bottom: .4rem; }
+			.post-card p { font-size: .875rem; color: #555; margin-bottom: .75rem; }
+			.tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+			.tag { font-size: .7rem; border: 1px solid #ccc; padding: .1rem .4rem; }
 
-			/* Media section */
-			.media-grid {
-				display: grid;
-				grid-template-columns: 1fr 1fr;
-				gap: 1.5rem;
-				margin-bottom: 3rem;
-			}
-			@media (max-width: 600px) {
-				.media-grid {
-					grid-template-columns: 1fr;
-				}
-			}
-			.media-card {
-				background: #fff;
-				border-radius: 8px;
-				overflow: hidden;
-				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-			}
-			.media-card img,
-			.media-card video {
-				width: 100%;
-				display: block;
-			}
-			.media-card .caption {
-				padding: 0.75rem 1rem;
-				font-size: 0.85rem;
-				color: #666;
-			}
+			/* Media */
+			.media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 3rem; }
+			@media (max-width: 540px) { .media-grid { grid-template-columns: 1fr; } }
+			.media-card img, .media-card video { width: 100%; display: block; }
+			.media-card .caption { font-size: .75rem; color: #888; padding: .4rem 0; }
 
 			/* Report CTA */
 			.report-cta {
-				background: #fff;
-				border-radius: 8px;
-				padding: 2rem;
-				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+				border: 1px solid #111;
+				padding: 1.25rem 1.5rem;
 				display: flex;
-				align-items: center;
 				justify-content: space-between;
+				align-items: center;
 				gap: 1rem;
 				margin-bottom: 3rem;
 			}
-			.report-cta h3 {
-				font-size: 1.1rem;
-				margin-bottom: 0.4rem;
-			}
-			.report-cta p {
-				color: #555;
-				font-size: 0.9rem;
-			}
-			.report-cta a {
-				white-space: nowrap;
-				background: #1a1a2e;
-				color: #fff;
-				padding: 0.7rem 1.4rem;
-				border-radius: 4px;
-				font-size: 0.9rem;
-				font-weight: 600;
-			}
-			.report-cta a:hover {
-				background: #0f3460;
-				text-decoration: none;
-			}
+			.report-cta h3 { font-size: .95rem; margin-bottom: .2rem; }
+			.report-cta p { font-size: .85rem; color: #555; }
+			.report-cta a { font-size: .85rem; white-space: nowrap; text-decoration: underline; }
 
 			/* Footer */
 			footer {
-				background: #1a1a2e;
-				color: #8892b0;
-				text-align: center;
-				padding: 2rem;
-				font-size: 0.85rem;
-			}
-			footer strong {
-				color: #ccd6f6;
+				border-top: 1px solid #111;
+				padding-top: .75rem;
+				font-size: .8rem;
+				color: #888;
 			}
 		</style>
 	</head>
@@ -234,87 +89,74 @@
 		<nav>
 			<span class='brand'>Mikser</span>
 			<ul>
-				<li><a href='{{url (get "link" (href "/blog"))}}'>Blog</a></li>
-				<li><a href='{{url (get "link" (href "/en/report"))}}'>Report</a></li>
-				{{#if (eq document.meta.lang 'en')}}
-					<li><a href='{{url (get "link" (href "/blog"))}}'>BG</a></li>
-				{{else}}
-					<li><a href='{{url (get "link" (href "/blog"))}}'>EN</a></li>
-				{{/if}}
+				<li><a href='{{url (href "/blog")}}'>Blog</a></li>
+				<li><a href='{{url (href "/en/report")}}'>Report</a></li>
+				{{#each (hrefLang document.meta.href)}}
+					{{#unless (eq @key ../document.meta.lang)}}
+						<li><a href='{{url (href ../document.meta.href @key)}}'>{{uppercase @key}}</a></li>
+					{{/unless}}
+				{{/each}}
 			</ul>
 		</nav>
 
 		<div class='hero'>
 			<h1>{{document.meta.title}}</h1>
 			<p>{{document.meta.description}}</p>
-			<a class='cta' href='{{url (get "link" (href "/blog/getting-started"))}}'>Read the Blog</a>
+			<a href='{{url (href "/blog/getting-started")}}'>Read the Blog →</a>
 		</div>
 
-		<div class='container'>
-
-			<h2 class='section-title'>Latest Posts</h2>
+		<div>
+			<div class='section-title'>Latest Posts</div>
 			<div class='posts'>
 				{{#with (href '/blog/getting-started')}}
 					<div class='post-card'>
 						<div class='date'>{{date meta.date 'MMMM D, YYYY'}}</div>
-						<h3><a href='{{url link}}'>{{meta.title}}</a></h3>
+						<h3><a href='{{url}}'>{{meta.title}}</a></h3>
 						<p>{{meta.description}}</p>
-						<div class='tags'>
-							{{#each meta.tags}}<span class='tag'>{{this}}</span>{{/each}}
-						</div>
+						<div class='tags'>{{#each meta.tags}}<span class='tag'>{{this}}</span>{{/each}}</div>
 					</div>
 				{{/with}}
 				{{#with (href '/blog/clean-code')}}
 					<div class='post-card'>
 						<div class='date'>{{date meta.date 'MMMM D, YYYY'}}</div>
-						<h3><a href='{{url link}}'>{{meta.title}}</a></h3>
+						<h3><a href='{{url}}'>{{meta.title}}</a></h3>
 						<p>{{meta.description}}</p>
-						<div class='tags'>
-							{{#each meta.tags}}<span class='tag'>{{this}}</span>{{/each}}
-						</div>
+						<div class='tags'>{{#each meta.tags}}<span class='tag'>{{this}}</span>{{/each}}</div>
 					</div>
 				{{/with}}
 				{{#with (href '/blog/handlebars-layouts')}}
 					<div class='post-card'>
 						<div class='date'>{{date meta.date 'MMMM D, YYYY'}}</div>
-						<h3><a href='{{url link}}'>{{meta.title}}</a></h3>
+						<h3><a href='{{url}}'>{{meta.title}}</a></h3>
 						<p>{{meta.description}}</p>
-						<div class='tags'>
-							{{#each meta.tags}}<span class='tag'>{{this}}</span>{{/each}}
-						</div>
+						<div class='tags'>{{#each meta.tags}}<span class='tag'>{{this}}</span>{{/each}}</div>
 					</div>
 				{{/with}}
 			</div>
 
 			{{#if document.meta.image}}
-				<h2 class='section-title'>Media</h2>
+				<div class='section-title'>Media</div>
 				<div class='media-grid'>
 					<div class='media-card'>
-						<img src='{{url (get "link" (resource document.meta.image))}}' alt='Placeholder image' />
-						<div class='caption'>Original image via resource plugin</div>
+						<img src='{{url (resource document.meta.image)}}' alt='Placeholder image' />
+						<div class='caption'>Original via resource plugin</div>
 					</div>
 					<div class='media-card'>
-						<img
-							src='{{url (asset "small-image" (get "name" (resource document.meta.image)) "webp")}}'
-							alt='Processed image'
-						/>
-						<div class='caption'>Optimised WebP via asset preset <code>small-image</code></div>
+						<img src='{{url (asset "small-image" (get "name" (resource document.meta.image)) "webp")}}' alt='Processed image' />
+						<div class='caption'>WebP via asset preset <code>small-image</code></div>
 					</div>
 					{{#if document.meta.video}}
 						<div class='media-card'>
 							<video controls>
-								<source src='{{url (get "link" (resource document.meta.video))}}' type='video/mp4' />
+								<source src='{{url (resource document.meta.video)}}' type='video/mp4' />
 							</video>
-							<div class='caption'>Original video via resource plugin</div>
+							<div class='caption'>Original via resource plugin</div>
 						</div>
 						<div class='media-card'>
 							<video controls>
-								<source
-									src='{{url (asset "small-video" (get "name" (resource document.meta.video)) "mp4")}}'
-									type='video/mp4'
-								/>
+								<source src='{{url (asset "small-video" (get "name" (resource document.meta.video)) "mp4")}}' type='video/mp4' />
 							</video>
-							<div class='caption'>Transcoded MP4 via asset preset <code>small-video</code></div>
+							<div class='caption'>MP4 via asset preset <code>small-video</code></div>
 						</div>
 					{{/if}}
 				</div>
@@ -323,17 +165,12 @@
 			<div class='report-cta'>
 				<div>
 					<h3>Quarterly Report</h3>
-					<p>Auto-generated PDF via the <code>post-pdf</code> postprocessor. The same document renders as PDF.</p>
+					<p>Auto-generated PDF via the <code>post-pdf</code> postprocessor.</p>
 				</div>
-				<a href='{{url (get "link" (href "/en/report"))}}'>Download PDF</a>
+				<a href='{{url (href "/en/report")}}'>Download PDF →</a>
 			</div>
-
 		</div>
 
-		<footer>
-			Built with
-			<strong>Mikser</strong>
-			— fast, plugin-driven static site generation.
-		</footer>
+		<footer>Built with Mikser</footer>
 	</body>
 </html>

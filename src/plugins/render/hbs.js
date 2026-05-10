@@ -23,6 +23,15 @@ export function load({ config, runtime, context }) {
             handlebars.registerPartial(partial, partialLayout)
         }
     }
+    handlebars.registerHelper('url', function(obj, options) {
+        // Called as {{url}} with no args — obj is the Handlebars options object,
+        // so read url from the current context (this)
+        if (!options) return this?.url ?? ''
+        if (!obj) return ''
+        if (typeof obj === 'string') return obj
+        return obj.url ?? ''
+    })
+
     runtime.hbs = (source, sandbox) => {
         const template = handlebars.compile(source)
         return template(sandbox)

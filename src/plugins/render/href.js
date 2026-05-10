@@ -1,41 +1,42 @@
 import path from 'node:path'
 
-export function load({ entity, runtime, state }) {
-    runtime.hrefLang = (href, page) => {
+export function load({ entity, runtime, state, options }) {
+    const { clear } = options
+
+    runtime.hrefLang = (href) => {
         const { sitemap } = state.layouts
+        return sitemap[href]
+    }
+
+    runtime.hrefLangPage = (href, page) => {
         if (page > 1) href += `.${page}`
         return sitemap[href]
     }
 
-    runtime.href = (href, page, lang) => {
-        if (typeof page == 'string' && !lang) {
-            lang = page
-            page = undefined
-        }
+    runtime.href = (href, lang) => {
+        if (!href || typeof href != 'string') return
+        if (typeof lang != 'string') lang = undefined
+
+        if (href.indexOf('http') == 0) return href
         lang ||= entity.meta?.lang
 
-        if (!href) return
-        if (typeof href == 'object') return href
-        if (href.indexOf('http') == 0) return href
-
-        let found = runtime.hrefLang(href, page)
+        let found = runtime.hrefLang(href)
         if (!found) {
-            return { link: href }
+            return { url: href }
         } else {
             if (!found.id) {
                 found = found[lang]
             }
             if (found?.destination) {
-                found.link = found.destination.replace('index.html', '')
+                const destination = clear ? found.destination.replace('index.html', '') : found.destination
+                const from = path.dirname(entity.destination || '/')
+                found.url = path.relative(from, destination)
             }
             return found
         }
     }
 
-    runtime.url = (link) => {
-        if (!link) return ''
-        const from = path.dirname(entity.destination || '/')
-        return path.relative(from, link)
+    runtime.hrefPage = (href, page, lang) => {
     }
 
     runtime.prev = entity.page > 1 ? entity.page - 1 : false
