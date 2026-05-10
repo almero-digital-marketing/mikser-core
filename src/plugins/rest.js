@@ -22,11 +22,10 @@ export default ({
         router.use(express.json())
 
         const token = runtime.config.rest?.token
-        if (token) {
-            router.use((req, res, next) => {
-                if (req.headers.authorization === `Bearer ${token}`) return next()
-                res.status(401).json({ error: 'Unauthorized' })
-            })
+        const auth = (req, res, next) => {
+            if (!token) return next()
+            if (req.headers.authorization === `Bearer ${token}`) return next()
+            res.status(401).json({ error: 'Unauthorized' })
         }
 
         function collectionFolder(collection) {
@@ -60,7 +59,7 @@ export default ({
             }
         })
 
-        router.put('/entities', async (req, res) => {
+        router.put('/entities', auth, async (req, res) => {
             try {
                 const { collection, relativePath, content = '' } = req.body
                 const folder = collectionFolder(collection)
@@ -75,7 +74,7 @@ export default ({
             }
         })
 
-        router.delete('/entities', async (req, res) => {
+        router.delete('/entities', auth, async (req, res) => {
             try {
                 const { collection, relativePath } = req.body
                 const folder = collectionFolder(collection)

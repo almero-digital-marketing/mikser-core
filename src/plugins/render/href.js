@@ -22,7 +22,8 @@ export function load({ entity, runtime, state, options }) {
 
         let found = runtime.hrefLang(href)
         if (!found) {
-            return { url: href }
+            const from = path.dirname(entity.destination || '/')
+            return { url: path.relative(from, href) }
         } else {
             if (!found.id) {
                 found = found[lang]

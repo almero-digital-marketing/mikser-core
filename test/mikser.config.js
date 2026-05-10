@@ -4,6 +4,7 @@ export default async ({ options }) => ({
 		'front-matter',
 		'yaml',
 		'layouts',
+		'files',
         'resources',
 		'assets',
 		'render-hbs',

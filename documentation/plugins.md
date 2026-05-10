@@ -516,7 +516,16 @@ rest: {
 
 **Authentication:**
 
-When `rest.token` is set, every request must include:
+When `rest.token` is set, write operations require a Bearer token. Read-only endpoints are always open.
+
+| Method | Auth required |
+|--------|--------------|
+| `GET /entities` | No |
+| `POST /render` | No |
+| `PUT /entities` | Yes |
+| `DELETE /entities` | Yes |
+
+Protected requests must include:
 ```
 Authorization: Bearer <token>
 ```

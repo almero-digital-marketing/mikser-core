@@ -1,0 +1,36 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #111;
+    background: #fff;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+a { color: inherit; }
+a:hover { text-decoration: none; }
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid #111;
+    padding-bottom: .75rem;
+    margin-bottom: 3rem;
+}
+nav .brand { font-weight: 700; font-size: 1rem; }
+nav ul { list-style: none; display: flex; gap: 1.5rem; font-size: .9rem; }
+nav .back { font-size: .9rem; text-decoration: underline; }
+
+.tag { font-size: .7rem; border: 1px solid #ccc; padding: .1rem .4rem; }
+.tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+
+footer {
+    border-top: 1px solid #111;
+    padding-top: .75rem;
+    margin-top: 3rem;
+    font-size: .8rem;
+    color: #888;
+}

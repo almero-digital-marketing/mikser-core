@@ -143,14 +143,15 @@ All properties of the `runtime` object are available directly in the template:
 <html lang="en">
 <head>
   <title>{{document.meta.title}}</title>
+  <link rel="stylesheet" href="{{url (href '/styles/base.css')}}">
 </head>
 <body>
   <main>
     {{{document.content}}}
   </main>
   <nav>
-    <a href="{{href '/'}}">Home</a>
-    <a href="{{href '/about'}}">About</a>
+    <a href="{{url (href '/')}}">Home</a>
+    <a href="{{url (href '/about')}}">About</a>
   </nav>
 </body>
 </html>
@@ -213,53 +214,67 @@ Resolves internal links using the layouts sitemap and computes relative URLs fro
 
 **Functions added to `runtime`:**
 
-#### `href(path, page?, lang?)`
+#### `href(path, lang?)`
 
-Looks up an entity in the sitemap by its virtual path. Returns an object with the entity's metadata and a `link` property pointing to its output URL.
+Looks up an entity in the sitemap by its virtual path. Returns an object with the entity's metadata and a `url` property containing the relative URL from the current document's output location.
+
+When the path is not in the sitemap (e.g. a static file like a CSS or PDF), `href` still returns `{ url }` computed as a relative path — so it works for any output file, not just rendered entities.
 
 ```handlebars
-{{! Look up an entity — returns { link, meta, ... } }}
+{{! Look up an entity — returns { url, meta, ... } }}
 {{#with (href '/blog/getting-started')}}
-  <a href="{{url link}}">{{meta.title}}</a>
+  <a href="{{url}}">{{meta.title}}</a>
   <p>{{meta.description}}</p>
   <span>{{date meta.date 'MMMM D, YYYY'}}</span>
 {{/with}}
 
-{{! Resolve with page number for paginated content }}
-<a href="{{url (get 'link' (href '/blog' 2))}}">Page 2</a>
+{{! Inline link — wrap with url helper to extract .url }}
+<a href="{{url (href '/blog/getting-started')}}">Blog</a>
+
+{{! CSS and static files — also resolved as relative URLs }}
+<link rel="stylesheet" href="{{url (href '/styles/base.css')}}">
 
 {{! Resolve with language override }}
-<a href="{{url (get 'link' (hrefLang '/blog/post' 'fr'))}}">FR</a>
+<a href="{{url (href '/blog/post' 'fr')}}">FR</a>
 
 {{! Pagination links }}
 {{#if prev}}
-  <a href="{{url (get 'link' (href document.name prev))}}">Previous</a>
+  <a href="{{url (href document.name prev)}}">Previous</a>
 {{/if}}
 {{#if next}}
-  <a href="{{url (get 'link' (href document.name next))}}">Next</a>
+  <a href="{{url (href document.name next)}}">Next</a>
 {{/if}}
 ```
 
-#### `url(link)`
+#### `hrefLang(path)`
 
-Converts an absolute virtual output path to a **relative URL** from the current document's output location. Always use `url` when building `href` attributes — it ensures links work regardless of where the site is deployed or nested.
+Returns all language variants of a path from the sitemap, as `{ [lang]: entity }`. Useful for building language switchers.
 
 ```handlebars
-{{! Absolute virtual path → relative URL }}
-<a href="{{url '/en/blog/index.html'}}">Blog</a>
+{{#each (hrefLang document.meta.href)}}
+  {{#unless (eq @key ../document.meta.lang)}}
+    <li><a href="{{url (href ../document.meta.href @key)}}">{{uppercase @key}}</a></li>
+  {{/unless}}
+{{/each}}
+```
 
-{{! Combine with href }}
-<a href="{{url (get 'link' (href '/blog'))}}">Blog</a>
+#### `url` helper
 
-{{! Combine with asset }}
+Extracts the `.url` property from the object returned by `href`, `resource`, or `asset`. Use it whenever you pass one of these helpers as an attribute value.
+
+```handlebars
+{{! Extract url from href result }}
+<a href="{{url (href '/blog')}}">Blog</a>
+
+{{! Extract url from asset result }}
 <img src="{{url (asset 'thumbnail' name 'webp')}}" />
 
-{{! Combine with resource }}
-<link rel="stylesheet" href="{{url (get 'link' (resource 'https://cdn.example.com/lib.css'))}}">
+{{! Extract url from resource result }}
+<link rel="stylesheet" href="{{url (resource 'https://cdn.example.com/lib.css')}}">
 
-{{! Inside {{#with (href '...')}} — link is already resolved }}
+{{! Inside {{#with (href '...')}} — call url with no args to read from context }}
 {{#with (href '/blog/getting-started')}}
-  <a href="{{url link}}">{{meta.title}}</a>
+  <a href="{{url}}">{{meta.title}}</a>
 {{/with}}
 ```
 
@@ -269,28 +284,32 @@ The `href` plugin reads `runtime.state.layouts.sitemap` to resolve paths to outp
 
 ### `render-asset` — Asset Paths
 
-Generates paths to transformed assets (output of the assets plugin).
+Generates relative URLs to transformed assets (output of the assets plugin). Returns `{ url }` — use the `url` helper to extract it.
 
 ```handlebars
-{{! Generate path to transformed asset }}
-<img src="{{asset 'thumbnail' '/images/photo.jpg'}}" alt="Photo">
-<img src="{{asset 'thumbnail' '/images/photo.jpg' 'webp'}}" alt="Photo">
+{{! Generate relative URL to transformed asset }}
+<img src="{{url (asset 'thumbnail' '/images/photo.jpg')}}" alt="Photo">
+<img src="{{url (asset 'thumbnail' '/images/photo.jpg' 'webp')}}" alt="Photo">
+
+{{! Using a name from a resource }}
+<img src="{{url (asset 'small-image' (get 'name' (resource document.meta.image)) 'webp')}}" alt="Photo">
 ```
 
-The path is: `/{assetsFolder}/{preset}/{path}[.{format}]`
+The underlying path is: `/{assetsFolder}/{preset}/{path}[.{format}]`
 
 ---
 
 ### `render-resource` — CDN Resource Mapping
 
-Maps CDN URLs to locally cached paths (from the resources plugin).
+Maps CDN URLs to locally cached paths (from the resources plugin). Returns `{ url, name }` — use the `url` helper to extract the relative URL, or `name` to get the filename for further processing (e.g. passing to `asset`).
 
 ```handlebars
-{{! Map CDN URL to local path }}
-<link rel="stylesheet" href="{{resource 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css'}}">
-```
+{{! Map CDN URL to local relative path }}
+<link rel="stylesheet" href="{{url (resource 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css')}}">
 
-Returns an object `{ link, name }` where `link` is the local path.
+{{! Use name to pass the cached file into an asset preset }}
+<img src="{{url (asset 'small-image' (get 'name' (resource document.meta.image)) 'webp')}}" alt="Photo">
+```
 
 ---
 
@@ -337,7 +356,7 @@ The returned value is available in the template as `data`:
 
 ```handlebars
 {{#each data.relatedPosts}}
-  <a href="{{href this.name}}">{{this.meta.title}}</a>
+  <a href="{{url (href this.name)}}">{{this.meta.title}}</a>
 {{/each}}
 ```
 

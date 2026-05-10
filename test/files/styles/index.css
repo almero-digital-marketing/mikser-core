@@ -1,0 +1,38 @@
+.hero { margin-bottom: 3rem; }
+.hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+.hero p { color: #555; margin-bottom: 1rem; }
+.hero a { font-size: .9rem; text-decoration: underline; }
+
+.section-title {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    border-bottom: 1px solid #111;
+    padding-bottom: .25rem;
+    margin-bottom: 1.5rem;
+}
+
+.posts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+.post-card { border: 1px solid #ddd; padding: 1.25rem; }
+.post-card .date { font-size: .75rem; color: #888; margin-bottom: .4rem; }
+.post-card h3 { font-size: 1rem; margin-bottom: .4rem; }
+.post-card p { font-size: .875rem; color: #555; margin-bottom: .75rem; }
+
+.media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 3rem; }
+@media (max-width: 540px) { .media-grid { grid-template-columns: 1fr; } }
+.media-card img, .media-card video { width: 100%; display: block; }
+.media-card .caption { font-size: .75rem; color: #888; padding: .4rem 0; }
+
+.report-cta {
+    border: 1px solid #111;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 3rem;
+}
+.report-cta h3 { font-size: .95rem; margin-bottom: .2rem; }
+.report-cta p { font-size: .85rem; color: #555; }
+.report-cta a { font-size: .85rem; white-space: nowrap; text-decoration: underline; }

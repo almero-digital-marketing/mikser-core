@@ -3,94 +3,15 @@
 		<meta charset='UTF-8' />
 		<meta name='viewport' content='width=device-width, initial-scale=1.0' />
 		<title>{{document.meta.title}}</title>
-		<style>
-			*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-			body {
-				font-family: system-ui, -apple-system, sans-serif;
-				font-size: 1rem;
-				line-height: 1.6;
-				color: #111;
-				background: #fff;
-				max-width: 800px;
-				margin: 0 auto;
-				padding: 2rem 1.5rem;
-			}
-			a { color: inherit; }
-			a:hover { text-decoration: none; }
-
-			/* Nav */
-			nav {
-				display: flex;
-				justify-content: space-between;
-				align-items: baseline;
-				border-bottom: 1px solid #111;
-				padding-bottom: .75rem;
-				margin-bottom: 3rem;
-			}
-			nav .brand { font-weight: 700; font-size: 1rem; }
-			nav ul { list-style: none; display: flex; gap: 1.5rem; font-size: .9rem; }
-
-			/* Hero */
-			.hero { margin-bottom: 3rem; }
-			.hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
-			.hero p { color: #555; margin-bottom: 1rem; }
-			.hero a { font-size: .9rem; text-decoration: underline; }
-
-			/* Section */
-			.section-title {
-				font-size: .75rem;
-				font-weight: 700;
-				text-transform: uppercase;
-				letter-spacing: .1em;
-				border-bottom: 1px solid #111;
-				padding-bottom: .25rem;
-				margin-bottom: 1.5rem;
-			}
-
-			/* Posts */
-			.posts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
-			.post-card { border: 1px solid #ddd; padding: 1.25rem; }
-			.post-card .date { font-size: .75rem; color: #888; margin-bottom: .4rem; }
-			.post-card h3 { font-size: 1rem; margin-bottom: .4rem; }
-			.post-card p { font-size: .875rem; color: #555; margin-bottom: .75rem; }
-			.tags { display: flex; flex-wrap: wrap; gap: .3rem; }
-			.tag { font-size: .7rem; border: 1px solid #ccc; padding: .1rem .4rem; }
-
-			/* Media */
-			.media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 3rem; }
-			@media (max-width: 540px) { .media-grid { grid-template-columns: 1fr; } }
-			.media-card img, .media-card video { width: 100%; display: block; }
-			.media-card .caption { font-size: .75rem; color: #888; padding: .4rem 0; }
-
-			/* Report CTA */
-			.report-cta {
-				border: 1px solid #111;
-				padding: 1.25rem 1.5rem;
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				gap: 1rem;
-				margin-bottom: 3rem;
-			}
-			.report-cta h3 { font-size: .95rem; margin-bottom: .2rem; }
-			.report-cta p { font-size: .85rem; color: #555; }
-			.report-cta a { font-size: .85rem; white-space: nowrap; text-decoration: underline; }
-
-			/* Footer */
-			footer {
-				border-top: 1px solid #111;
-				padding-top: .75rem;
-				font-size: .8rem;
-				color: #888;
-			}
-		</style>
+		<link rel='stylesheet' href='{{url (href "/styles/base.css")}}' />
+		<link rel='stylesheet' href='{{url (href "/styles/index.css")}}' />
 	</head>
 	<body>
 		<nav>
 			<span class='brand'>Mikser</span>
 			<ul>
-				<li><a href='{{url (href "/blog")}}'>Blog</a></li>
-				<li><a href='{{url (href "/en/report")}}'>Report</a></li>
+				<li><a href='{{url (href "/blog/getting-started")}}'>Blog</a></li>
+				<li><a href='{{url (href "/en/report.pdf")}}'>Report</a></li>
 				{{#each (hrefLang document.meta.href)}}
 					{{#unless (eq @key ../document.meta.lang)}}
 						<li><a href='{{url (href ../document.meta.href @key)}}'>{{uppercase @key}}</a></li>
@@ -167,7 +88,7 @@
 					<h3>Quarterly Report</h3>
 					<p>Auto-generated PDF via the <code>post-pdf</code> postprocessor.</p>
 				</div>
-				<a href='{{url (href "/en/report")}}'>Download PDF →</a>
+				<a href='{{url (href "/en/report.pdf")}}' download>Download PDF →</a>
 			</div>
 		</div>
 
