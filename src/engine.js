@@ -308,7 +308,7 @@ export async function setup(options) {
         logger.notice('Mikser restarted')
     })
 
-    console.info('Mikser: %s', packageInfo.version)
+    console.info('mikser\x1b[5;38;2;255;63;0m.\x1b[0m %s\n', packageInfo.version)
     return runtime
 }
 
