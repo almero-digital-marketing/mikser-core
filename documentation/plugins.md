@@ -1,6 +1,6 @@
 # Plugins
 
-Plugins are the primary way to extend Mikser Core. Every content source, transformation, and output format is implemented as a plugin.
+Plugins are the primary way to extend Mikser. Every content source, transformation, and output format is implemented as a plugin.
 
 ## Loading Plugins
 

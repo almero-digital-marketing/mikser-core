@@ -1,6 +1,6 @@
 # Lifecycle
 
-Mikser Core processes content through a fixed sequence of phases. Each phase is implemented as a set of hooks — arrays of async functions that are called in registration order.
+Mikser processes content through a fixed sequence of phases. Each phase is implemented as a set of hooks — arrays of async functions that are called in registration order.
 
 ## Phase Overview
 

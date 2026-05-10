@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Node.js 18 or later
-- A project with `"type": "module"` in `package.json` (Mikser Core is ESM-only)
+- A project with `"type": "module"` in `package.json` (Mikser is ESM-only)
 
 ## Installation
 

@@ -1,6 +1,6 @@
 # Configuration
 
-Mikser Core is configured via a `mikser.config.js` file in your working folder, plus CLI arguments. Programmatic options passed to `setup()` take highest precedence.
+Mikser is configured via a `mikser.config.js` file in your working folder, plus CLI arguments. Programmatic options passed to `setup()` take highest precedence.
 
 ## Priority Order
 

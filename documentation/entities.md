@@ -2,7 +2,7 @@
 
 ## Entities
 
-An entity is the fundamental unit of data in Mikser Core. Everything that gets processed — a Markdown document, an image file, a layout template, an API record — is represented as an entity object.
+An entity is the fundamental unit of data in Mikser. Everything that gets processed — a Markdown document, an image file, a layout template, an API record — is represented as an entity object.
 
 ### Base Entity Shape
 

@@ -2,9 +2,9 @@
   <img src="mikser-lockup-stacked.svg" alt="mikser" width="198" />
 </p>
 
-# Mikser Core Documentation
+# Mikser Documentation
 
-Mikser Core is a lifecycle-driven static site generator and content processing pipeline for Node.js. It provides a hook-based architecture where plugins register callbacks at each phase of the lifecycle, enabling composable content workflows — from loading and transforming documents to rendering and deploying output.
+Mikser is a lifecycle-driven static site generator and content processing pipeline for Node.js. It provides a hook-based architecture where plugins register callbacks at each phase of the lifecycle, enabling composable content workflows — from loading and transforming documents to rendering and deploying output.
 
 ## Documentation Index
 
