@@ -4,7 +4,7 @@
 
 # Mikser Documentation
 
-Mikser is a lifecycle-driven static site generator and content processing pipeline for Node.js. It provides a hook-based architecture where plugins register callbacks at each phase of the lifecycle, enabling composable content workflows — from loading and transforming documents to rendering and deploying output.
+Mikser is a precision content engine for Node.js — built around a strict lifecycle, a composable plugin system, and zero compromise on output control. Every document, asset, and template flows through the same deterministic pipeline: import → process → render → finalize. Plugins hook in at any phase; nothing runs outside the cycle. The result is a system that scales from a single markdown blog to a multi-language, multi-format publishing platform — without ever losing sight of what it produced and why.
 
 ## Documentation Index
 
