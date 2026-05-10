@@ -12,7 +12,7 @@ export async function loadPlugin(pluginName) {
     const resolveLocations = [
         path.join(path.dirname(import.meta.url), 'plugins', `${pluginName}.js`),
         path.join(runtime.options.workingFolder, 'plugins', `${pluginName}.js`),
-        path.join(runtime.options.workingFolder, 'node_modules', `mikser-core-${pluginName}`, 'index.js'),
+        path.join(runtime.options.workingFolder, 'node_modules', `mikser-io-${pluginName}`, 'index.js'),
     ]
     for (let index = 0; index < resolveLocations.length; index++) {
         const resolveLocation = resolveLocations[index]
