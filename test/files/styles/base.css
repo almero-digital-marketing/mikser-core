@@ -1,36 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --ink:    #111111;
+    --accent: #FF3F00;
+    --paper:  #ffffff;
+    --muted:  rgba(255, 63, 0, 0.08);
+    --rule:   rgba(22, 20, 15, 0.15);
+    --dim:    rgba(22, 20, 15, 0.45);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: 'Exo 2', system-ui, -apple-system, sans-serif;
     font-size: 1rem;
     line-height: 1.6;
-    color: #111;
-    background: #fff;
+    color: var(--ink);
+    background: var(--paper);
     max-width: 800px;
     margin: 0 auto;
     padding: 2rem 1.5rem;
 }
+
 a { color: inherit; }
-a:hover { text-decoration: none; }
+a:hover { color: var(--accent); }
 
 nav {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    border-bottom: 1px solid #111;
+    border-bottom: 1px solid var(--rule);
     padding-bottom: .75rem;
     margin-bottom: 3rem;
 }
-nav .brand { font-weight: 700; font-size: 1rem; }
+nav .brand {
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.045em;
+}
+nav .brand::after {
+    content: '.';
+    color: var(--accent);
+}
 nav ul { list-style: none; display: flex; gap: 1.5rem; font-size: .9rem; }
-nav .back { font-size: .9rem; text-decoration: underline; }
+nav ul a { opacity: .7; transition: opacity .15s; }
+nav ul a:hover { opacity: 1; color: var(--ink); }
+nav .back { font-size: .9rem; text-decoration: underline; opacity: .7; }
+nav .back:hover { opacity: 1; }
 
-.tag { font-size: .7rem; border: 1px solid #ccc; padding: .1rem .4rem; }
+.tag {
+    font-size: .7rem;
+    border: 1px solid var(--rule);
+    padding: .1rem .4rem;
+    color: var(--dim);
+}
 .tags { display: flex; flex-wrap: wrap; gap: .3rem; }
 
 footer {
-    border-top: 1px solid #111;
+    border-top: 1px solid var(--rule);
     padding-top: .75rem;
     margin-top: 3rem;
     font-size: .8rem;
-    color: #888;
+    color: var(--dim);
 }
