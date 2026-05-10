@@ -10,13 +10,13 @@
 ### As a project dependency
 
 ```bash
-npm install mikser-core
+npm install mikser-io
 ```
 
 ### As a global CLI
 
 ```bash
-npm install -g mikser-core
+npm install -g mikser-io
 mikser
 ```
 
@@ -118,7 +118,7 @@ mikser [options]
 ## Using Mikser Programmatically
 
 ```js
-import { setup } from 'mikser-core'
+import { setup } from 'mikser-io'
 
 const runtime = await setup({
   workingFolder: './my-project',
@@ -135,7 +135,7 @@ Any option passed to `setup()` overrides CLI arguments and config file values.
 ## Programmatic API with Custom Hooks
 
 ```js
-import { setup, onFinalized, useLogger } from 'mikser-core'
+import { setup, onFinalized, useLogger } from 'mikser-io'
 
 onFinalized(async () => {
   const logger = useLogger()

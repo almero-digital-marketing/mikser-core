@@ -23,7 +23,7 @@ Mikser is a precision content engine for Node.js — built around a strict lifec
 ## Quick Start
 
 ```bash
-npm install mikser-core
+npm install mikser-io
 ```
 
 ```js

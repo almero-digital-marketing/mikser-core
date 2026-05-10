@@ -3,7 +3,7 @@
 ## Module Structure
 
 ```
-mikser-core/
+mikser-io/
 ├── app.js                    CLI entry point
 ├── index.js                  Public API re-exports
 │
@@ -227,7 +227,7 @@ main process
         └── Result returned to main thread
 ```
 
-Postprocess plugins use the `post-` prefix and live in `src/plugins/post/` (built-in) or `plugins/post-<name>.js` (project-level) or `node_modules/mikser-core-post-<name>/` (npm). A postprocess plugin exports a `postprocess()` function (and optionally `load()`):
+Postprocess plugins use the `post-` prefix and live in `src/plugins/post/` (built-in) or `plugins/post-<name>.js` (project-level) or `node_modules/mikser-io-post-<name>/` (npm). A postprocess plugin exports a `postprocess()` function (and optionally `load()`):
 
 ```js
 // plugins/post-pdf.js

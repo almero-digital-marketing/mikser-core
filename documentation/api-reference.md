@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for all functions and values exported from `mikser-core`.
+Complete reference for all functions and values exported from `mikser-io`.
 
 ---
 
@@ -13,7 +13,7 @@ Initializes the runtime and registers all built-in hooks. Returns the `runtime` 
 Must be called before `runtime.start()`.
 
 ```js
-import { setup } from 'mikser-core'
+import { setup } from 'mikser-io'
 
 const runtime = await setup({
   workingFolder: './my-project',
@@ -52,7 +52,7 @@ await runtime.start()
 Returns the current pino logger instance. Available after `onInitialized` fires.
 
 ```js
-import { useLogger } from 'mikser-core'
+import { useLogger } from 'mikser-io'
 
 const logger = useLogger()
 logger.info('Hello %s', 'world')
@@ -71,7 +71,7 @@ logger.notice('Completion message')  // styled green in info mode
 The singleton object. Import directly:
 
 ```js
-import { runtime } from 'mikser-core'
+import { runtime } from 'mikser-io'
 ```
 
 #### Properties
@@ -136,7 +136,7 @@ import {
   onCancel, onCancelled,
   onFinalize, onFinalized,
   onSync, onValidate, onComplete
-} from 'mikser-core'
+} from 'mikser-io'
 ```
 
 ### `onInitialize(callback)`
@@ -244,7 +244,7 @@ import {
   createEntity, updateEntity, deleteEntity,
   renderEntity, renderEntities,
   postprocessEntity, postprocessEntities
-} from 'mikser-core'
+} from 'mikser-io'
 ```
 
 ### `createEntity(entity)`
@@ -322,7 +322,7 @@ await postprocessEntities([
 ## Journal
 
 ```js
-import { addEntry, addEntries, updateEntry, useJournal, clearJournal } from 'mikser-core'
+import { addEntry, addEntries, updateEntry, useJournal, clearJournal } from 'mikser-io'
 ```
 
 ### `useJournal(name, operations?, signal?)`
@@ -361,7 +361,7 @@ Delete all journal entries. Closes the database connection if not in watch mode.
 ## Catalog
 
 ```js
-import { findEntity, findEntities } from 'mikser-core'
+import { findEntity, findEntities } from 'mikser-io'
 ```
 
 ### `findEntity(query?)`
@@ -390,7 +390,7 @@ Query types: function, lodash match object, or `undefined` for all.
 ## Manager
 
 ```js
-import { watch, schedule, createdHook, updatedHook, deletedHook, triggeredHook } from 'mikser-core'
+import { watch, schedule, createdHook, updatedHook, deletedHook, triggeredHook } from 'mikser-io'
 ```
 
 ### `watch(name, folder, options?)`
@@ -427,7 +427,7 @@ await createdHook('documents', { relativePath: 'new-post.md' })
 ## Utilities
 
 ```js
-import { checksum, normalize, matchEntity, changeExtension, AbortError } from 'mikser-core'
+import { checksum, normalize, matchEntity, changeExtension, AbortError } from 'mikser-io'
 ```
 
 ### `checksum(uri)`
@@ -480,7 +480,7 @@ if (signal?.aborted) throw new AbortError()
 ## Tracking
 
 ```js
-import { trackProgress, updateProgress, stopProgress, updateProgressDetails } from 'mikser-core'
+import { trackProgress, updateProgress, stopProgress, updateProgressDetails } from 'mikser-io'
 ```
 
 ### `trackProgress(name, total)`
@@ -508,7 +508,7 @@ Update the detail text shown on the progress bar (also logs at debug level).
 ## Constants
 
 ```js
-import { constants } from 'mikser-core'
+import { constants } from 'mikser-io'
 
 const { OPERATION, ACTION, TASKS } = constants
 ```

@@ -49,7 +49,7 @@ The import phase runs **only once** at startup. Subsequent cycles start from `pr
 Plugins register folder watchers using the `watch()` function:
 
 ```js
-import { watch } from 'mikser-core'
+import { watch } from 'mikser-io'
 
 // In a plugin's onLoaded handler
 onLoaded(() => {
@@ -85,7 +85,7 @@ Watch events (add, change, unlink) are routed to the sync hook with:
 The sync hook is the bridge between a file system event and a journal entry. Each plugin registers a sync handler for its collection:
 
 ```js
-import { onSync, createEntity, updateEntity, deleteEntity, ACTION } from 'mikser-core'
+import { onSync, createEntity, updateEntity, deleteEntity, ACTION } from 'mikser-io'
 
 onSync('documents', async ({ action, name, context }) => {
   const { relativePath } = context
@@ -133,7 +133,7 @@ If a file changes while a `process()` cycle is already running, Mikser cancels t
 Plugins that do long-running work should check `signal.aborted` and throw `AbortError` to exit cleanly:
 
 ```js
-import { AbortError } from 'mikser-core'
+import { AbortError } from 'mikser-io'
 
 onRender(async (signal) => {
   for await (const entry of useJournal('Rendering', ['RENDER'], signal)) {
@@ -148,7 +148,7 @@ onRender(async (signal) => {
 In watch mode, plugins can schedule recurring tasks using cron expressions:
 
 ```js
-import { schedule } from 'mikser-core'
+import { schedule } from 'mikser-io'
 
 // In a plugin's onLoaded handler
 onLoaded(() => {
@@ -224,7 +224,7 @@ onProcess(async (signal) => {
 ### Injecting external changes programmatically
 
 ```js
-import { createdHook, updatedHook, deletedHook, triggeredHook } from 'mikser-core'
+import { createdHook, updatedHook, deletedHook, triggeredHook } from 'mikser-io'
 
 // Simulate a file change from outside the watcher
 await updatedHook('documents', { relativePath: 'blog/new-post.md' })

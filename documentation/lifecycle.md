@@ -39,7 +39,7 @@ After `finalize`, if `--watch` is enabled, Mikser waits for file system events a
 
 ## Hook Registration
 
-All hook registration functions are exported from `mikser-core`:
+All hook registration functions are exported from `mikser-io`:
 
 ```js
 import {
@@ -52,7 +52,7 @@ import {
   onCancel, onCancelled,
   onFinalize, onFinalized,
   onSync, onValidate, onComplete
-} from 'mikser-core'
+} from 'mikser-io'
 ```
 
 Hooks are registered before `setup()` is called or inside a plugin's factory function.
@@ -278,7 +278,7 @@ onProcess(async (signal) => {
 The sync hook is how plugins decide whether a file system event should trigger a rebuild:
 
 ```js
-import { onSync } from 'mikser-core'
+import { onSync } from 'mikser-io'
 
 onSync('documents', async (operation) => {
   const { action, name, context } = operation
@@ -312,7 +312,7 @@ Return values:
 Validates entities before they are written to the journal. Return a string message if invalid; return nothing (or `true`) if valid.
 
 ```js
-import { onValidate } from 'mikser-core'
+import { onValidate } from 'mikser-io'
 
 onValidate(['CREATE', 'UPDATE'], async (entry) => {
   const { entity, operation } = entry
@@ -332,7 +332,7 @@ onValidate(['CREATE', 'UPDATE'], async (entry) => {
 Called after each entity finishes rendering (regardless of success or failure).
 
 ```js
-import { onComplete } from 'mikser-core'
+import { onComplete } from 'mikser-io'
 
 onComplete(async (entry) => {
   const { entity, output } = entry
@@ -357,4 +357,4 @@ onRender(async (signal) => {
 })
 ```
 
-`AbortError` is exported from `mikser-core` and is the expected way to exit a hook cleanly when cancelled.
+`AbortError` is exported from `mikser-io` and is the expected way to exit a hook cleanly when cancelled.

@@ -107,7 +107,7 @@ CREATE TABLE operations (
 ### Writing to the Journal
 
 ```js
-import { createEntity, updateEntity, deleteEntity, renderEntity, renderEntities } from 'mikser-core'
+import { createEntity, updateEntity, deleteEntity, renderEntity, renderEntities } from 'mikser-io'
 
 // Add a CREATE operation
 await createEntity({
@@ -140,7 +140,7 @@ await renderEntities([
 ### Reading from the Journal
 
 ```js
-import { useJournal } from 'mikser-core'
+import { useJournal } from 'mikser-io'
 
 // Async generator — yields journal entries one by one
 for await (const { id, entity, operation, context, options, output } of useJournal(
@@ -157,7 +157,7 @@ for await (const { id, entity, operation, context, options, output } of useJourn
 ### Low-level Journal Access
 
 ```js
-import { addEntry, addEntries, updateEntry } from 'mikser-core'
+import { addEntry, addEntries, updateEntry } from 'mikser-io'
 
 // Insert a raw entry (no stamp/time injection)
 await addEntry({ entity, operation: 'CREATE', context: {}, options: {} })
@@ -200,7 +200,7 @@ The catalog is a persistent JSON database of all entities across all runs. Unlik
 ### Querying the Catalog
 
 ```js
-import { findEntity, findEntities } from 'mikser-core'
+import { findEntity, findEntities } from 'mikser-io'
 
 // Find one entity matching a lodash query
 const entity = await findEntity({ id: '/documents/blog/post.md' })
@@ -245,7 +245,7 @@ The catalog is updated during the `persist` phase by reading CREATE/UPDATE/DELET
 Plugins use checksums to avoid re-importing unchanged files:
 
 ```js
-import { checksum, findEntity, createEntity, updateEntity } from 'mikser-core'
+import { checksum, findEntity, createEntity, updateEntity } from 'mikser-io'
 
 onImport(async () => {
   for (const file of await globby('**/*.md', { cwd: docsFolder })) {

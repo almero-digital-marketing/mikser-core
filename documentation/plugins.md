@@ -24,7 +24,7 @@ For each plugin name, Mikser looks in these locations, in order:
 
 1. `src/plugins/{name}.js` — built-in plugins
 2. `{workingFolder}/plugins/{name}.js` — project-local plugins
-3. `{workingFolder}/node_modules/mikser-core-{name}/index.js` — npm packages
+3. `{workingFolder}/node_modules/mikser-io-{name}/index.js` — npm packages
 
 Render plugins (names starting with `render-`) are loaded separately by the render system and are not listed in `plugins`.
 
@@ -534,10 +534,10 @@ Authorization: Bearer <token>
 
 ## npm Plugin Packages
 
-Third-party plugins can be published as npm packages named `mikser-core-{name}`:
+Third-party plugins can be published as npm packages named `mikser-io-{name}`:
 
 ```bash
-npm install mikser-core-sharp
+npm install mikser-io-sharp
 ```
 
 ```js
@@ -546,4 +546,4 @@ export default {
 }
 ```
 
-Mikser will look for the package at `node_modules/mikser-core-sharp/index.js`.
+Mikser will look for the package at `node_modules/mikser-io-sharp/index.js`.
