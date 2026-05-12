@@ -17,8 +17,8 @@ export async function createdHook(name, context) {
     })
 
     if (synced) {
-        clearTimeout(runtime.runtime.processTimeout)
-        runtime.runtime.processTimeout = setTimeout(() => runtime.process(), 1000)
+        clearTimeout(runtime.engine.processTimeout)
+        runtime.engine.processTimeout = setTimeout(() => runtime.process(), 1000)
     }
 }
 
@@ -32,8 +32,8 @@ export async function updatedHook(name, context) {
     })
 
     if (synced) {
-        clearTimeout(runtime.runtime.processTimeout)
-        runtime.runtime.processTimeout = setTimeout(() => runtime.process(), 1000)
+        clearTimeout(runtime.engine.processTimeout)
+        runtime.engine.processTimeout = setTimeout(() => runtime.process(), 1000)
     }
 }
 
@@ -47,8 +47,8 @@ export async function triggeredHook(name, context) {
     })
 
     if (synced) {
-        clearTimeout(runtime.runtime.processTimeout)
-        runtime.runtime.processTimeout = setTimeout(() => runtime.process(), 1000)
+        clearTimeout(runtime.engine.processTimeout)
+        runtime.engine.processTimeout = setTimeout(() => runtime.process(), 1000)
     }
 }
 
@@ -62,8 +62,8 @@ export async function deletedHook(name, context) {
     })
 
     if (synced) {
-        clearTimeout(runtime.runtime.processTimeout)
-        runtime.runtime.processTimeout = setTimeout(() => runtime.process(), 1000)
+        clearTimeout(runtime.engine.processTimeout)
+        runtime.engine.processTimeout = setTimeout(() => runtime.process(), 1000)
     }
 }
 
@@ -72,7 +72,7 @@ export function watch(name, folder, options = { interval: 1000, binaryInterval: 
 
     chokidar.watch(folder, options)
         .on('all', () => {
-            clearTimeout(runtime.runtime.processTimeout)
+            clearTimeout(runtime.engine.processTimeout)
         })
         .on('add', async fullPath => {
             const relativePath = fullPath.replace(`${folder}/`, '')
