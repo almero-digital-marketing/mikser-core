@@ -167,17 +167,25 @@ All properties of the `runtime` object are available directly in the template:
 
 **Handlebars helpers included:**
 
-Mikser ships with [handlebars-helpers](https://github.com/helpers/handlebars-helpers), providing:
+Mikser ships with [@budibase/handlebars-helpers](https://www.npmjs.com/package/@budibase/handlebars-helpers) (a maintained fork of `handlebars-helpers`), providing:
 
 | Category | Helpers |
 |----------|---------|
 | Arrays | `after`, `before`, `filter`, `first`, `last`, `map`, `sort`, `unique`, ... |
 | Collections | `isEmpty`, `iterate`, ... |
 | Comparisons | `eq`, `ne`, `lt`, `gt`, `and`, `or`, `if`, ... |
-| Dates | `moment` (requires moment.js) |
 | Math | `add`, `subtract`, `multiply`, `divide`, `ceil`, `floor`, `round`, ... |
 | Strings | `lowercase`, `uppercase`, `trim`, `truncate`, `replace`, `startsWith`, ... |
 | URLs | `encodeURI`, `decodeURI`, ... |
+
+Plus two helpers registered directly by `render-hbs`:
+
+| Helper | Source | Usage |
+|---|---|---|
+| `date` | [dayjs](https://www.npmjs.com/package/dayjs) | `{{date created "YYYY-MM-DD"}}` — format defaults to `YYYY-MM-DD` |
+| `url` | built-in | `{{url}}` (current context) or `{{url someObj}}` |
+
+`markdown` and `removeMarkdown` are not included by default. Add the [`mikser-io-render-markdown`](https://www.npmjs.com/package/mikser-io-render-markdown) plugin (in your `plugins` list as `'render-markdown'`) — its runtime functions become Handlebars helpers automatically: `{{{markdown meta.body}}}`, `{{removeMarkdown meta.body}}`.
 
 **Partials:** Any layout with a name starting with `partials` and `format: 'hbs'` is automatically registered as a Handlebars partial:
 ```

@@ -24,9 +24,10 @@ For each plugin name, Mikser looks in these locations, in order:
 
 1. `src/plugins/{name}.js` — built-in plugins
 2. `{workingFolder}/plugins/{name}.js` — project-local plugins
-3. `{workingFolder}/node_modules/mikser-io-{name}/index.js` — npm packages
+3. `{workingFolder}/node_modules/mikser-io-{name}/index.js` — npm packages installed in the working folder
+4. Node module resolution (`createRequire`) starting from the working folder — finds `mikser-io-{name}` in any ancestor `node_modules`, matching how `import` works
 
-Render plugins (names starting with `render-`) are loaded separately by the render system and are not listed in `plugins`.
+Render plugins (names starting with `render-`) follow the same four-step resolution but are loaded by the render worker, not the core. They aren't listed in `plugins`.
 
 ---
 
@@ -205,10 +206,22 @@ layouts: {
     '@/**': 'default.hbs'      // Fallback
   },
 
-  autoLayouts: true,           // Match by entity.name == layout.name
+  autoLayouts: true,           // Auto-match entity to layout within same directory namespace
   cleanUrls: true              // /page.html → /page/index.html
 }
 ```
+
+**Auto-layout matching (`autoLayouts: true`):**
+
+For each entity, Mikser tries lookups in the entity's directory namespace, peeling trailing dot-segments off the basename. The first candidate that names an existing layout wins:
+
+| Entity (`entity.name`) | Candidates tried in order | Matches if layout exists at |
+|---|---|---|
+| `nginx.conf` | `nginx.conf`, `nginx` | `layouts/nginx.conf.*` or `layouts/nginx.*` |
+| `styles/post.css` | `styles/post.css`, `styles/post` | `layouts/styles/post.css.*` or `layouts/styles/post.*` |
+| `posts/article.md` | `posts/article.md`, `posts/article` | `layouts/posts/article.*` |
+
+Cross-directory auto-matching is intentionally not supported — pair `posts/article.md` with a top-level `article.eta` via `meta.layout: 'article'` or a `layouts.match` rule.
 
 **Entity properties set on documents:**
 - `layout`: The matched layout entity object

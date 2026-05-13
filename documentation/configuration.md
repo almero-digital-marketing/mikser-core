@@ -110,7 +110,7 @@ export default {
       '@/pages/*': 'page.hbs'
     },
 
-    autoLayouts: true,          // Auto-detect layout by matching entity.name to layout filename
+    autoLayouts: true,          // Match entity to layout within the same directory namespace; peels trailing dot-segments off basename
     cleanUrls: true             // Convert /page.html to /page/index.html
   }
 }
