@@ -212,6 +212,19 @@ The entity must have `entity.preset` set (done by the assets plugin). The preset
 
 ---
 
+### External Renderers
+
+Additional template engines are available as installable packages — drop the package name into `plugins` (without the `mikser-io-` prefix) and set `renderer: '<name>'`:
+
+| Package | Renderer | Notes |
+|---|---|---|
+| [`mikser-io-render-eta`](https://www.npmjs.com/package/mikser-io-render-eta) | `eta` | Fast embedded JS templates. `cache` defaults to `!options.watch`. |
+| [`mikser-io-render-ect`](https://www.npmjs.com/package/mikser-io-render-ect) | `ect` | Lightweight ECT templates. |
+| [`mikser-io-render-markdown`](https://www.npmjs.com/package/mikser-io-render-markdown) | (helper) | Adds `markdown`/`removeMarkdown` to the render runtime (and as Handlebars helpers). |
+| [`mikser-io-render-metatext`](https://www.npmjs.com/package/mikser-io-render-metatext) | (helper) | Adds `metatext`/`removeMetatext` bracket-to-HTML helpers. |
+
+---
+
 ## Helper Render Plugins
 
 These plugins extend the `runtime` object inside templates. They are loaded automatically when the `render-hbs` renderer is used, or can be listed in `context.plugins`.
