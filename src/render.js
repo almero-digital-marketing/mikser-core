@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import _ from 'lodash'
 
@@ -22,11 +23,18 @@ export default async ({ entity, options, config, context, state, logger, port })
     }
 
     async function loadPlugin(pluginName) {
+        const require = createRequire(path.join(options.workingFolder, 'package.json'))
+        let nodeModulesResolved
+        try {
+            nodeModulesResolved = require.resolve(`mikser-io-${pluginName}`)
+        } catch { }
+
         const resolveLocations = [
             path.join(options.workingFolder, 'node_modules', `mikser-io-${pluginName}/index.js`),
+            nodeModulesResolved,
             path.join(options.workingFolder, 'plugins', `${pluginName}.js`),
             path.join(path.dirname(import.meta.url), 'plugins', 'render', `${pluginName.replace('render-', '')}.js`)
-        ]
+        ].filter(Boolean)
         for (let resolveLocation of resolveLocations) {
             try {
                 return await import(resolveLocation)

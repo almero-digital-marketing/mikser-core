@@ -1,5 +1,6 @@
 import handlebars from 'handlebars'
-import helpers from 'handlebars-helpers'
+import helpers from '@budibase/handlebars-helpers'
+import dayjs from 'dayjs'
 import { readFile } from 'fs/promises'
 
 export function load({ config, runtime, context }) {
@@ -8,8 +9,6 @@ export function load({ config, runtime, context }) {
         'collection',
         'object',
         'comparison',
-        'date',
-        'markdown',
         'match',
         'math',
         'number',
@@ -23,6 +22,12 @@ export function load({ config, runtime, context }) {
             handlebars.registerPartial(partial, partialLayout)
         }
     }
+    handlebars.registerHelper('date', (date, format) => {
+        if (!date) return ''
+        if (typeof format !== 'string') format = 'YYYY-MM-DD'
+        return dayjs(date).format(format)
+    })
+
     handlebars.registerHelper('url', function(obj, options) {
         // Called as {{url}} with no args — obj is the Handlebars options object,
         // so read url from the current context (this)

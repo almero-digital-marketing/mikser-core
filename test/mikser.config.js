@@ -11,6 +11,7 @@ export default async ({ options }) => ({
 		'render-href',
 		'render-resource',
 		'render-asset',
+		'render-markdown',
 		'post-pdf',
 	],
     resources: {
@@ -37,4 +38,7 @@ export default async ({ options }) => ({
             ]
         }
     },
+    layouts: {
+        autoLayouts: true,
+    }
 })

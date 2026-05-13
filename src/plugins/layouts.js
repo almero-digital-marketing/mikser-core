@@ -207,19 +207,25 @@ export default ({
                             }
                         }
                         if (!entity.layout && runtime.config.layouts?.autoLayouts && entity.name) {
-                            const nameChunks = entity.name.split('.')
-                            if (nameChunks?.length) {
-                                for (let index = 0; index < nameChunks.length; index++) {
-                                    const autoLayout = [
-                                        path.basename(entity.name).split('.').slice(index).join('.'),
-                                        path.basename(entity.id)
-                                    ]
-                                        .find(layout => layouts[layout])
-                                    if (autoLayout) {
-                                        entity.layout = layouts[autoLayout]
-                                        break
-                                    }
-                                }
+                            const dir = path.dirname(entity.name)
+                            const base = path.basename(entity.name)
+                            const chunks = base.split('.')
+                            const candidates = []
+
+                            // Peel trailing chunks within the entity's directory only.
+                            // "nginx.conf" (dir=".") -> ["nginx.conf", "nginx"]
+                            // "styles/post.css" (dir="styles") -> ["styles/post.css", "styles/post"]
+                            for (let i = chunks.length; i > 0; i--) {
+                                const head = chunks.slice(0, i).join('.')
+                                candidates.push(dir && dir !== '.' ? path.join(dir, head) : head)
+                            }
+
+                            const autoLayout = candidates.find(name => layouts[name])
+                            if (autoLayout) {
+                                entity.layout = layouts[autoLayout]
+                                logger.debug('Auto layout matched %s -> %s for %s', entity.name, autoLayout, entity.id)
+                            } else {
+                                logger.trace('Auto layout no match for %s tried: %s', entity.id, candidates.join(', '))
                             }
                         }
                     } else {
