@@ -20,6 +20,8 @@ export default ({
     onSync,
     matchEntity,
     changeExtension,
+    findEntity,
+    findEntities,
     constants: { ACTION, OPERATION, TASKS },
 }) => {
     const collection = 'layouts'
@@ -206,9 +208,10 @@ export default ({
                                 break
                             }
                         }
-                        if (!entity.layout && runtime.config.layouts?.autoLayouts && entity.name) {
-                            const dir = path.dirname(entity.name)
-                            const base = path.basename(entity.name)
+                        if (!entity.layout && runtime.config.layouts?.autoLayouts && entity.id) {
+                            const lookupBase = entity.id.replace(`/${entity.collection}/`,'')
+                            const dir = path.dirname(lookupBase)
+                            const base = path.basename(lookupBase)
                             const chunks = base.split('.')
                             const candidates = []
 
@@ -256,6 +259,7 @@ export default ({
     })
 
     onBeforeRender(async (signal) => {
+        const logger = useLogger()
         const tasks = []
         const entities = Array.from(getSitemapEntities())
             .filter(entity => entity.layout)
@@ -274,7 +278,7 @@ export default ({
             try {
                 var { load, plugins = [] } = await import(`${path.join(runtime.options.layoutsFolder, entity.layout.name)}.js?stamp=${Date.now()}`)
                 if (load) {
-                    data = await load(entity, signal)
+                    data = await load({ entity, findEntity, findEntities, runtime, signal })            
                 }
             } catch (err) {
                 if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
