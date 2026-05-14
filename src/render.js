@@ -2,6 +2,25 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import _ from 'lodash'
+import { useLogger } from './engine.js'
+
+// Flatten template-helper args into a single human-readable message.
+// Handlebars helpers receive a trailing options object (it has a `.hash`
+// property) which we drop.
+function formatLogArgs(args) {
+    if (args.length && typeof args[args.length - 1] === 'object' && args[args.length - 1] !== null && 'hash' in args[args.length - 1]) {
+        args = args.slice(0, -1)
+    }
+    return args
+        .map(arg => {
+            if (arg == null) return String(arg)
+            if (typeof arg === 'object') {
+                try { return JSON.stringify(arg) } catch { return String(arg) }
+            }
+            return String(arg)
+        })
+        .join(' ')
+}
 
 export default async ({ entity, options, config, context, state, logger, port }) => {
     logger = logger || {
@@ -65,7 +84,21 @@ export default async ({ entity, options, config, context, state, logger, port })
         data: context.data,
         content() {
             return readFileSync(entity.source, { encoding: 'utf8' })
-        }
+        },
+        // Logger functions are exposed directly so each renderer's
+        // auto-helper loop picks them up are picked up; falls back to the local `logger` in
+        // worker contexts where the engine singleton isn't initialised.
+        //
+        // Args are flattened into a single space-separated message so
+        // every value the template passed shows up — pino otherwise drops
+        // trailing positional args unless the first contains %s/%d format
+        // specifiers. Handlebars appends an internal options object as
+        // the last arg, which we strip before joining.
+        log: (...args) => (useLogger() ?? logger).info(formatLogArgs(args)),
+        warn: (...args) => (useLogger() ?? logger).warn(formatLogArgs(args)),
+        error: (...args) => (useLogger() ?? logger).error(formatLogArgs(args)),
+        debug: (...args) => (useLogger() ?? logger).debug(formatLogArgs(args)),
+        trace: (...args) => (useLogger() ?? logger).trace(formatLogArgs(args)),
     }
 
     for (let pluginName of pluginsToLoad) {

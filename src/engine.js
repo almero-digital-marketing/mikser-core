@@ -356,5 +356,5 @@ export async function setup(options) {
 }
 
 export function useLogger() {
-    return runtime.engine.logger
+    return runtime.engine?.logger
 }
