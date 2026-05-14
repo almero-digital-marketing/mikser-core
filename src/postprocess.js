@@ -36,7 +36,7 @@ export async function loadPlugin(pluginName, workingFolder) {
         }
     }
 
-    logger?.error('Postprocess plugin %s not found. Searched: %s', pluginName, resolveLocations.join(', '))
+    logger?.error('Postprocess plugin %s not found.', pluginName)
 }
 
 export default async ({ entity, options, config, context, state, logger }) => {

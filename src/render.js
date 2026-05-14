@@ -73,7 +73,7 @@ export default async ({ entity, options, config, context, state, logger, port })
             }
         }
 
-        logger.error('Render plugin %s not found. Searched: %s', pluginName, resolveLocations.join(', '))
+        logger.error('Render plugin %s not found.', pluginName)
     }
 
     const { renderer } = options

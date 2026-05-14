@@ -51,7 +51,7 @@ export async function loadPlugin(pluginName) {
             }
         }
     }
-    logger.error('Plugin %s not found. Searched: %s', pluginName, resolveLocations.join(', '))
+    logger.error('Plugin %s not found.', pluginName)
 }
 
 onLoad(async () => {
