@@ -90,11 +90,35 @@ Inside a render, a `runtime` object is assembled and passed to all plugins:
   plugins,                 // loaded plugin instances keyed by name
   config,                  // render config
   data: context.data,      // context data from layout's load()
-  content()                // async function: reads entity.source as UTF-8
+  content(),               // async function: reads entity.source as UTF-8
+  log, warn, error,        // logger functions — see "Logging from templates"
+  debug, trace
 }
 ```
 
 Render plugins extend this object further (e.g. `runtime.href`, `runtime.asset`, `runtime.resource`).
+
+### Logging from templates
+
+The runtime exposes five logger functions — `log` (info), `warn`, `error`, `debug`, `trace` — that route through Mikser's central logger (`useLogger()` is resolved at call time, so progress-bar wrappers in `info` mode are honoured). Each renderer's auto-helper loop picks them up:
+
+```hbs
+{{!-- Handlebars --}}
+{{log "📄 Rendering page" document.id}}
+{{warn "Missing meta.author"}}
+```
+
+```liquid
+{# Liquid — message on the left, extra context after the colon #}
+{{ "📄 Rendering page" | log: document.id }}
+```
+
+```eta
+<%# Eta — regular JS call %>
+<% log("📄 Rendering page", document.id) %>
+```
+
+Args are flattened into a single space-separated message (objects are `JSON.stringify`-ed). Handlebars' internal options object is stripped automatically. This means **the first argument is always the message** — putting `document.id` first in a Liquid pipe would log just the id and discard the label.
 
 ## Plugin Load / Render Protocol
 
@@ -412,7 +436,24 @@ Each item in `pages` triggers a separate render call. The entity gets `entity.pa
 
 After rendering completes:
 
-- The rendered content is written to `entity.destination`
-- The journal entry is updated with `output: { success: true, result: '...' }`
-- `render-details.json` in the runtime folder contains a list of all rendered entities
-- Failed renders are logged and marked `output: { success: false }` but do not abort the run
+- The rendered content is written to `entity.destination`.
+- The journal entry is updated with `output: { success: true, result: '...' }`.
+- `render-details.json` in the runtime folder is a **cumulative manifest** of every rendered output. It loads at startup, is merged with each cycle's renders, and on DELETE entries (e.g. in watch mode) the corresponding output files are unlinked and pruned. Paginated children are tracked via `entity.parent` so a single source delete sweeps all pages.
+- Failed renders are logged and marked `output: { success: false }` but do not abort the run.
+
+### Error output
+
+Render and postprocess errors include a compact source-location suffix so you can jump straight to the layout:
+
+```
+Render error: /documents/en/posts/post-1.html [layouts/post.hbs:12] Parse error on line 12: ...
+Postprocess error: /documents/en/welcome.yml [layouts/welcome.html-mjml.hbs] MJML: ...
+```
+
+The format is `[<relative-layout-path>[:<line>[:<column>]]]`. Each renderer plugin enriches its thrown errors with `layoutUri`, `line`, and `column` when the underlying engine exposes them; the central logger formats whatever is present.
+
+| Renderer | Error info surfaced |
+|---|---|
+| `render-hbs` | layout path; line extracted from Handlebars' `lineNumber` or "on line N" in message |
+| `render-eta` (`mikser-io-render-eta`) | layout path; line extracted from "at line N" in message |
+| `render-liquid` (`mikser-io-render-liquid`) | layout path, line, and column from `LiquidError.token` |

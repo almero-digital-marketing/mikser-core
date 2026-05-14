@@ -49,7 +49,7 @@ await runtime.start()
 
 ### `useLogger()`
 
-Returns the current pino logger instance. Available after `onInitialized` fires.
+Returns the current pino logger instance, or `undefined` if the engine isn't initialised yet (notably in render-worker contexts). Available after `onInitialized` fires in the main thread.
 
 ```js
 import { useLogger } from 'mikser-io'
@@ -83,7 +83,7 @@ import { runtime } from 'mikser-io'
 | `runtime.started` | boolean | `true` after the import phase completes |
 | `runtime.options` | object | Merged CLI + programmatic options |
 | `runtime.config` | object | Loaded from `mikser.config.js` |
-| `runtime.state` | object | Arbitrary state set by plugins |
+| `runtime.state` | object | Arbitrary state set by plugins (e.g. `state.manifest` is the in-memory render manifest, `state.layouts` holds layout index + sitemap) |
 | `runtime.catalog` | object | The lowdb catalog instance |
 | `runtime.validators` | function[] | Registered validation functions |
 | `runtime.engine` | object | Runtime services (logger, renderWorkers, queue, commander) |
@@ -427,7 +427,7 @@ await createdHook('documents', { relativePath: 'new-post.md' })
 ## Utilities
 
 ```js
-import { checksum, normalize, matchEntity, changeExtension, AbortError } from 'mikser-io'
+import { checksum, normalize, matchEntity, changeExtension, formatErrorContext, AbortError } from 'mikser-io'
 ```
 
 ### `checksum(uri)`
@@ -466,6 +466,17 @@ Returns the file path with the extension replaced.
 changeExtension('/out/page.html', 'md')  // → '/out/page.md'
 changeExtension('post.md', 'html')       // → 'post.html'
 ```
+
+### `formatErrorContext(entity, err, options)`
+
+Builds the `[layouts/foo.hbs:12:4]` suffix used by the central render and postprocess error logs. Reads `err.layoutUri`, `err.line`/`err.lineNumber`, `err.column`/`err.col`. The `options` argument is the runtime options object — `options.workingFolder` is used to relativize the layout path.
+
+```js
+const suffix = formatErrorContext(entity, err, runtime.options)
+logger.error('Render error: %s%s %s', entity.id, suffix, err.message)
+```
+
+Render plugins that wrap an underlying template engine should set these properties on the thrown error before rethrowing so the central logger has something to format.
 
 ### `AbortError`
 

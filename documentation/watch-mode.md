@@ -122,6 +122,17 @@ onSync('documents', async ({ action, name, context }) => {
 
 When any sync hook returns `true`, `process()` is scheduled to run after a 1-second debounce. Multiple rapid file changes are coalesced into a single rebuild.
 
+## Cleanup on delete and rename
+
+Chokidar reports a file rename as `unlink(old)` followed by `add(new)`. The `unlink` runs through `runtime.sync({ action: DELETE })`; each collection plugin's `onSync` handler emits a sparse DELETE entry to the journal (id, collection, type).
+
+After the next render cycle Mikser reconciles state:
+
+- `render-details.json` (the cumulative render manifest) is consulted. Every entry whose `id` or `parent` matches a deleted source is unlinked from disk and pruned from the manifest. Paginated children are caught via `parent`.
+- The layouts sitemap drops entries whose `id` or `parent` matches the deleted source.
+
+The net effect: renaming `documents/foo.md` to `documents/bar.md` in watch mode unlinks `out/foo.html` and any `out/foo.<n>.html` pages on its own. One-shot builds (no watch) don't generate DELETE events — use `--clear` to start from a clean output tree.
+
 ## Cancellation
 
 If a file changes while a `process()` cycle is already running, Mikser cancels the current run and starts a new one:
