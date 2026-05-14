@@ -10,7 +10,7 @@ import { onInitialize, onInitialized, onRender, onCancel, onCancelled, onFinaliz
 import { useJournal, updateEntry } from './journal.js'
 import { globby } from 'globby'
 import { OPERATION, TASKS } from './constants.js'
-import { changeExtension } from './utils.js'
+import { changeExtension, formatErrorContext } from './utils.js'
 import render from './render.js'
 import postprocess, { loadPlugin as loadPostPlugin } from './postprocess.js'
 import map from 'p-map'
@@ -177,7 +177,7 @@ export async function setup(options) {
                 } catch (err) {
                     if (!signal.aborted) {
                         await updateEntry({ id, output: { success: false } })
-                        logger.error('Render error: %s %s', entity.id, err.message)
+                        logger.error('Render error: %s%s %s', entity.id, formatErrorContext(entity, err, runtime.options), err.message)
                     }
                     logger.debug('Render canceled')
                 }
@@ -302,7 +302,7 @@ export async function setup(options) {
                     } catch (err) {
                         if (!signal.aborted) {
                             await updateEntry({ id, output: { success: false } })
-                            logger.error('Postprocess error: %s %s', entity.id, err.message)
+                            logger.error('Postprocess error: %s%s %s', entity.id, formatErrorContext(entity, err, runtime.options), err.message)
                         }
                         logger.debug('Postprocess canceled')
                     }

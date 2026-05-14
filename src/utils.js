@@ -63,3 +63,21 @@ export function changeExtension(file, format) {
     let result = file.substring(0, file.length - extension.length) + '.' + format
     return result
 }
+
+// Build a compact "[layouts/foo.hbs:12:4]" suffix from whatever the
+// underlying template engine attached to its thrown error. Renderer
+// plugins are expected to set `err.layoutUri` (and optionally `err.line` /
+// `err.column`) before rethrowing.
+export function formatErrorContext(entity, err, options) {
+    const layoutUri = err?.layoutUri || entity?.layout?.uri || entity?.layout?.id
+    if (!layoutUri) return ''
+    const workingFolder = options?.workingFolder
+    const rel = workingFolder && layoutUri.startsWith(workingFolder + '/')
+        ? layoutUri.slice(workingFolder.length + 1)
+        : layoutUri
+    const line = err?.line ?? err?.lineNumber
+    const column = err?.column ?? err?.col
+    let pos = ''
+    if (line) pos = `:${line}${column ? ':' + column : ''}`
+    return ` [${rel}${pos}]`
+}

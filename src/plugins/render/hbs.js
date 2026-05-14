@@ -53,5 +53,18 @@ export async function render({ entity, runtime }) {
             sandbox[helper] = runtime[helper]
         }
     }
-    return runtime.hbs(source, sandbox)
+    try {
+        return runtime.hbs(source, sandbox)
+    } catch (err) {
+        // Handlebars compile errors expose `.lineNumber`/`.column`; runtime
+        // errors (missing helper, etc.) don't, but we still know the layout.
+        // Parse errors put the line in the message as "Parse error on line N".
+        if (err.lineNumber != null && err.line == null) err.line = err.lineNumber
+        if (err.line == null && typeof err.message === 'string') {
+            const m = err.message.match(/on line (\d+)/i)
+            if (m) err.line = Number(m[1])
+        }
+        err.layoutUri = entity.layout.uri
+        throw err
+    }
 }
