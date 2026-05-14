@@ -226,14 +226,33 @@ export async function setup(options) {
     })
 
     onBeforePostprocess(async (signal) => {
+        // Resolve the output extension for each postprocessor exactly once
+        // per cycle. A plugin can declare `export const output = '...'` to
+        // separate its name from the produced file extension (e.g. post-mjml
+        // names itself "mjml" but emits ".html"). Falls back to the
+        // postprocessor name for plugins that don't declare it — preserves
+        // the current behavior for post-pdf and any other existing plugin.
+        const outputExtCache = new Map()
+        const resolveOutputExt = async (postprocessor) => {
+            if (outputExtCache.has(postprocessor)) return outputExtCache.get(postprocessor)
+            let ext = postprocessor
+            try {
+                const plugin = await loadPostPlugin(`post-${postprocessor}`, runtime.options.workingFolder)
+                if (plugin?.output) ext = plugin.output
+            } catch { /* loadPostPlugin already logged */ }
+            outputExtCache.set(postprocessor, ext)
+            return ext
+        }
+
         const tasks = []
         for await (const { entity, options, context, output } of useJournal('Queuing postprocess', [OPERATION.RENDER], signal)) {
             if (output?.success && options.postprocessor) {
+                const ext = await resolveOutputExt(options.postprocessor)
                 tasks.push({
                     entity: {
                         ...entity,
                         origin: entity.destination,
-                        destination: changeExtension(entity.destination, options.postprocessor)
+                        destination: changeExtension(entity.destination, ext)
                     },
                     options: { postprocessor: options.postprocessor, tasks: options.tasks },
                     context

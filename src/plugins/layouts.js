@@ -385,7 +385,11 @@ export default ({
             } catch { }
             await writeFile(destinationFile, output.result)
             logger.debug('Layout render finished: %s', entity.destination.replace(runtime.options.workingFolder, ''))
-            if (entity.origin) {
+            if (entity.origin && entity.origin !== entity.destination) {
+                // Don't unlink the origin if it was the same path we just
+                // wrote to (post plugins that produce the same extension as
+                // the renderer's output — e.g. MJML→HTML on `*.html-mjml.*`
+                // layouts). Otherwise we'd delete our own final file.
                 const originFile = path.join(runtime.options.outputFolder, entity.origin)
                 try {
                     await unlink(originFile)
