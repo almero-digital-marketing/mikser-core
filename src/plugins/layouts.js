@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { mkdir, writeFile, unlink } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { globby } from 'globby'
 import _ from 'lodash'
 
@@ -280,13 +281,27 @@ export default ({
             const entity = _.cloneDeep(original)
             entity.destination = '/' + entity.name
             let data
-            try {
-                var { load, plugins = [] } = await import(`${path.join(runtime.options.layoutsFolder, entity.layout.name)}.js?stamp=${Date.now()}`)
-                if (load) {
-                    data = await load({ entity, findEntity, findEntities, runtime, signal })            
+            let load
+            let plugins = []
+            const sidecarPath = `${path.join(runtime.options.layoutsFolder, entity.layout.name)}.js`
+            // Existence-check first so a real ERR_MODULE_NOT_FOUND inside the
+            // sidecar (e.g. it imports a missing package) doesn't get swallowed
+            // as "sidecar doesn't exist".
+            if (existsSync(sidecarPath)) {
+                try {
+                    ({ load, plugins = [] } = await import(`${sidecarPath}?stamp=${Date.now()}`))
+                } catch (err) {
+                    logger.error('Layout sidecar %s failed to load: %s', sidecarPath.replace(runtime.options.workingFolder + '/', ''), err.message)
+                    throw err
                 }
-            } catch (err) {
-                if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
+                if (load) {
+                    try {
+                        data = await load({ entity, findEntity, findEntities, runtime, signal })
+                    } catch (err) {
+                        logger.error('Layout sidecar %s load() threw: %s', sidecarPath.replace(runtime.options.workingFolder + '/', ''), err.message)
+                        throw err
+                    }
+                }
             }
 
             if (data?.pages) {

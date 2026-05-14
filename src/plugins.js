@@ -27,6 +27,10 @@ export async function loadPlugin(pluginName) {
         if (fs.existsSync(resolveLocation.replace('file:', ''))) {
             try {
                 const plugin = await import(resolveLocation)
+                if (typeof plugin.default !== 'function') {
+                    logger.error('Plugin %s loaded from %s but does not export a default factory function', pluginName, resolveLocation)
+                    return
+                }
                 const pluginRuntime = plugin.default(core)
                 runtime.engine[pluginName] = pluginRuntime
                 if (pluginRuntime) {
@@ -36,12 +40,18 @@ export async function loadPlugin(pluginName) {
                 }
                 return
             } catch (err) {
-                logger.error('Plugin load error: [%s] %s', pluginName, err.message)
+                // ERR_MODULE_NOT_FOUND here means the plugin file resolved
+                // but one of its imports didn't — a real bug worth surfacing.
+                if (err.code === 'ERR_MODULE_NOT_FOUND') {
+                    logger.error('Plugin %s found at %s but its dependencies are missing: %s', pluginName, resolveLocation, err.message)
+                } else {
+                    logger.error('Plugin %s failed to load (%s): %s', pluginName, resolveLocation, err.message)
+                }
                 return
             }
         }
     }
-    logger.error('Plugin not loaded: %s', pluginName)
+    logger.error('Plugin %s not found. Searched: %s', pluginName, resolveLocations.join(', '))
 }
 
 onLoad(async () => {

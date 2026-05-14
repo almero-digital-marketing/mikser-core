@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import _ from 'lodash'
@@ -46,7 +46,7 @@ export default async ({ entity, options, config, context, state, logger, port })
         let nodeModulesResolved
         try {
             nodeModulesResolved = require.resolve(`mikser-io-${pluginName}`)
-        } catch { }
+        } catch { /* package not installed at this level — fine, try next */ }
 
         const resolveLocations = [
             path.join(options.workingFolder, 'node_modules', `mikser-io-${pluginName}/index.js`),
@@ -54,16 +54,26 @@ export default async ({ entity, options, config, context, state, logger, port })
             path.join(options.workingFolder, 'plugins', `${pluginName}.js`),
             path.join(path.dirname(import.meta.url), 'plugins', 'render', `${pluginName.replace('render-', '')}.js`)
         ].filter(Boolean)
+
         for (let resolveLocation of resolveLocations) {
+            // Existence-check first: once we know the plugin file is there,
+            // any subsequent ERR_MODULE_NOT_FOUND is a *transitive* dep
+            // missing (e.g. plugin imports a package that isn't installed),
+            // not a "this plugin isn't here, try the next path" signal.
+            if (!existsSync(resolveLocation.replace(/^file:/, ''))) continue
             try {
                 return await import(resolveLocation)
             } catch (err) {
-                if (err.code != 'ERR_MODULE_NOT_FOUND') {
-                    logger.error('Redner plugin error:', resolveLocation, err)
-                    throw err
+                if (err.code === 'ERR_MODULE_NOT_FOUND') {
+                    logger.error('Render plugin %s found at %s but its dependencies are missing: %s', pluginName, resolveLocation, err.message)
+                } else {
+                    logger.error('Render plugin %s failed to load (%s): %s', pluginName, resolveLocation, err.message)
                 }
+                throw err
             }
         }
+
+        logger.error('Render plugin %s not found. Searched: %s', pluginName, resolveLocations.join(', '))
     }
 
     const { renderer } = options

@@ -1,13 +1,16 @@
 import path from 'node:path'
 import { createRequire } from 'node:module'
+import { existsSync } from 'node:fs'
 import _ from 'lodash'
+import { useLogger } from './engine.js'
 
 export async function loadPlugin(pluginName, workingFolder) {
+    const logger = useLogger()
     const require = createRequire(path.join(workingFolder, 'package.json'))
     let nodeModulesResolved
     try {
         nodeModulesResolved = require.resolve(`mikser-io-${pluginName}`)
-    } catch { }
+    } catch { /* package not installed at this level — fine, try next */ }
 
     const resolveLocations = [
         path.join(workingFolder, 'node_modules', `mikser-io-${pluginName}/index.js`),
@@ -15,13 +18,25 @@ export async function loadPlugin(pluginName, workingFolder) {
         path.join(workingFolder, 'plugins', `${pluginName}.js`),
         path.join(path.dirname(import.meta.url), 'plugins', 'post', `${pluginName.replace('post-', '')}.js`)
     ].filter(Boolean)
+
     for (let resolveLocation of resolveLocations) {
+        // See render.js loadPlugin — existence-check first so we can
+        // distinguish "plugin not at this path" from "plugin found but its
+        // transitive deps are missing".
+        if (!existsSync(resolveLocation.replace(/^file:/, ''))) continue
         try {
             return await import(resolveLocation)
         } catch (err) {
-            if (err.code != 'ERR_MODULE_NOT_FOUND') throw err
+            if (err.code === 'ERR_MODULE_NOT_FOUND') {
+                logger?.error('Postprocess plugin %s found at %s but its dependencies are missing: %s', pluginName, resolveLocation, err.message)
+            } else {
+                logger?.error('Postprocess plugin %s failed to load (%s): %s', pluginName, resolveLocation, err.message)
+            }
+            throw err
         }
     }
+
+    logger?.error('Postprocess plugin %s not found. Searched: %s', pluginName, resolveLocations.join(', '))
 }
 
 export default async ({ entity, options, config, context, state, logger }) => {
@@ -46,10 +61,24 @@ export default async ({ entity, options, config, context, state, logger }) => {
 
     for (let pluginName of pluginsToLoad) {
         const plugin = await loadPlugin(pluginName, options.workingFolder)
+        if (!plugin) continue // loadPlugin already logged the "not found" path
         plugins[pluginName] = plugin
-        if (plugin?.load) await plugin.load({ entity, options, config: config[pluginName], context, runtime, state, logger })
+        if (plugin.load) {
+            try {
+                await plugin.load({ entity, options, config: config[pluginName], context, runtime, state, logger })
+            } catch (err) {
+                logger.error('Postprocess plugin %s load() failed: %s', pluginName, err.message)
+                throw err
+            }
+        }
     }
 
     const postprocessorPlugin = plugins[`post-${postprocessor}`]
-    return await postprocessorPlugin?.postprocess({ entity, options, config, context, plugins, runtime, state, logger })
+    if (!postprocessorPlugin) {
+        throw new Error(`Postprocessor "${postprocessor}" was requested but plugin "post-${postprocessor}" is not loaded`)
+    }
+    if (typeof postprocessorPlugin.postprocess !== 'function') {
+        throw new Error(`Plugin "post-${postprocessor}" does not export a postprocess() function`)
+    }
+    return await postprocessorPlugin.postprocess({ entity, options, config, context, plugins, runtime, state, logger })
 }
