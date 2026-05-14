@@ -59,18 +59,18 @@ export default ({
 
     function removeFromSitemap(entity) {
         const { sitemap } = runtime.state.layouts
+        const matches = (current) =>
+            current.id === entity.id || current.parent === entity.id
         for (let href in sitemap) {
             let entry = sitemap[href]
             if (entry.id) {
-                if (entry.id == entity.id) {
+                if (matches(entry)) {
                     delete sitemap[href]
-                    return
                 }
             } else {
                 for (let lang in entry) {
-                    if (entry[lang].id == entity.id) {
+                    if (matches(entry[lang])) {
                         delete entry[lang]
-                        return
                     }
                 }
             }
@@ -251,6 +251,11 @@ export default ({
                     }
                     break
                 case OPERATION.DELETE:
+                    // DELETE journal entries are sparse (id/collection/type only),
+                    // so the uri-based removePagesFromSitemap can't match. Walk
+                    // the sitemap by id first; keep the uri-based sweep for any
+                    // paginated children that match by uri.
+                    removeFromSitemap(entity)
                     removePagesFromSitemap(entity)
                     break
             }
@@ -292,6 +297,9 @@ export default ({
                         if (page) {
                             pageEntity.page = page + 1
                             pageEntity.id = changeExtension(entity.id, `${pageEntity.page}.${entity.layout.format}`)
+                            // Remember the source entity id so the render manifest
+                            // can reclaim paginated outputs when the parent is deleted.
+                            pageEntity.parent = entity.id
                             if (entity.meta) {
                                 if (entity.meta.href) {
                                     pageEntity.meta.href = `${entity.meta.href}.${pageEntity.page}`

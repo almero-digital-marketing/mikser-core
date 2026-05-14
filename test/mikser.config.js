@@ -8,11 +8,13 @@ export default async ({ options }) => ({
         'resources',
 		'assets',
 		'render-hbs',
+		'render-liquid',
 		'render-href',
 		'render-resource',
 		'render-asset',
 		'render-markdown',
 		'post-pdf',
+		'post-mjml',
 	],
     resources: {
         outputFolder: 'public',

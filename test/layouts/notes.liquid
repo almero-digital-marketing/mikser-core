@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="{{ document.meta.lang }}">
+    <head>
+        <meta charset="UTF-8" />
+        <title>{{ document.meta.title }}</title>
+    </head>
+    <body>
+        <article>
+            <header>
+                <h1>{{ document.meta.title }}</h1>
+                <p>{{ document.meta.date | date: "%Y-%m-%d" }}</p>
+            </header>
+            {{ document.content | markdown }}
+        </article>
+        <footer>Rendered with LiquidJS · {{ document.meta.author | default: "Mikser" }}</footer>
+    </body>
+</html>

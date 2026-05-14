@@ -1,0 +1,29 @@
+<mjml>
+    <mj-head>
+        <mj-title>{{document.meta.title}}</mj-title>
+        <mj-preview>{{document.meta.preview}}</mj-preview>
+        <mj-attributes>
+            <mj-all font-family="Helvetica, Arial, sans-serif" />
+            <mj-text font-size="14px" line-height="22px" color="#333333" />
+        </mj-attributes>
+    </mj-head>
+    <mj-body background-color="#f4f4f4">
+        <mj-section background-color="#ffffff" padding="32px 24px">
+            <mj-column>
+                <mj-text font-size="22px" font-weight="bold">{{document.meta.title}}</mj-text>
+                <mj-text>Hello {{document.meta.recipient}},</mj-text>
+                <mj-text>{{document.meta.body}}</mj-text>
+                <mj-button background-color="#FF3F00" color="#ffffff" href="{{document.meta.cta.url}}">
+                    {{document.meta.cta.label}}
+                </mj-button>
+            </mj-column>
+        </mj-section>
+        <mj-section background-color="#0A0907" padding="16px">
+            <mj-column>
+                <mj-text color="#ffffff" align="center" font-size="12px">
+                    Sent with mikser{{date}} · Powered by MJML
+                </mj-text>
+            </mj-column>
+        </mj-section>
+    </mj-body>
+</mjml>

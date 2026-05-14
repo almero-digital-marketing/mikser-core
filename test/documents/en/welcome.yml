@@ -1,0 +1,11 @@
+layout: welcome
+lang: en
+title: Welcome to Mikser
+preview: Your content engine is ready.
+recipient: friend
+body: |
+  Thanks for installing Mikser. This email was rendered from a Handlebars
+  template into MJML markup, then compiled to inbox-safe HTML by post-mjml.
+cta:
+  label: Read the docs
+  url: https://github.com/almero-digital-marketing/mikser-io

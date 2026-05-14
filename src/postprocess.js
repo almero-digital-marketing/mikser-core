@@ -1,12 +1,20 @@
 import path from 'node:path'
+import { createRequire } from 'node:module'
 import _ from 'lodash'
 
 export async function loadPlugin(pluginName, workingFolder) {
+    const require = createRequire(path.join(workingFolder, 'package.json'))
+    let nodeModulesResolved
+    try {
+        nodeModulesResolved = require.resolve(`mikser-io-${pluginName}`)
+    } catch { }
+
     const resolveLocations = [
-        path.join(workingFolder, 'node_modules', `mikser-core-${pluginName}/index.js`),
+        path.join(workingFolder, 'node_modules', `mikser-io-${pluginName}/index.js`),
+        nodeModulesResolved,
         path.join(workingFolder, 'plugins', `${pluginName}.js`),
         path.join(path.dirname(import.meta.url), 'plugins', 'post', `${pluginName.replace('post-', '')}.js`)
-    ]
+    ].filter(Boolean)
     for (let resolveLocation of resolveLocations) {
         try {
             return await import(resolveLocation)

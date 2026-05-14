@@ -1,7 +1,7 @@
 import pino from 'pino'
 import path from 'node:path'
 import { Command } from 'commander'
-import { rm, lstat, realpath, mkdir, writeFile } from 'fs/promises'
+import { rm, lstat, realpath, mkdir, writeFile, readFile, unlink } from 'fs/promises'
 import { existsSync } from 'fs'
 import _ from 'lodash'
 import Piscina from 'piscina'
@@ -89,6 +89,27 @@ export async function setup(options) {
     onLoaded(async () => {
         const logger = useLogger()
         logger.debug(runtime.options, 'Mikser options')
+
+        // Cumulative render manifest — survives across watch cycles, used to
+        // unlink stale output files when their source entity is deleted.
+        // Keyed by "<entity.id>:<entity.destination>" so paginated outputs
+        // for the same id stay distinct.
+        runtime.state.manifest = new Map()
+        const manifestPath = path.join(runtime.options.runtimeFolder, 'render-details.json')
+        if (existsSync(manifestPath)) {
+            try {
+                const arr = JSON.parse(await readFile(manifestPath, 'utf8'))
+                if (Array.isArray(arr)) {
+                    for (const entity of arr) {
+                        if (entity?.id && entity?.destination) {
+                            runtime.state.manifest.set(`${entity.id}:${entity.destination}`, entity)
+                        }
+                    }
+                }
+            } catch (err) {
+                logger.warn('Could not load render-details.json: %s', err.message)
+            }
+        }
     })
 
     onRender(async (signal) => {
@@ -171,15 +192,37 @@ export async function setup(options) {
     })
 
     onAfterRender(async () => {
-        const results = new Map()
-        for await (let { output, entity } of useJournal('Output', [OPERATION.RENDER])) {
-            if (output?.success) {
-                const jobId = entity.id + ':' + entity.destination
-                results.set(jobId, entity)
+        const logger = useLogger()
+        const manifest = runtime.state.manifest
+
+        // Unlink stale output files for entities deleted in this cycle, and
+        // prune them from the manifest. Matches by `entity.id` for direct hits
+        // and by `entity.parent` so paginated children (whose id was rewritten
+        // via changeExtension) are reclaimed alongside their source.
+        for await (let { entity } of useJournal('Manifest cleanup', [OPERATION.DELETE])) {
+            for (const [key, value] of manifest) {
+                if (value.id === entity.id || value.parent === entity.id) {
+                    const filePath = path.join(runtime.options.outputFolder, value.destination)
+                    try {
+                        await unlink(filePath)
+                        logger.debug('Manifest unlinked stale output: %s', value.destination)
+                    } catch { }
+                    manifest.delete(key)
+                }
             }
         }
-        const renderOutput = path.join(runtime.options.runtimeFolder, `render-details.json`)
-        await writeFile(renderOutput, JSON.stringify(Array.from(results.values())), 'utf8')
+
+        // Merge this cycle's successful renders. New ids appear; re-rendered
+        // ids overwrite (same key); ids whose destination changed leave the
+        // old key as a stale entry — handled by the cleanup pass on next DELETE.
+        for await (let { output, entity } of useJournal('Output', [OPERATION.RENDER])) {
+            if (output?.success) {
+                manifest.set(`${entity.id}:${entity.destination}`, entity)
+            }
+        }
+
+        const manifestPath = path.join(runtime.options.runtimeFolder, 'render-details.json')
+        await writeFile(manifestPath, JSON.stringify(Array.from(manifest.values())), 'utf8')
     })
 
     onBeforePostprocess(async (signal) => {
