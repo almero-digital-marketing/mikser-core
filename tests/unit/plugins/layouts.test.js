@@ -1,0 +1,116 @@
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
+import layoutsPlugin from '../../../src/plugins/layouts.js'
+import { createHarness } from '../plugin-harness.js'
+
+async function withTempWorking(fn) {
+    const dir = await mkdtemp(path.join(tmpdir(), 'mikser-layouts-'))
+    try { return await fn(dir) }
+    finally { await rm(dir, { recursive: true, force: true }) }
+}
+
+describe('layouts plugin', () => {
+    it('registers all the expected hooks', () => {
+        const h = createHarness()
+        layoutsPlugin(h.core)
+        assert.equal(h.hooks.loaded.length, 1)
+        assert.equal(h.hooks.import.length, 1)
+        assert.equal(h.hooks.processed.length, 1)
+        assert.equal(h.hooks.beforeRender.length, 1)
+        assert.equal(h.hooks.complete.length, 1)
+        assert.ok(h.sync.has('layouts'))
+    })
+
+    it('initializes runtime.state.layouts on onLoaded with empty maps', async () => {
+        await withTempWorking(async (workingFolder) => {
+            const h = createHarness({ options: { workingFolder, outputFolder: path.join(workingFolder, 'out') } })
+            layoutsPlugin(h.core)
+            await h.runHook('loaded')
+            assert.deepEqual(h.runtime.state.layouts, { layouts: {}, sitemap: {} })
+            assert.equal(h.runtime.options.layoutsFolder, path.join(workingFolder, 'layouts'))
+        })
+    })
+
+    it('onSync CREATE registers a layout in state.layouts and writes a journal entry', async () => {
+        await withTempWorking(async (workingFolder) => {
+            const h = createHarness({ options: { workingFolder, outputFolder: path.join(workingFolder, 'out') } })
+            layoutsPlugin(h.core)
+            await h.runHook('loaded')
+            await h.runSync('layouts', { action: 'create', context: { relativePath: 'post.hbs' } })
+
+            const entry = h.journal.find(e => e.operation === 'create')
+            assert.ok(entry)
+            assert.equal(entry.entity.id, '/layouts/post.hbs')
+            assert.equal(entry.entity.template, 'hbs')
+            assert.equal(entry.entity.format, 'html')
+            assert.equal(entry.entity.name, 'post')
+            assert.ok(h.runtime.state.layouts.layouts['post'])
+        })
+    })
+
+    it('onSync CREATE for a sidecar .js layout drops .js from id', async () => {
+        await withTempWorking(async (workingFolder) => {
+            const h = createHarness({ options: { workingFolder, outputFolder: path.join(workingFolder, 'out') } })
+            layoutsPlugin(h.core)
+            await h.runHook('loaded')
+            await h.runSync('layouts', { action: 'create', context: { relativePath: 'post.hbs.js' } })
+            const entry = h.journal.find(e => e.operation === 'create')
+            assert.equal(entry.entity.id, '/layouts/post.hbs')
+        })
+    })
+
+    it('onSync DELETE removes the layout from state.layouts and writes a delete entry', async () => {
+        await withTempWorking(async (workingFolder) => {
+            const h = createHarness({ options: { workingFolder, outputFolder: path.join(workingFolder, 'out') } })
+            layoutsPlugin(h.core)
+            await h.runHook('loaded')
+            await h.runSync('layouts', { action: 'create', context: { relativePath: 'post.hbs' } })
+            assert.ok(h.runtime.state.layouts.layouts['post'])
+
+            await h.runSync('layouts', { action: 'delete', context: { relativePath: 'post.hbs' } })
+
+            assert.equal(h.runtime.state.layouts.layouts['post'], undefined)
+            assert.equal(h.journal.filter(e => e.operation === 'delete').length, 1)
+        })
+    })
+
+    it('onProcessed addToSitemap for entities with a matched layout', async () => {
+        await withTempWorking(async (workingFolder) => {
+            const h = createHarness({
+                options: { workingFolder, outputFolder: path.join(workingFolder, 'out') },
+                config: { layouts: { autoLayouts: true } },
+            })
+            layoutsPlugin(h.core)
+            await h.runHook('loaded')
+            // Seed a layout
+            await h.runSync('layouts', { action: 'create', context: { relativePath: 'post.hbs' } })
+
+            // Seed a document journal entry whose name matches 'post'
+            const doc = {
+                id: '/documents/post.md',
+                collection: 'documents',
+                name: 'post',
+                format: 'md',
+                meta: { lang: 'en' },
+            }
+            h.journal.push({ id: 99, entity: doc, operation: 'create', context: {}, options: {}, output: null })
+
+            await h.runHook('processed', { aborted: false })
+
+            assert.ok(doc.layout, 'entity should have been assigned a layout')
+            assert.equal(doc.layout.name, 'post')
+            const sitemap = h.runtime.state.layouts.sitemap
+            assert.ok(sitemap['/post'] || Object.keys(sitemap).length > 0)
+        })
+    })
+
+    it('onSync returns false when relativePath is missing', async () => {
+        const h = createHarness()
+        layoutsPlugin(h.core)
+        assert.equal(await h.runSync('layouts', { action: 'create', context: {} }), false)
+    })
+})

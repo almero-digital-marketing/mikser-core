@@ -36,7 +36,7 @@ export default ({
             try {
                 const { page: rawPage, limit: rawLimit, ...filter } = req.query
                 const page = Math.max(1, parseInt(rawPage) || 1)
-                const limit = Math.min(100, Math.max(1, parseInt(rawLimit) || runtime.config.rest?.pageSize ?? 10))
+                const limit = Math.min(100, Math.max(1, parseInt(rawLimit) || (runtime.config.rest?.pageSize ?? 10)))
                 const query = Object.keys(filter).length ? filter : undefined
 
                 const all = await findEntities(query)
