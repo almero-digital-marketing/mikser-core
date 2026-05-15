@@ -5,7 +5,7 @@
 	"main": "index.js",
 	"scripts": {
 		"debug": "node --no-warnings app.js --debug --working-folder test/fixture",
-		"test:unit": "node --test --test-reporter=spec 'tests/unit/**/*.test.js'",
+		"test:unit": "node --test --test-reporter=spec 'test/unit/**/*.test.js'",
 		"test:smoke": "node --no-warnings app.js --working-folder test/fixture",
 		"test": "npm run test:unit && npm run test:smoke"
 	},
