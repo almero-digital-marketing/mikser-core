@@ -104,10 +104,12 @@ dist
 # TernJS port file
 .tern-port
 
-test/runtime
-test/out
-test/assets
-test/resources
+# Smoke-fixture build artifacts (the runtime journal, rendered output,
+# downloaded resources, and asset preset derivatives)
+test/fixture/runtime/
+test/fixture/out/
+test/fixture/assets/
+test/fixture/resources/
 
 # Claude Code
 .claude/
