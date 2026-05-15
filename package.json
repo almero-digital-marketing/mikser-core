@@ -4,7 +4,10 @@
 	"description": "<p align=\"center\">   <img src=\"mikser-lockup-stacked.svg\" alt=\"mikser\" width=\"198\" /> </p>",
 	"main": "index.js",
 	"scripts": {
-		"test": "node --no-warnings app.js --debug --working-folder test"
+		"debug": "node --no-warnings app.js --debug --working-folder test/fixture",
+		"test:unit": "node --test --test-reporter=spec 'tests/unit/**/*.test.js'",
+		"test:smoke": "node --no-warnings app.js --working-folder test/fixture",
+		"test": "npm run test:unit && npm run test:smoke"
 	},
 	"bin": {
 		"mikser": "app.js"

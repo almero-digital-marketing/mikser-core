@@ -3,24 +3,7 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import _ from 'lodash'
 import { useLogger } from './engine.js'
-
-// Flatten template-helper args into a single human-readable message.
-// Handlebars helpers receive a trailing options object (it has a `.hash`
-// property) which we drop.
-function formatLogArgs(args) {
-    if (args.length && typeof args[args.length - 1] === 'object' && args[args.length - 1] !== null && 'hash' in args[args.length - 1]) {
-        args = args.slice(0, -1)
-    }
-    return args
-        .map(arg => {
-            if (arg == null) return String(arg)
-            if (typeof arg === 'object') {
-                try { return JSON.stringify(arg) } catch { return String(arg) }
-            }
-            return String(arg)
-        })
-        .join(' ')
-}
+import { formatLogArgs } from './utils.js'
 
 export default async ({ entity, options, config, context, state, logger, port }) => {
     logger = logger || {

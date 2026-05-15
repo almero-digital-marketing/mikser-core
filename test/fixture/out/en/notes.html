@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Liquid Smoke Test</title>
+    </head>
+    <body>
+        <article>
+            <header>
+                <h1>Liquid Smoke Test</h1>
+                <p>2026-05-13</p>
+            </header>
+            <h2>Hello from LiquidJS</h2>
+<p>This document renders through <strong>mikser-io-render-liquid</strong>:</p>
+<ul>
+<li><code>{{ ... | markdown }}</code> runs the body through <code>render-markdown</code>.</li>
+<li><code>{{ date | date: &quot;%Y-%m-%d&quot; }}</code> uses LiquidJS's built-in date filter.</li>
+<li><code>{{ author | default: &quot;Mikser&quot; }}</code> falls back if <code>meta.author</code> is unset.</li>
+</ul>
+<p>That's it — every runtime function (e.g. <code>markdown</code>, <code>href</code>) is available as a Liquid filter without per-helper wiring.</p>
+
+        </article>
+        <footer>Rendered with LiquidJS · Mikser</footer>
+    </body>
+</html>

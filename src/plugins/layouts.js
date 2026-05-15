@@ -21,21 +21,13 @@ export default ({
     onSync,
     matchEntity,
     changeExtension,
+    getFormatInfo,
     findEntity,
     findEntities,
     constants: { ACTION, OPERATION, TASKS },
 }) => {
     const collection = 'layouts'
     const type = 'layout'
-
-    function getFormatInfo(relativePath) {
-        const template = path.extname(relativePath).substring(1).toLowerCase()
-        const withoutTemplate = relativePath.replace(path.extname(relativePath), '')
-        const formatExt = path.extname(withoutTemplate).substring(1).toLowerCase()
-        const [format, postprocessor] = formatExt.split('-')
-        const name = formatExt ? withoutTemplate.replace(path.extname(withoutTemplate), '') : withoutTemplate
-        return { name, format: format || 'html', template, postprocessor }
-    }
 
     function addToSitemap(entity) {
         const logger = useLogger()
