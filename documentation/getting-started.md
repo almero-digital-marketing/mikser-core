@@ -160,7 +160,7 @@ import {
   updateEntity,
   findEntities,
   createRenderer,
-  createEntityIo,
+  useCollection,
 } from 'mikser-io'
 
 await setup({
@@ -171,7 +171,7 @@ await setup({
 await runtime.start()
 
 const { render } = createRenderer({ runtime, updateEntity })
-const { writeContent, removeContent } = createEntityIo({ runtime })
+const documents = useCollection(runtime, 'documents')
 
 // 1) Render an entity on demand. Concurrent calls coalesce into the
 //    same process() cycle; the worker pool renders the batch in parallel.
@@ -188,16 +188,17 @@ const { output, entity } = await render({
 
 // 2) Write or remove content in a watched collection folder.
 //    In watch mode, this triggers the normal sync → process cycle.
-await writeContent('documents', 'en/draft.md', '# Draft')
-await removeContent('documents', 'en/old.md')
+await documents.write('en/draft.md', '# Draft')
+await documents.remove('en/old.md')
 
 // 3) Query the catalog (already public; just here for completeness).
 const docs = await findEntities({ collection: 'documents' })
 ```
 
 `createRenderer` returns a `{ render }` function that batches concurrent
-calls. `createEntityIo` returns `{ writeContent, removeContent }` for
-filesystem writes into a collection folder.
+calls. `useCollection(runtime, name)` binds to a single collection's
+source folder and returns `{ name, folder, write, remove }` for
+filesystem-level operations against it.
 
 ## Output Structure
 

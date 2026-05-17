@@ -106,35 +106,51 @@ export function createRenderer({ runtime, updateEntity, defaultTimeout = 30_000 
 }
 
 /**
- * Create the filesystem-level entity I/O helpers: `writeContent` and
- * `removeContent`. These operate on the collection folders (e.g.
- * documents/, files/) which are watched by mikser's collection plugins;
- * in watch mode, edits made through these functions trigger a sync event
- * and a re-process cycle.
+ * Bind to a single collection's source folder and return file-level
+ * `write` / `remove` operations against it. Each collection plugin sets
+ * `runtime.options.<name>Folder` during its onLoaded hook; this looks
+ * that up lazily, so it's safe to call useCollection() anywhere after
+ * `runtime.start()`.
  *
- * Distinct from `lifecycle.updateEntity` and `lifecycle.deleteEntity` —
- * those write journal entries directly. These write actual files.
+ * Distinct from `lifecycle.updateEntity` / `lifecycle.deleteEntity` —
+ * those write journal entries. These write actual files; in watch mode
+ * the resulting fs change is what kicks the next sync→process cycle.
+ *
+ * @example
+ *   const documents = useCollection(runtime, 'documents')
+ *   await documents.write('en/draft.md', '# Hi')
+ *   await documents.remove('en/old.md')
+ *
+ * @param {object} runtime         - the mikser runtime singleton
+ * @param {string} name            - collection name (e.g. 'documents')
+ * @returns {{
+ *   name: string,
+ *   folder: string,
+ *   write(relativePath: string, content?: string): Promise<string>,
+ *   remove(relativePath: string): Promise<void>,
+ * }}
  */
-export function createEntityIo({ runtime }) {
-    function collectionFolder(collection) {
-        return runtime.options[`${collection}Folder`]
+export function useCollection(runtime, name) {
+    function resolveFolder() {
+        const folder = runtime?.options?.[`${name}Folder`]
+        if (!folder) throw new Error(`Unknown collection: ${name}`)
+        return folder
     }
 
-    async function writeContent(collection, relativePath, content = '') {
-        const folder = collectionFolder(collection)
-        if (!folder) throw new Error(`Unknown collection: ${collection}`)
-        const uri = path.join(folder, relativePath)
-        await mkdir(path.dirname(uri), { recursive: true })
-        await writeFile(uri, content, 'utf8')
-        return uri
-    }
+    return {
+        name,
+        get folder() { return resolveFolder() },
 
-    async function removeContent(collection, relativePath) {
-        const folder = collectionFolder(collection)
-        if (!folder) throw new Error(`Unknown collection: ${collection}`)
-        const uri = path.join(folder, relativePath)
-        await unlink(uri)
-    }
+        async write(relativePath, content = '') {
+            const uri = path.join(resolveFolder(), relativePath)
+            await mkdir(path.dirname(uri), { recursive: true })
+            await writeFile(uri, content, 'utf8')
+            return uri
+        },
 
-    return { writeContent, removeContent }
+        async remove(relativePath) {
+            const uri = path.join(resolveFolder(), relativePath)
+            await unlink(uri)
+        },
+    }
 }

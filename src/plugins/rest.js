@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { access } from 'node:fs/promises'
-import { createRenderer, createEntityIo } from '../api.js'
+import { createRenderer, useCollection } from '../api.js'
 
 // MIME type lookup used when streaming a postprocessor's output back over
 // HTTP. The renderer's output extension lives on entity.destination
@@ -99,7 +99,6 @@ export default ({
             updateEntity,
             defaultTimeout: runtime.config.rest?.renderTimeout ?? 30_000,
         })
-        const { writeContent, removeContent } = createEntityIo({ runtime })
 
         router.get('/entities', async (req, res) => {
             try {
@@ -131,7 +130,7 @@ export default ({
         router.put('/entities', auth, async (req, res) => {
             try {
                 const { collection, relativePath, content = '' } = req.body
-                await writeContent(collection, relativePath, content)
+                await useCollection(runtime, collection).write(relativePath, content)
                 res.status(202).json({ ok: true })
             } catch (err) {
                 logger.error('REST update error: %s', err.message)
@@ -142,7 +141,7 @@ export default ({
         router.delete('/entities', auth, async (req, res) => {
             try {
                 const { collection, relativePath } = req.body
-                await removeContent(collection, relativePath)
+                await useCollection(runtime, collection).remove(relativePath)
                 res.status(202).json({ ok: true })
             } catch (err) {
                 logger.error('REST delete error: %s', err.message)
