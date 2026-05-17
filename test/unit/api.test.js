@@ -4,9 +4,9 @@ import { mkdtemp, readFile, rm, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
-import { createRenderer, useCollection } from '../../src/api.js'
+import { useRenderer, useCollection } from '../../src/api.js'
 
-// Build a minimal runtime-like object exposing the surface createRenderer
+// Build a minimal runtime-like object exposing the surface useRenderer
 // uses: hooks.completed (array), and a process() the test controls.
 function createFakeRuntime({ process }) {
     return {
@@ -15,7 +15,7 @@ function createFakeRuntime({ process }) {
     }
 }
 
-describe('api: createRenderer', () => {
+describe('api: useRenderer', () => {
     it('resolves a single render request when the hook fires its correlation id', async () => {
         const updates = []
         const runtime = createFakeRuntime({
@@ -28,7 +28,7 @@ describe('api: createRenderer', () => {
         })
         const updateEntity = async (entity) => updates.push(entity)
 
-        const { render } = createRenderer({ runtime, updateEntity })
+        const { render } = useRenderer(runtime, { updateEntity })
         const { output, entity } = await render({ id: '/a.md', collection: 'documents' })
         assert.equal(output.result, 'rendered html')
         assert.ok(entity._correlationId)
@@ -53,7 +53,7 @@ describe('api: createRenderer', () => {
         })
         const updateEntity = async (entity) => updates.push(entity)
 
-        const { render } = createRenderer({ runtime, updateEntity })
+        const { render } = useRenderer(runtime, { updateEntity })
         const ids = ['/a', '/b', '/c', '/d', '/e']
         const results = await Promise.all(ids.map(id => render({ id })))
         for (let i = 0; i < ids.length; i++) {
@@ -76,8 +76,7 @@ describe('api: createRenderer', () => {
                 updates.length = 0
             },
         })
-        const { render } = createRenderer({
-            runtime,
+        const { render } = useRenderer(runtime, {
             updateEntity: async (e) => updates.push(e),
         })
 
@@ -90,8 +89,7 @@ describe('api: createRenderer', () => {
         const runtime = createFakeRuntime({
             process: () => new Promise(() => { }), // never resolves
         })
-        const { render } = createRenderer({
-            runtime,
+        const { render } = useRenderer(runtime, {
             updateEntity: async () => { },
             defaultTimeout: 40,
         })
@@ -102,8 +100,7 @@ describe('api: createRenderer', () => {
         const runtime = createFakeRuntime({
             process: async () => { /* no-op */ },
         })
-        const { render } = createRenderer({
-            runtime,
+        const { render } = useRenderer(runtime, {
             updateEntity: async () => { },
         })
         await assert.rejects(() => render({ id: '/y' }), /did not complete/)
@@ -117,8 +114,7 @@ describe('api: createRenderer', () => {
                 }
             },
         })
-        const { render } = createRenderer({
-            runtime,
+        const { render } = useRenderer(runtime, {
             updateEntity: async () => { },
         })
         await assert.rejects(() => render({ id: '/z' }))
@@ -129,8 +125,7 @@ describe('api: createRenderer', () => {
         const runtime = createFakeRuntime({
             process: () => new Promise(() => { }),
         })
-        const { render } = createRenderer({
-            runtime,
+        const { render } = useRenderer(runtime, {
             updateEntity: async () => { },
             defaultTimeout: 60_000,
         })

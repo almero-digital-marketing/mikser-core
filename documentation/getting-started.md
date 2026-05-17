@@ -157,9 +157,8 @@ needing the REST plugin itself:
 import {
   setup,
   runtime,
-  updateEntity,
   findEntities,
-  createRenderer,
+  useRenderer,
   useCollection,
 } from 'mikser-io'
 
@@ -170,7 +169,7 @@ await setup({
 })
 await runtime.start()
 
-const { render } = createRenderer({ runtime, updateEntity })
+const { render } = useRenderer(runtime)
 const documents = useCollection(runtime, 'documents')
 
 // 1) Render an entity on demand. Concurrent calls coalesce into the
@@ -195,10 +194,14 @@ await documents.remove('en/old.md')
 const docs = await findEntities({ collection: 'documents' })
 ```
 
-`createRenderer` returns a `{ render }` function that batches concurrent
-calls. `useCollection(runtime, name)` binds to a single collection's
-source folder and returns `{ name, folder, write, remove }` for
-filesystem-level operations against it.
+`useRenderer(runtime)` binds to the runtime and returns `{ render }`,
+where `render(entity, opts?)` resolves with `{ output, entity }`.
+Concurrent calls coalesce into the same `process()` cycle automatically;
+parallelism within the cycle is governed by `runtime.options.threads`.
+
+`useCollection(runtime, name)` binds to a single collection's source
+folder and returns `{ name, folder, write, remove }` for filesystem-level
+operations against it.
 
 ## Output Structure
 

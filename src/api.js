@@ -5,20 +5,29 @@
 import { randomUUID } from 'node:crypto'
 import { writeFile, unlink, mkdir } from 'node:fs/promises'
 import path from 'node:path'
+import { updateEntity as defaultUpdateEntity } from './lifecycle.js'
 
 /**
- * Create an on-demand renderer that pipelines concurrent calls into the
- * minimum number of `runtime.process()` cycles. Returns `{ render }`.
+ * Bind to the runtime and return an on-demand renderer that pipelines
+ * concurrent calls into the minimum number of `runtime.process()` cycles.
+ * The returned binding is stateful — each call to useRenderer() owns its
+ * own pending queue and `completed`-hook lifecycle. Mount once per
+ * consumer (the REST plugin mounts one; a library service mounts its own).
  *
- * The renderer is stateful — each call to createRenderer() owns its own
- * batch queue and `completed` hook lifecycle. Mount once per consumer.
+ * @example
+ *   const { render } = useRenderer(runtime)
+ *   const { output, entity } = await render(entityShape)
  *
- * @param {object} deps
- * @param {object} deps.runtime         - the mikser runtime singleton
- * @param {Function} deps.updateEntity  - lifecycle.updateEntity
- * @param {number} [deps.defaultTimeout=30000] - per-render timeout in ms
+ * @param {object} runtime                  - the mikser runtime singleton
+ * @param {object} [opts]
+ * @param {Function} [opts.updateEntity]    - override lifecycle.updateEntity (mostly for testing)
+ * @param {number}   [opts.defaultTimeout]  - per-render timeout in ms (default 30_000)
+ * @returns {{ render: (entity, { timeout? }?) => Promise<{ output, entity }> }}
  */
-export function createRenderer({ runtime, updateEntity, defaultTimeout = 30_000 }) {
+export function useRenderer(runtime, {
+    updateEntity = defaultUpdateEntity,
+    defaultTimeout = 30_000,
+} = {}) {
     let pending = []
     let cycleRunning = false
 

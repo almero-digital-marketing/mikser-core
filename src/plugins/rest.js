@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { access } from 'node:fs/promises'
-import { createRenderer, useCollection } from '../api.js'
+import { useRenderer, useCollection } from '../api.js'
 
 // MIME type lookup used when streaming a postprocessor's output back over
 // HTTP. The renderer's output extension lives on entity.destination
@@ -94,8 +94,7 @@ export default ({
         // Reuse the transport-agnostic primitives from src/api.js so the
         // library entry point and the REST endpoints share the exact same
         // batching/timeouts/error semantics.
-        const { render } = createRenderer({
-            runtime,
+        const { render } = useRenderer(runtime, {
             updateEntity,
             defaultTimeout: runtime.config.rest?.renderTimeout ?? 30_000,
         })
