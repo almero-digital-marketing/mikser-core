@@ -1,7 +1,6 @@
 import path from 'node:path'
 import { writeFile, unlink, mkdir, access } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
-import Queue from 'p-queue'
 
 // MIME type lookup used when streaming a postprocessor's output back over
 // HTTP. The renderer's output extension lives on entity.destination
@@ -96,9 +95,90 @@ export default ({
             return runtime.options[`${collection}Folder`]
         }
 
-        // `runtime.process()` is not reentrant — interleaving render cycles
-        // races on the journal and the worker pool. Serialize them.
-        const renderQueue = new Queue({ concurrency: 1 })
+        // `runtime.process()` is not reentrant — interleaving cycles would
+        // race on the journal. Instead of serializing requests, we coalesce
+        // concurrent /render calls into the next process() cycle: each call
+        // adds its entity (tagged with a correlation id) to a pending batch,
+        // a single completed-hook resolves every promise as its entry comes
+        // through, and we kick off one cycle per batch. Real parallelism
+        // happens inside the cycle via Piscina (runtime.options.threads).
+        let pending = []
+        let cycleRunning = false
+
+        async function runBatch() {
+            if (cycleRunning || pending.length === 0) return
+            cycleRunning = true
+
+            const batch = pending
+            pending = []
+            const timeoutMs = runtime.config.rest?.renderTimeout ?? 30_000
+
+            // One hook for the entire batch; routes each entry's completion
+            // to the right pending promise by correlation id.
+            const remaining = new Map(batch.map(b => [b.correlationId, b]))
+            const completedHooks = runtime.hooks.completed
+            const hook = async (entry) => {
+                const cid = entry.entity?._correlationId
+                if (!cid) return
+                const item = remaining.get(cid)
+                if (!item) return
+                remaining.delete(cid)
+                clearTimeout(item.timer)
+                item.resolve({ output: entry.output, entity: entry.entity })
+            }
+            completedHooks.push(hook)
+
+            // Per-request timeouts so a slow entity doesn't block a fast one
+            // from being rejected on its own clock.
+            for (const item of batch) {
+                item.timer = setTimeout(() => {
+                    if (remaining.delete(item.correlationId)) {
+                        item.reject(new Error(`Render timeout for ${item.entity.id}`))
+                    }
+                }, timeoutMs)
+            }
+
+            try {
+                // Submit every entity in the batch before running one cycle.
+                for (const item of batch) {
+                    await updateEntity(item.entity).catch(item.reject)
+                }
+                await runtime.process()
+            } catch (err) {
+                for (const item of remaining.values()) {
+                    clearTimeout(item.timer)
+                    item.reject(err)
+                }
+                remaining.clear()
+            } finally {
+                // Anything not resolved by the cycle and not yet timed out:
+                // the cycle finished without firing the hook for it. Reject.
+                for (const item of remaining.values()) {
+                    clearTimeout(item.timer)
+                    item.reject(new Error(`Render did not complete for ${item.entity.id}`))
+                }
+                const idx = completedHooks.indexOf(hook)
+                if (idx >= 0) completedHooks.splice(idx, 1)
+                cycleRunning = false
+                // New requests that arrived during the cycle form the next batch.
+                if (pending.length) setImmediate(runBatch)
+            }
+        }
+
+        function enqueueRender(entity) {
+            return new Promise((resolve, reject) => {
+                pending.push({
+                    entity,
+                    correlationId: entity._correlationId,
+                    resolve,
+                    reject,
+                    timer: null,
+                })
+                // Defer one tick so concurrent handlers can join this batch
+                // before we start the cycle.
+                if (!cycleRunning) setImmediate(runBatch)
+            })
+        }
 
         router.get('/entities', async (req, res) => {
             try {
@@ -158,44 +238,9 @@ export default ({
 
         router.post('/render', auth, async (req, res) => {
             try {
-                await renderQueue.add(async () => {
-                    const correlationId = randomUUID()
-                    const entity = { ...req.body, _correlationId: correlationId }
-                    const timeout = runtime.config.rest?.renderTimeout ?? 30_000
-
-                    const completedHooks = runtime.hooks.completed
-                    let hook
-                    const removeHook = () => {
-                        if (!hook) return
-                        const idx = completedHooks.indexOf(hook)
-                        if (idx >= 0) completedHooks.splice(idx, 1)
-                    }
-
-                    const { output, entity: resolvedEntity } = await new Promise((resolve, reject) => {
-                        const timer = setTimeout(() => {
-                            removeHook()
-                            reject(new Error(`Render timeout for ${entity.id}`))
-                        }, timeout)
-
-                        hook = async (entry) => {
-                            if (entry.entity?._correlationId !== correlationId) return
-                            clearTimeout(timer)
-                            removeHook()
-                            resolve({ output: entry.output, entity: entry.entity })
-                        }
-                        completedHooks.push(hook)
-
-                        updateEntity(entity)
-                            .then(() => runtime.process())
-                            .catch((err) => {
-                                clearTimeout(timer)
-                                removeHook()
-                                reject(err)
-                            })
-                    })
-
-                    await sendRenderOutput(res, output, resolvedEntity)
-                })
+                const entity = { ...req.body, _correlationId: randomUUID() }
+                const { output, entity: resolvedEntity } = await enqueueRender(entity)
+                await sendRenderOutput(res, output, resolvedEntity)
             } catch (err) {
                 logger.error('REST render error: %s', err.message)
                 if (!res.headersSent) {

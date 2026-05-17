@@ -198,7 +198,77 @@ describe('rest plugin: /render endpoint (integration)', () => {
         }
     })
 
-    it('returns 500 with the timeout message when the lifecycle never fires the hook', async () => {
+    it('coalesces concurrent /render requests into one cycle and resolves each by correlation id', async () => {
+        const { default: express } = await import('express')
+        const app = express()
+        const h = createHarness({
+            options: {
+                app,
+                workingFolder: '/tmp/mikser-rest-batch',
+                outputFolder: '/tmp/mikser-rest-batch/out',
+            },
+        })
+
+        // The plugin pipelines requests into the *next* cycle: anything
+        // arriving while a cycle is running queues up and is processed
+        // together once it finishes. Make process() take some real time so
+        // the 5 concurrent fetches stack up while cycle 1 is busy with the
+        // first one.
+        let cycleInvocations = 0
+        h.runtime.process = async () => {
+            cycleInvocations++
+            await new Promise(r => setTimeout(r, 40))
+            const updates = h.journal.filter(e => e.operation === 'update')
+            for (const upd of updates) {
+                const entry = {
+                    entity: { ...upd.entity, destination: '/en/report.pdf' },
+                    output: {
+                        success: true,
+                        result: Buffer.from(`PDF for ${upd.entity.id}`),
+                    },
+                }
+                for (const cb of [...h.runtime.hooks.completed]) await cb(entry)
+            }
+            h.journal.length = 0
+        }
+        h.runtime.hooks.completed = h.runtime.hooks.complete
+
+        restPlugin(h.core)
+        await h.runHook('loaded')
+
+        const server = await new Promise((resolve) => {
+            const s = app.listen(0, () => resolve(s))
+        })
+        try {
+            const { port } = server.address()
+            const ids = ['/docs/a.md', '/docs/b.md', '/docs/c.md', '/docs/d.md', '/docs/e.md']
+            const responses = await Promise.all(
+                ids.map(id => fetch(`http://127.0.0.1:${port}/mikser/render`, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ id, collection: 'documents', type: 'document' }),
+                }))
+            )
+
+            const bodies = await Promise.all(responses.map(r => r.arrayBuffer()))
+            for (let i = 0; i < ids.length; i++) {
+                assert.equal(responses[i].status, 200)
+                assert.match(responses[i].headers.get('content-type') ?? '', /application\/pdf/)
+                assert.equal(Buffer.from(bodies[i]).toString(), `PDF for ${ids[i]}`)
+            }
+
+            // The pipelining invariant: the number of process() invocations
+            // is strictly smaller than the number of requests (otherwise
+            // we'd just have N parallel cycles, which is what we set out
+            // to avoid).
+            assert.ok(cycleInvocations < ids.length,
+                `expected fewer cycles than requests, got ${cycleInvocations} cycles for ${ids.length} requests`)
+        } finally {
+            await new Promise((r) => server.close(r))
+        }
+    })
+
+    it('returns 500 "Render timeout" when the cycle hangs past renderTimeout', async () => {
         const { default: express } = await import('express')
         const app = express()
         const h = createHarness({
@@ -209,7 +279,9 @@ describe('rest plugin: /render endpoint (integration)', () => {
             },
             config: { rest: { renderTimeout: 50 } },
         })
-        h.runtime.process = async () => { /* do nothing — let it time out */ }
+        // process() never resolves — simulates a hung cycle. Per-request
+        // timer fires first and rejects the promise with "Render timeout".
+        h.runtime.process = () => new Promise(() => { })
         h.runtime.hooks.completed = h.runtime.hooks.complete
 
         restPlugin(h.core)
@@ -228,6 +300,43 @@ describe('rest plugin: /render endpoint (integration)', () => {
             assert.equal(response.status, 500)
             const body = await response.json()
             assert.match(body.error, /Render timeout/)
+        } finally {
+            await new Promise((r) => server.close(r))
+        }
+    })
+
+    it('returns 500 "did not complete" when the cycle finishes without firing the entity\'s hook', async () => {
+        const { default: express } = await import('express')
+        const app = express()
+        const h = createHarness({
+            options: {
+                app,
+                workingFolder: '/tmp/mikser-rest-nc',
+                outputFolder: '/tmp/mikser-rest-nc/out',
+            },
+        })
+        // Cycle finishes immediately, but the completed hook is never fired
+        // for this entity (e.g. no layout matched, or the renderer failed
+        // and the postprocess phase skipped it).
+        h.runtime.process = async () => { /* no-op */ }
+        h.runtime.hooks.completed = h.runtime.hooks.complete
+
+        restPlugin(h.core)
+        await h.runHook('loaded')
+
+        const server = await new Promise((resolve) => {
+            const s = app.listen(0, () => resolve(s))
+        })
+        try {
+            const { port } = server.address()
+            const response = await fetch(`http://127.0.0.1:${port}/mikser/render`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ id: '/docs/x.md' }),
+            })
+            assert.equal(response.status, 500)
+            const body = await response.json()
+            assert.match(body.error, /did not complete/)
         } finally {
             await new Promise((r) => server.close(r))
         }
