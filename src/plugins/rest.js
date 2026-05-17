@@ -1,12 +1,76 @@
 import path from 'node:path'
 import { writeFile, unlink, mkdir, access } from 'node:fs/promises'
-import { updateEntity } from '../lifecycle.js'
-import { findEntities } from '../catalog.js'
+import { randomUUID } from 'node:crypto'
+import Queue from 'p-queue'
+
+// MIME type lookup used when streaming a postprocessor's output back over
+// HTTP. The renderer's output extension lives on entity.destination
+// (assigned by the layouts plugin), so we use it as the source of truth.
+const MIME_BY_EXT = {
+    pdf: 'application/pdf',
+    html: 'text/html; charset=utf-8',
+    xml: 'application/xml; charset=utf-8',
+    xhtml: 'application/xhtml+xml; charset=utf-8',
+    rss: 'application/rss+xml; charset=utf-8',
+    atom: 'application/atom+xml; charset=utf-8',
+    json: 'application/json; charset=utf-8',
+    css: 'text/css; charset=utf-8',
+    js: 'application/javascript; charset=utf-8',
+    svg: 'image/svg+xml',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    txt: 'text/plain; charset=utf-8',
+    md: 'text/markdown; charset=utf-8',
+}
+
+export function mimeForEntity(entity) {
+    if (!entity?.destination) return null
+    const ext = path.extname(entity.destination).toLowerCase().replace(/^\./, '')
+    return MIME_BY_EXT[ext] ?? null
+}
+
+// Decide how to send the render output over HTTP. Exported (and pure-ish)
+// so tests can exercise the branching without spinning up a real server.
+export async function sendRenderOutput(res, output, entity) {
+    if (output == null || output.result == null) {
+        return res.status(204).send()
+    }
+    const result = output.result
+    const mime = mimeForEntity(entity)
+
+    if (Buffer.isBuffer(result)) {
+        if (mime) res.type(mime)
+        return res.send(result)
+    }
+    if (typeof result === 'string') {
+        // A few postprocessors might return an absolute path to a generated
+        // file rather than its contents. Only attempt this when the string
+        // looks plausibly path-shaped — short, starts with a slash, and the
+        // file actually exists. Otherwise treat it as content.
+        if (result.length < 4096 && (result.startsWith('/') || /^[A-Za-z]:[\\/]/.test(result))) {
+            try {
+                await access(result)
+                return res.sendFile(result)
+            } catch { /* not a path, fall through */ }
+        }
+        if (mime) res.type(mime)
+        return res.send(result)
+    }
+    // Anything else (plain object, etc.) is sent as JSON.
+    return res.json(result)
+}
 
 export default ({
     runtime,
     onLoaded,
     useLogger,
+    updateEntity,
+    findEntities,
 }) => {
     onLoaded(async () => {
         const logger = useLogger()
@@ -31,6 +95,10 @@ export default ({
         function collectionFolder(collection) {
             return runtime.options[`${collection}Folder`]
         }
+
+        // `runtime.process()` is not reentrant — interleaving render cycles
+        // races on the journal and the worker pool. Serialize them.
+        const renderQueue = new Queue({ concurrency: 1 })
 
         router.get('/entities', async (req, res) => {
             try {
@@ -88,43 +156,51 @@ export default ({
             }
         })
 
-        router.post('/render', async (req, res) => {
+        router.post('/render', auth, async (req, res) => {
             try {
-                const entity = { ...req.body, _correlationId: crypto.randomUUID() }
-                const timeout = runtime.config.rest?.renderTimeout ?? 30_000
+                await renderQueue.add(async () => {
+                    const correlationId = randomUUID()
+                    const entity = { ...req.body, _correlationId: correlationId }
+                    const timeout = runtime.config.rest?.renderTimeout ?? 30_000
 
-                const output = await new Promise((resolve, reject) => {
-                    const timer = setTimeout(() => {
-                        runtime.removeHook('completed', hook)
-                        reject(new Error(`Render timeout for ${entity.id}`))
-                    }, timeout)
-
-                    const hook = async (entry) => {
-                        if (entry.entity._correlationId !== entity._correlationId) return
-                        clearTimeout(timer)
-                        runtime.removeHook('completed', hook)
-                        resolve(entry.output)
+                    const completedHooks = runtime.hooks.completed
+                    let hook
+                    const removeHook = () => {
+                        if (!hook) return
+                        const idx = completedHooks.indexOf(hook)
+                        if (idx >= 0) completedHooks.splice(idx, 1)
                     }
-                    runtime.addHook('completed', hook)
 
-                    updateEntity(entity)
-                        .then(() => runtime.process())
-                        .catch(reject)
+                    const { output, entity: resolvedEntity } = await new Promise((resolve, reject) => {
+                        const timer = setTimeout(() => {
+                            removeHook()
+                            reject(new Error(`Render timeout for ${entity.id}`))
+                        }, timeout)
+
+                        hook = async (entry) => {
+                            if (entry.entity?._correlationId !== correlationId) return
+                            clearTimeout(timer)
+                            removeHook()
+                            resolve({ output: entry.output, entity: entry.entity })
+                        }
+                        completedHooks.push(hook)
+
+                        updateEntity(entity)
+                            .then(() => runtime.process())
+                            .catch((err) => {
+                                clearTimeout(timer)
+                                removeHook()
+                                reject(err)
+                            })
+                    })
+
+                    await sendRenderOutput(res, output, resolvedEntity)
                 })
-
-                if (output?.result != null) {
-                    const isFile = await access(output.result).then(() => true).catch(() => false)
-                    if (isFile) {
-                        res.sendFile(output.result)
-                    } else {
-                        res.send(output.result)
-                    }
-                } else {
-                    res.status(204).send()
-                }
             } catch (err) {
                 logger.error('REST render error: %s', err.message)
-                res.status(500).json({ error: err.message })
+                if (!res.headersSent) {
+                    res.status(500).json({ error: err.message })
+                }
             }
         })
 
