@@ -147,6 +147,58 @@ const runtime = await setup({ clear: true })
 await runtime.start()
 ```
 
+## On-demand Rendering (library use)
+
+When you embed mikser inside another Node.js service — say, generating
+PDFs on request — use the same primitives the REST plugin uses, without
+needing the REST plugin itself:
+
+```js
+import {
+  setup,
+  runtime,
+  updateEntity,
+  findEntities,
+  createRenderer,
+  createEntityIo,
+} from 'mikser-io'
+
+await setup({
+  workingFolder: './content',
+  plugins: ['documents', 'front-matter', 'yaml', 'layouts',
+            'render-hbs', 'post-pdf'],
+})
+await runtime.start()
+
+const { render } = createRenderer({ runtime, updateEntity })
+const { writeContent, removeContent } = createEntityIo({ runtime })
+
+// 1) Render an entity on demand. Concurrent calls coalesce into the
+//    same process() cycle; the worker pool renders the batch in parallel.
+const { output, entity } = await render({
+  id: '/documents/en/report.md',
+  type: 'document',
+  collection: 'documents',
+  format: 'md',
+  meta: { layout: 'report' },
+  content: '# Quarterly report ...',
+})
+// output.result is a Buffer for PDF, a string for HTML, etc.
+// entity.destination tells you what extension was produced.
+
+// 2) Write or remove content in a watched collection folder.
+//    In watch mode, this triggers the normal sync → process cycle.
+await writeContent('documents', 'en/draft.md', '# Draft')
+await removeContent('documents', 'en/old.md')
+
+// 3) Query the catalog (already public; just here for completeness).
+const docs = await findEntities({ collection: 'documents' })
+```
+
+`createRenderer` returns a `{ render }` function that batches concurrent
+calls. `createEntityIo` returns `{ writeContent, removeContent }` for
+filesystem writes into a collection folder.
+
 ## Output Structure
 
 After a successful run:

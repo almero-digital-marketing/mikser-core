@@ -1,0 +1,193 @@
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
+import { mkdtemp, readFile, rm, mkdir, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
+import { createRenderer, createEntityIo } from '../../src/api.js'
+
+// Build a minimal runtime-like object exposing the surface createRenderer
+// uses: hooks.completed (array), and a process() the test controls.
+function createFakeRuntime({ process }) {
+    return {
+        hooks: { completed: [] },
+        process,
+    }
+}
+
+describe('api: createRenderer', () => {
+    it('resolves a single render request when the hook fires its correlation id', async () => {
+        const updates = []
+        const runtime = createFakeRuntime({
+            process: async () => {
+                const last = updates[updates.length - 1]
+                for (const cb of [...runtime.hooks.completed]) {
+                    await cb({ entity: last, output: { result: 'rendered html' } })
+                }
+            },
+        })
+        const updateEntity = async (entity) => updates.push(entity)
+
+        const { render } = createRenderer({ runtime, updateEntity })
+        const { output, entity } = await render({ id: '/a.md', collection: 'documents' })
+        assert.equal(output.result, 'rendered html')
+        assert.ok(entity._correlationId)
+    })
+
+    it('routes outputs to the right correlation id in a concurrent batch', async () => {
+        const updates = []
+        const runtime = createFakeRuntime({
+            process: async () => {
+                // simulate a real cycle: 20 ms of work, then resolve everyone
+                await new Promise(r => setTimeout(r, 20))
+                for (const upd of updates) {
+                    for (const cb of [...runtime.hooks.completed]) {
+                        await cb({
+                            entity: upd,
+                            output: { result: `result-for-${upd.id}` },
+                        })
+                    }
+                }
+                updates.length = 0
+            },
+        })
+        const updateEntity = async (entity) => updates.push(entity)
+
+        const { render } = createRenderer({ runtime, updateEntity })
+        const ids = ['/a', '/b', '/c', '/d', '/e']
+        const results = await Promise.all(ids.map(id => render({ id })))
+        for (let i = 0; i < ids.length; i++) {
+            assert.equal(results[i].output.result, `result-for-${ids[i]}`)
+        }
+    })
+
+    it('coalesces concurrent renders into fewer process() cycles than requests', async () => {
+        let cycleCount = 0
+        const updates = []
+        const runtime = createFakeRuntime({
+            process: async () => {
+                cycleCount++
+                await new Promise(r => setTimeout(r, 30))
+                for (const upd of updates) {
+                    for (const cb of [...runtime.hooks.completed]) {
+                        await cb({ entity: upd, output: { result: 'ok' } })
+                    }
+                }
+                updates.length = 0
+            },
+        })
+        const { render } = createRenderer({
+            runtime,
+            updateEntity: async (e) => updates.push(e),
+        })
+
+        const N = 6
+        await Promise.all(Array.from({ length: N }, (_, i) => render({ id: `/e${i}` })))
+        assert.ok(cycleCount < N, `expected < ${N} cycles, got ${cycleCount}`)
+    })
+
+    it('rejects with a timeout when the cycle hangs past the configured timeout', async () => {
+        const runtime = createFakeRuntime({
+            process: () => new Promise(() => { }), // never resolves
+        })
+        const { render } = createRenderer({
+            runtime,
+            updateEntity: async () => { },
+            defaultTimeout: 40,
+        })
+        await assert.rejects(() => render({ id: '/x' }), /Render timeout/)
+    })
+
+    it('rejects "did not complete" when the cycle returns without firing the hook', async () => {
+        const runtime = createFakeRuntime({
+            process: async () => { /* no-op */ },
+        })
+        const { render } = createRenderer({
+            runtime,
+            updateEntity: async () => { },
+        })
+        await assert.rejects(() => render({ id: '/y' }), /did not complete/)
+    })
+
+    it('cleans up its completed hook after each batch', async () => {
+        const runtime = createFakeRuntime({
+            process: async () => {
+                for (const cb of [...runtime.hooks.completed]) {
+                    await cb({ entity: { _correlationId: '???' }, output: null })
+                }
+            },
+        })
+        const { render } = createRenderer({
+            runtime,
+            updateEntity: async () => { },
+        })
+        await assert.rejects(() => render({ id: '/z' }))
+        assert.equal(runtime.hooks.completed.length, 0, 'should not leak hooks across batches')
+    })
+
+    it('respects a per-call timeout override', async () => {
+        const runtime = createFakeRuntime({
+            process: () => new Promise(() => { }),
+        })
+        const { render } = createRenderer({
+            runtime,
+            updateEntity: async () => { },
+            defaultTimeout: 60_000,
+        })
+        const start = Date.now()
+        await assert.rejects(() => render({ id: '/x' }, { timeout: 30 }), /Render timeout/)
+        const elapsed = Date.now() - start
+        assert.ok(elapsed < 200, `should time out fast, elapsed=${elapsed}ms`)
+    })
+})
+
+describe('api: createEntityIo', () => {
+    async function withTempCollection(fn) {
+        const dir = await mkdtemp(path.join(tmpdir(), 'mikser-api-'))
+        try {
+            const docsFolder = path.join(dir, 'documents')
+            await mkdir(docsFolder, { recursive: true })
+            const runtime = { options: { workingFolder: dir, documentsFolder: docsFolder } }
+            return await fn({ runtime, dir, docsFolder })
+        } finally {
+            await rm(dir, { recursive: true, force: true })
+        }
+    }
+
+    it('writeContent creates the file and any missing parent directories', async () => {
+        await withTempCollection(async ({ runtime, docsFolder }) => {
+            const { writeContent } = createEntityIo({ runtime })
+            await writeContent('documents', 'en/posts/hello.md', '# Hi')
+            const content = await readFile(path.join(docsFolder, 'en/posts/hello.md'), 'utf8')
+            assert.equal(content, '# Hi')
+        })
+    })
+
+    it('writeContent returns the absolute uri of the file it wrote', async () => {
+        await withTempCollection(async ({ runtime, docsFolder }) => {
+            const { writeContent } = createEntityIo({ runtime })
+            const uri = await writeContent('documents', 'note.md', 'x')
+            assert.equal(uri, path.join(docsFolder, 'note.md'))
+        })
+    })
+
+    it('writeContent throws "Unknown collection" for an undeclared collection', async () => {
+        const { writeContent } = createEntityIo({ runtime: { options: {} } })
+        await assert.rejects(() => writeContent('layouts', 'x.hbs', '...'), /Unknown collection: layouts/)
+    })
+
+    it('removeContent unlinks an existing file', async () => {
+        await withTempCollection(async ({ runtime, docsFolder }) => {
+            const file = path.join(docsFolder, 'a.md')
+            await writeFile(file, 'x')
+            const { removeContent } = createEntityIo({ runtime })
+            await removeContent('documents', 'a.md')
+            await assert.rejects(() => readFile(file, 'utf8'), { code: 'ENOENT' })
+        })
+    })
+
+    it('removeContent throws "Unknown collection" for an undeclared collection', async () => {
+        const { removeContent } = createEntityIo({ runtime: { options: {} } })
+        await assert.rejects(() => removeContent('layouts', 'x.hbs'), /Unknown collection: layouts/)
+    })
+})
